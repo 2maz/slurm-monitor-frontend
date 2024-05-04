@@ -1,31 +1,36 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState } from "react";
+import reactLogo from "./assets/react.svg";
+import viteLogo from "/vite.svg";
+import "./App.css";
 
-import { queryClient } from './app/client';
-import { PropsWithChildren } from 'react';
-import { MantineProvider } from '@mantine/core';
-import { ColorScheme, ColorSchemeProvider } from '@mantine/types'
-import { useColorScheme, useLocalStorage } from '@mantine/hooks';
-import { ModalsProvider } from '@mantine/modals';
-import { QueryClientProvider } from '@tanstack/react-query';
-import { RouterProvider, createBrowserRouter } from 'react-router-dom';
+import { queryClient } from "./app/client";
+import { PropsWithChildren } from "react";
+import { MantineProvider } from "@mantine/core";
+import { ColorScheme, ColorSchemeProvider } from "@mantine/types";
+import { useColorScheme, useLocalStorage } from "@mantine/hooks";
+import { ModalsProvider } from "@mantine/modals";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { RouterProvider, createBrowserRouter } from "react-router-dom";
 //import routes from './routes.tsx';
 //
 //import { UiDecorators } from './decorators.tsx';
-import JobList from './components/JobList';
+import JobList from "./components/JobList";
+import PartitionList from "./components/PartitionsList";
+import NodeList from "./components/NodeList";
+
 
 function App() {
-  const [count, setCount] = useState(0)
-
-  const baseUrl = "http://srl-login3.ex3.simula.no:12000/api/v1/monitor/"
+  const baseUrl = "http://srl-login3.ex3.simula.no:12000/api/v1/monitor/";
 
   return (
     <>
-        <JobList baseUrl={baseUrl} />
+    <MantineProvider>
+      {/* <PartitionList baseUrl={baseUrl} />
+      <NodeList baseUrl={baseUrl} /> */}
+      <JobList baseUrl={baseUrl} />
+    </MantineProvider>
     </>
-  )
+  );
 }
 
 export default App;

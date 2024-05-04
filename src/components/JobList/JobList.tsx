@@ -2,7 +2,10 @@ import React, { useEffect, useRef, useState } from "react";
 import "./JobList.module.css";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
-import DataTable from "react-data-table-component";
+
+import { DataGrid } from "@mui/x-data-grid";
+import MetaData from "../ResponseMetaData";
+import { Backdrop } from "@mui/material";
 
 interface Props {
   baseUrl: string;
@@ -40,7 +43,7 @@ interface Job {
   group_id: number;
   job_id: number;
   //job_resources:
-  job_state: string;
+  job_state: "COMPLETED" | "PENDING" | "CANCELLED" | "RUNNING";
   last_sched_evaluation: number;
 
   max_cpus: number;
@@ -60,152 +63,195 @@ interface Job {
 }
 
 interface JobsResponse {
+  meta: MetaData;
+  errors: string[];
   jobs: Job[];
 }
 
 const JobList = ({ baseUrl }: Props) => {
-  const [filterUser, setFilterUser] = useState("");
-  const searchInput = useRef(null);
-  const [resetPaginationToggle, setResetPaginationToggle] =
-    React.useState(false);
+  const [error, setError] = useState<Error>();
+  const [refreshInterval, setRefreshInterval] = useState(10000);
+  const [refreshTime, setRefreshTime] = useState<Date>(new Date());
 
-   useEffect(() => {
-    if(searchInput.current)
-        searchInput.current.focus();
-   },[filterUser]);
+  const [backdropToggle, setBackdropToggle] = useState(false);
+  const [backdropId, setBackdropId] = useState(-1);
 
   const fetchJobs = () =>
-    axios.get<JobsResponse>(baseUrl + "jobs").then(({ data }) => data?.jobs);
+    axios
+      .get<JobsResponse>(baseUrl + "jobs")
+      .then(({ data }) => {
+        setRefreshTime(new Date());
+        return data?.jobs;
+      })
+      .catch((error) => {
+        setError(error);
+        return [];
+      });
 
   const { data } = useQuery({
     queryKey: ["jobs"],
     queryFn: fetchJobs,
     initialData: [],
+    refetchInterval: refreshInterval,
   });
 
-  const FilterComponent = ({ filterText, onFilter, onClear }) => (
-    <>
-      <input
-        ref={searchInput}
-        id="search"
-        type="text"
-        placeholder="Filter By Username"
-        aria-label="Search Input"
-        value={filterText}
-        onChange={onFilter}
-      />
-      <button className="btn" type="button" onClick={onClear}>
-        x
-      </button>
-    </>
-  );
-
-  const subHeaderComponentMemo = React.useMemo(() => {
-    const handleClear = () => {
-      if (filterUser) {
-        setResetPaginationToggle(!resetPaginationToggle);
-        setFilterUser("");
-      }
-    };
+  if (data?.length == 0)
     return (
-      <FilterComponent
-        onFilter={(e) => {
-          setFilterUser(e.target.value);
-        }}
-        onClear={handleClear}
-        filterText={filterUser}
-      />
+      <>
+        <h1 className="centered">Jobs</h1>
+        {error && (
+          <p className="text-danger">No data available: {error.message}</p>
+        )}
+      </>
     );
-  }, [filterUser, resetPaginationToggle]);
 
-  const filtered_data = data.filter(
-    (item) =>
-      item.user_name &&
-      item.user_name.toLowerCase().includes(filterUser.toLowerCase())
-  );
-
-  const conditionalRowStyles = [
-    {
-      when: (row: Job) => row.job_state === "CANCELLED",
-      style: (row: Job) => ({ backgroundColor: "lightgray" }),
-    },
-    {
-      when: (row: Job) => row.job_state === "RUNNING",
-      style: (row: Job) => ({ backgroundColor: "lightyellow" }),
-    },
-    {
-      when: (row: Job) => row.job_state === "COMPLETED",
-      style: (row: Job) => ({ backgroundColor: "green" }),
-    },
-    {
-      when: (row: Job) => row.job_state === "PENDING",
-      //style: (row: Job) => ({ backgroundColor: 'orange' }),
-    },
-  ];
-
+  const prepared_data = data.map((job) => ({ ...job, id: job.job_id }));
   const columns = [
     {
-      name: "Job ID",
-      selector: (row: Job) => row.job_id,
-      sortable: true,
+      field: "job_id",
+      headerName: "Job ID",
+      description: "SLURM job id",
+      width: 70,
     },
     {
-      name: "Name",
-      selector: (row: Job) => row.name,
-      sortable: true,
+      field: "name",
+      headerName: "Job Name",
+      description: "SLURM job name",
+      width: 130,
+    },
+    { field: "user_name", headerName: "Username", width: 130 },
+    {
+      field: "partition",
+      headerName: "Partition",
+      width: 130,
+      type: "singleSelect",
+      valueOptions: [
+        ...new Set(prepared_data.map((job) => job.partition)),
+      ].sort(),
     },
     {
-      name: "Username",
-      selector: (row: Job) => row.user_name,
-      sortable: true,
+      field: "nodes",
+      headerName: "Nodes",
+      width: 130,
+      type: "singleSelect",
+      valueOptions: [...new Set(prepared_data.map((job) => job.nodes))].sort(),
     },
     {
-      name: "Partition",
-      selector: (row: Job) => row.partition,
-      sortable: true,
+      field: "job_state",
+      headerName: "Job State",
+      width: 130,
+      type: "singleSelect",
+      valueOptions: ["COMPLETED", "PENDING", "CANCELLED", "RUNNING"],
+      renderCell: (params) => {
+        if (params.value === "RUNNING")
+          return <p className="text-success">{params.value}</p>;
+        if (params.value === "CANCELLED")
+          return <p className="text-secondary">{params.value}</p>;
+        if (params.value === "PENDING")
+          return <p className="text-warning">{params.value}</p>;
+        if (params.value === "COMPLETED")
+          return <p className="text-muted">{params.value}</p>;
+        return params.value;
+        //params.value === "RUNNING" ? <p>{params.value}</p> : <p>new</p>
+      },
     },
     {
-      name: "Nodes",
-      selector: (row: Job) => row.nodes,
-      sortable: true,
+      field: "start_time",
+      headerName: "Start Time",
+      width: 230,
+      renderCell: (params) => {
+        const date = new Date(params.value * 1000);
+        return date.toUTCString();
+      },
     },
     {
-      name: "Job Status",
-      selector: (row: Job) => row.job_state,
-      sortable: true,
+      field: "submit_time",
+      headerName: "Submit Time",
+      width: 230,
+      renderCell: (params) => {
+        const date = new Date(params.value * 1000);
+        return date.toUTCString();
+      },
+    },
+    {
+      field: "state_reason",
+      headerName: "State Reason",
+      width: 230,
+      renderCell: (params) => {
+        if (params.value != "None") return params.value;
+        return "";
+      },
     },
   ];
 
   return (
-    <div className="flex flex-wrap justify-between">
-      <h1>Jobs</h1>
-      <DataTable
-        fixedHeader={true}
-        pagination
-        columns={columns}
-        data={filtered_data}
-        conditionalRowStyles={conditionalRowStyles}
-        subHeader
-        subHeaderComponent={subHeaderComponentMemo}
-      ></DataTable>
-      {/* <table className="table table-hover table-bordered table-sm">
-        <thead className="table-light">
-          <tr>
-            <th className="p-2" onClick={()=>{applySorting('job_id')}}>Id {sorting.key === 'job_id' && (sorting.ascending ? '▲' : '▼')} </th>
-            <th className="p-2">Name</th>
-          </tr>
-        </thead>
-        <tbody className="table-group-divider">
-          {data?.map((job: Job) => (
-            <tr key={job.job_id}>
-              <td>{job.job_id}</td>
-              <td>{job.name}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table> */}
+    <div className="mx-5 flex flex-wrap justify-between">
+      <h1 className="centered">Jobs</h1>
+      <div className="mr-3 d-flex">
+        <label className="mx-3">Refresh Interval (in ms):</label>{" "}
+        <input
+          className="mb-3"
+          value={refreshInterval}
+          type="number"
+          onChange={(e) => {
+            setRefreshInterval(e.target.valueAsNumber);
+          }}
+        />
+        <label className="mx-3">
+          Last refresh: {refreshTime.toUTCString()}
+        </label>
+      </div>
+      <>
+        <DataGrid
+          rows={prepared_data}
+          columns={columns}
+          onCellDoubleClick={(e) => {
+            console.log(e);
+            setBackdropToggle(true);
+            setBackdropId(e.row.id);
+          }}
+          initialState={{
+            pagination: {
+              paginationModel: { page: 0, pageSize: 50 },
+            },
+          }}
+          pageSizeOptions={[10, 50, 100, 250, 500]}
+          stickyHeader
+          getRowHeight={() => 30}
+        />
+
+        <Backdrop
+          sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
+          open={backdropToggle}
+          onClick={() => {
+            setBackdropToggle(!backdropToggle);
+          }}
+        >
+          <div className="h-75 bg-white text-muted rounded overflow-auto">
+            {prepared_data
+              .filter((d) => d.id === backdropId)
+              .map((d) => {
+                return (
+                  <div className="mx-3 my-3">
+                    <pre>{JSON.stringify(d, null, 2)}</pre>
+                  </div>
+                );
+              })}
+          </div>
+        </Backdrop>
+      </>
     </div>
   );
 };
 
 export default JobList;
+
+// style={{
+//   position: "absolute",
+//   width: "75%",
+//   top: "50%",
+//   left: "50%",
+//   transform: "translate(-50%, -50%)",
+//   border: "1px",
+//   borderColor: "red",
+// }}
