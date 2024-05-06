@@ -3,7 +3,7 @@ import "./PartitionList.module.css";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 
-import { DataGrid } from "@mui/x-data-grid";
+import { DataGrid, GridToolbar } from "@mui/x-data-grid";
 import MetaData from "../ResponseMetaData";
 
 interface Props {
@@ -112,6 +112,9 @@ const PartitionList = ({ baseUrl }: Props) => {
           pagination: {
             paginationModel: { page: 0, pageSize: 50 },
           },
+        }}
+        slots={{
+          toolbar: GridToolbar,
         }}
         pageSizeOptions={[10, 50, 100, 250, 500]}
         getRowHeight={() => 30}

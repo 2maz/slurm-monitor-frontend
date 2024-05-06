@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import MetaData from "../ResponseMetaData";
 import axios from "axios";
 import { useQuery } from "@tanstack/react-query";
-import { DataGrid } from "@mui/x-data-grid";
+import { DataGrid, GridToolbar } from "@mui/x-data-grid";
 
 interface Props {
   baseUrl: string;
@@ -130,6 +130,9 @@ const NodeList = ({ baseUrl }: Props) => {
           pagination: {
             paginationModel: { page: 0, pageSize: 50 },
           },
+        }}
+        slots={{
+          toolbar: GridToolbar,
         }}
         pageSizeOptions={[10, 50, 100, 250, 500]}
         getRowHeight={() => 30}

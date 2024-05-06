@@ -3,12 +3,28 @@ import "./JobList.module.css";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 
-import { DataGrid } from "@mui/x-data-grid";
+import { DataGrid, GridToolbar } from "@mui/x-data-grid";
 import MetaData from "../ResponseMetaData";
 import { Backdrop } from "@mui/material";
 
+import  ArrowOutwordIcon from '@mui/icons-material/ArrowOutward'
+
 interface Props {
   baseUrl: string;
+}
+
+interface MlflowRun {
+  run_uuid: string;
+  experiment_id: string;
+  run_name: string;
+  user_id: string;
+  status: string;
+  start_time: number;
+  artifact_uri: string;
+  lifecycle_stage: number;
+  run_id: string;
+  ref_url: string;
+  slurm_job_id: number;
 }
 
 interface Job {
@@ -68,6 +84,10 @@ interface JobsResponse {
   jobs: Job[];
 }
 
+interface MlflowRunsResponse {
+  runs: MlflowRun[];
+}
+
 const JobList = ({ baseUrl }: Props) => {
   const [error, setError] = useState<Error>();
   const [refreshInterval, setRefreshInterval] = useState(10000);
@@ -88,9 +108,27 @@ const JobList = ({ baseUrl }: Props) => {
         return [];
       });
 
+  const fetchMlflowRuns = () =>
+    axios
+      .get<MlflowRunsResponse>('http://srl-login3.ex3.simula.no:12000/api/v1/monitor/slurm-runs/ai-biostrat')
+      .then(({ data }) => {
+        return data?.runs;
+      })
+      .catch((error) => {
+        setError(error);
+        return [];
+      });
+
   const { data } = useQuery({
     queryKey: ["jobs"],
     queryFn: fetchJobs,
+    initialData: [],
+    refetchInterval: refreshInterval,
+  });
+
+  const { data: mlflow_runs } = useQuery({
+    queryKey: ["mlflow-runs"],
+    queryFn: fetchMlflowRuns,
     initialData: [],
     refetchInterval: refreshInterval,
   });
@@ -105,7 +143,10 @@ const JobList = ({ baseUrl }: Props) => {
       </>
     );
 
-  const prepared_data = data.map((job) => ({ ...job, id: job.job_id }));
+  const prepared_data = data.map((job) => ({ ...job, 
+    id: job.job_id, 
+    mlflow_ref: mlflow_runs.filter(r => r.slurm_job_id == job.job_id)[0]?.ref_url
+  }));
   const columns = [
     {
       field: "job_id",
@@ -182,6 +223,17 @@ const JobList = ({ baseUrl }: Props) => {
         return "";
       },
     },
+    {
+      field: "mlflow_ref",
+      headerName: "Mlflow Run",
+      width: 150,
+      renderCell: (params) => {
+        if(params.value)
+          return (<a href={params.value}><ArrowOutwordIcon /></a>)
+        return "";
+
+      }
+    }
   ];
 
   return (
@@ -215,9 +267,12 @@ const JobList = ({ baseUrl }: Props) => {
               paginationModel: { page: 0, pageSize: 50 },
             },
           }}
-          pageSizeOptions={[10, 50, 100, 250, 500]}
+          slots={{
+            toolbar: GridToolbar,
+          }}
+          pageSizeOptions={[10, 50, 100]}
           stickyHeader
-          getRowHeight={() => 30}
+          //getRowHeight={() => 30}
         />
 
         <Backdrop
@@ -245,13 +300,3 @@ const JobList = ({ baseUrl }: Props) => {
 };
 
 export default JobList;
-
-// style={{
-//   position: "absolute",
-//   width: "75%",
-//   top: "50%",
-//   left: "50%",
-//   transform: "translate(-50%, -50%)",
-//   border: "1px",
-//   borderColor: "red",
-// }}

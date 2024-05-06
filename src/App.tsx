@@ -5,7 +5,7 @@ import "./App.css";
 
 import { queryClient } from "./app/client";
 import { PropsWithChildren } from "react";
-import { MantineProvider } from "@mantine/core";
+import { Box, MantineProvider, Paper } from "@mantine/core";
 import { ColorScheme, ColorSchemeProvider } from "@mantine/types";
 import { useColorScheme, useLocalStorage } from "@mantine/hooks";
 import { ModalsProvider } from "@mantine/modals";
@@ -17,18 +17,54 @@ import { RouterProvider, createBrowserRouter } from "react-router-dom";
 import JobList from "./components/JobList";
 import PartitionList from "./components/PartitionsList";
 import NodeList from "./components/NodeList";
-
+import { BottomNavigation, BottomNavigationAction } from "@mui/material";
+import SegmentIcon from "@mui/icons-material/Segment";
+import AccountTreeIcon from "@mui/icons-material/AccountTree";
+import DirectionsRunsTwoToneIcon from "@mui/icons-material/DirectionsRunTwoTone";
 
 function App() {
+  const [value, setValue] = useState<string>("jobs");
   const baseUrl = "http://srl-login3.ex3.simula.no:12000/api/v1/monitor/";
 
   return (
     <>
-    <MantineProvider>
-      {/* <PartitionList baseUrl={baseUrl} />
-      <NodeList baseUrl={baseUrl} /> */}
-      <JobList baseUrl={baseUrl} />
-    </MantineProvider>
+      <MantineProvider>
+        <Box sx={{ pb: 7 }}>
+          <Paper
+            sx={{ position: "fixed", bottom: 0, left: 0, right: 0 }}
+            elevation={3}
+          >
+            <BottomNavigation
+              showLabels
+              value={value}
+              onChange={(event, newValue) => {
+                setValue(newValue);
+              }}
+            >
+              <BottomNavigationAction
+                label="Partitions"
+                icon={<SegmentIcon />}
+                onClick={() => setValue("partitions")}
+              />
+              <BottomNavigationAction
+                label="Nodes"
+                icon={<AccountTreeIcon />}
+                onClick={() => setValue("nodes")}
+              />
+              <BottomNavigationAction
+                label="Jobs"
+                icon={<DirectionsRunsTwoToneIcon />}
+                onClick={() => setValue("jobs")}
+              />
+            </BottomNavigation>
+          </Paper>
+          {value && value == "jobs" && <JobList baseUrl={baseUrl} />}
+          {value && value == "nodes" && <NodeList baseUrl={baseUrl} />}
+          {value && value == "partitions" && (
+            <PartitionList baseUrl={baseUrl} />
+          )}
+        </Box>
+      </MantineProvider>
     </>
   );
 }
