@@ -4,46 +4,10 @@ import axios from "axios";
 import { useQuery } from "@tanstack/react-query";
 import { DataGrid, GridToolbar } from "@mui/x-data-grid";
 
+import Node, { getColumns, columnsVisibilityDefault } from "./Node";
+
 interface Props {
   baseUrl: string;
-}
-
-interface Node {
-  architecture: string;
-  burstbuffer_network_address: string;
-  boards: number;
-  boot_time: number;
-  comment: string;
-  cores: number;
-  cpu_binding: number;
-  cpu_load: number;
-  free_memory: number;
-  cpus: number;
-  features: string;
-  active_features: string;
-  gres: string;
-  gres_drained: string;
-  gres_used: string;
-  mcs_label: string;
-  name: string;
-  next_state_after_reboot: string;
-  address: string;
-  hostname: string;
-  state: string;
-  operating_system: string;
-  owner: string;
-  port: number;
-  real_memory: boolean;
-  reason: string;
-  reason_changed_at: number;
-  reason_set_by_user: boolean;
-  slurmd_start_time: number;
-  sockets: number;
-  threads: number;
-  temporary_disk: boolean;
-  weight: number;
-  tres: string;
-  slurmd_version: string;
 }
 
 interface NodesResponse {
@@ -84,52 +48,20 @@ const NodeList = ({ baseUrl }: Props) => {
     );
 
   const prepared_data = data.map((node) => ({ ...node, id: node.name }));
-  const columns = [
-    {
-      field: "name",
-      headerName: "Name",
-      description: "Node Name",
-      width: 120,
-    },
-    {
-      field: "architecture",
-      headerName: "Architecture",
-      width: 130,
-      type: "singleSelect",
-      valueOptions: [
-        ...new Set(prepared_data.map((node) => node.architecture)),
-      ].sort(),
-    },
-    {
-      field: "operating_system",
-      headerName: "Operating System",
-      width: 130,
-      type: "singleSelect",
-      valueOptions: [
-        ...new Set(prepared_data.map((node) => node.operating_system)),
-      ].sort(),
-    },
-    { field: "cores", headerName: "Cores", width: 130 },
-    {
-      field: "free_memory",
-      headerName: "Free Memory",
-      width: 130,
-    },
-    { field: "cpus", headerName: "CPUs", width: 130 },
-    { field: "gres", headerName: "Resources", width: 130 },
-    { field: "gres_used", headerName: "Used Resources", width: 130 },
-  ];
 
   return (
     <div className="mx-5 flex flex-wrap justify-between">
       <h1 className="centered">Nodes</h1>
       <DataGrid
         rows={prepared_data}
-        columns={columns}
+        columns={getColumns(prepared_data)}
         initialState={{
           pagination: {
             paginationModel: { page: 0, pageSize: 50 },
           },
+          columns: {
+            columnVisibilityModel: columnsVisibilityDefault
+          }
         }}
         slots={{
           toolbar: GridToolbar,
