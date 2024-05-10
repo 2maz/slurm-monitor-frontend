@@ -43,6 +43,7 @@ export interface SlurmJob {
   priority: number;
 
   start_time: number;
+  state_reason: string;
   submit_time: number;
   suspend_time: number;
 
