@@ -20,11 +20,13 @@ import "@mantine/core/styles.css";
 import "@mantine/dates/styles.css"; //if using mantine date picker features
 import "mantine-react-table/styles.css"; //make sure MRT styles were imported in your app root (once)
 import JobsView from "./components/JobsView";
+import { MRT_ColumnFiltersState } from "material-react-table";
 
 const theme = createTheme({});
 
 function App() {
-  const [value, setValue] = useState<string>("jobs");
+  const [view, setView] = useState<string>("jobs");
+  const [jobsFilter, setJobsFilter] = useState<MRT_ColumnFiltersState>([]);
   const baseUrl = "http://srl-login3.ex3.simula.no:12000/api/v1/monitor/";
 
   return (
@@ -37,31 +39,31 @@ function App() {
           >
             <BottomNavigation
               showLabels
-              value={value}
-              onChange={(event, newValue) => {
-                setValue(newValue);
+              value={view}
+              onChange={(event, newView) => {
+                setView(newView);
               }}
             >
               <BottomNavigationAction
                 label="Partitions"
                 icon={<SegmentIcon />}
-                onClick={() => setValue("partitions")}
+                onClick={() => setView("partitions")}
               />
               <BottomNavigationAction
                 label="Nodes"
                 icon={<AccountTreeIcon />}
-                onClick={() => setValue("nodes")}
+                onClick={() => setView("nodes")}
               />
               <BottomNavigationAction
                 label="Jobs"
                 icon={<DirectionsRunsTwoToneIcon />}
-                onClick={() => setValue("jobs")}
+                onClick={() => setView("jobs")}
               />
             </BottomNavigation>
           </Paper>
-          {value && value == "jobs" && <JobsView />}
-          {value && value == "nodes" && <NodeList baseUrl={baseUrl} />}
-          {value && value == "partitions" && (
+          {view && view == "jobs" && <JobsView columnFilters={jobsFilter} setColumnFilters={setJobsFilter}/>}
+          {view && view == "nodes" && <NodeList baseUrl={baseUrl} />}
+          {view && view == "partitions" && (
             <PartitionList baseUrl={baseUrl} />
           )}
         </Box>

@@ -1,18 +1,21 @@
 import {
   MRT_Cell,
   MRT_ColumnDef,
+  MRT_ColumnFiltersState,
   MaterialReactTable,
   useMaterialReactTable,
 } from "material-react-table";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Job from "./Job";
 import ArrowOutwordIcon from "@mui/icons-material/ArrowOutward";
-import { Backdrop } from "@mui/material";
-import { LocalizationProvider } from '@mui/x-date-pickers';
-import { AdapterLuxon } from '@mui/x-date-pickers/AdapterLuxon';
+import { Backdrop, Button } from "@mui/material";
+import { LocalizationProvider } from "@mui/x-date-pickers";
+import { AdapterLuxon } from "@mui/x-date-pickers/AdapterLuxon";
 
 interface Props {
   data: Job[];
+  columnFilters: any;
+  setColumnFilters: any;
 }
 
 interface getDateProps {
@@ -24,7 +27,11 @@ const getDate = ({ cell }: getDateProps) => {
   return date.toUTCString();
 };
 
-const JobTable = ({ data }: Props) => {
+const getValues = (data: Job[], property_name: keyof Job) => {
+  return Array.from([...new Set(data.map((job) => job[property_name]))]).sort();
+};
+
+const JobTable = ({ data, columnFilters, setColumnFilters }: Props) => {
   const columns = useMemo<MRT_ColumnDef<Job>[]>(
     () => [
       {
@@ -43,14 +50,14 @@ const JobTable = ({ data }: Props) => {
         header: "Partition",
         grow: false,
         filterVariant: "multi-select",
-        filterSelectOptions: Array.from([...new Set(data.map((job) => job.partition))]).sort()
+        filterSelectOptions: getValues(data, "partition"),
       },
       {
         accessorKey: "nodes",
         header: "Nodes",
         grow: false,
         filterVariant: "multi-select",
-        filterSelectOptions: Array.from([...new Set(data.map((job) => job.nodes))]).sort()
+        filterSelectOptions: getValues(data, "nodes"),
       },
       {
         accessorKey: "job_state",
@@ -76,18 +83,24 @@ const JobTable = ({ data }: Props) => {
       {
         accessorKey: "start_time",
         header: "Start Time",
-        accessorFn: (row) =>  new Date(row.start_time * 1000),
+        accessorFn: (row) => new Date(row.start_time * 1000),
         filterVariant: "datetime-range",
-        Cell: ({ cell }) => `${cell.getValue<Date>().toLocaleDateString()} ${cell.getValue<Date>().toLocaleTimeString()}`,
+        Cell: ({ cell }) =>
+          `${cell.getValue<Date>().toLocaleDateString()} ${cell
+            .getValue<Date>()
+            .toLocaleTimeString()}`,
         minSize: 50,
         grow: true,
       },
       {
         accessorKey: "submit_time",
         header: "Submit Time",
-        accessorFn: (row) =>  new Date(row.submit_time * 1000),
+        accessorFn: (row) => new Date(row.submit_time * 1000),
         filterVariant: "datetime-range",
-        Cell: ({ cell }) => `${cell.getValue<Date>().toLocaleDateString()} ${cell.getValue<Date>().toLocaleTimeString()}`,
+        Cell: ({ cell }) =>
+          `${cell.getValue<Date>().toLocaleDateString()} ${cell
+            .getValue<Date>()
+            .toLocaleTimeString()}`,
         minSize: 50,
         grow: true,
       },
@@ -95,7 +108,7 @@ const JobTable = ({ data }: Props) => {
         accessorKey: "state_reason",
         header: "State Reason",
         filterVariant: "multi-select",
-        filterSelectOptions: Array.from([...new Set(data.map((job) => job.state_reason))]).sort(),
+        filterSelectOptions: getValues(data, "state_reason"),
         Cell: ({ cell }) => {
           const cellValue = cell.getValue<string>();
           return cellValue != "None" ? cellValue : "";
@@ -122,6 +135,10 @@ const JobTable = ({ data }: Props) => {
   const [backdropToggle, setBackdropToggle] = useState(false);
   const [backdropId, setBackdropId] = useState(-1);
 
+  const hasEnabledFilters = () => {
+    return columnFilters.filter((filter: { 'id': string, 'value': any} ) => !filter.id.endsWith("time")).length > 0
+  }
+
   const table = useMaterialReactTable({
     columns: columns,
     data: data, //must be memoized or stable (useState, useMemo, defined outside of this component, etc.)
@@ -138,6 +155,7 @@ const JobTable = ({ data }: Props) => {
     //enableColumnFilterModes: true,
     initialState: {
       density: "compact",
+      showColumnFilters: hasEnabledFilters(),
     },
     // disable when memo feature is used
     enableDensityToggle: true,
@@ -159,7 +177,20 @@ const JobTable = ({ data }: Props) => {
         cursor: "pointer", //you might want to change the cursor too when adding an onClick
       },
     }),
+    onColumnFiltersChange: setColumnFilters,
+    state: {
+      columnFilters,
+    },
+    renderTopToolbarCustomActions: ({ table }) => (
+      <div className="d-flex">
+        <Button onClick={resetState}>Reset Filters</Button>
+      </div>
+    ),
   });
+
+  const resetState = () => {
+    setColumnFilters([]);
+  };
 
   return (
     <div>

@@ -30,7 +30,12 @@ interface MlflowRunsResponse {
   runs: MlflowRun[];
 }
 
-const JobsView = () => {
+interface Props {
+  columnFilters: any
+  setColumnFilters: any
+}
+
+const JobsView = ({columnFilters, setColumnFilters } : Props) => {
   const [error, setError] = useState<Error>();
   const [refreshInterval, setRefreshInterval] = useState(10000);
   const [refreshTime, setRefreshTime] = useState<Date>(new Date());
@@ -108,7 +113,7 @@ const JobsView = () => {
         </label>
       </div>
       <>
-        <JobTable data={prepared_data} />
+        <JobTable data={prepared_data} columnFilters={columnFilters} setColumnFilters={setColumnFilters} />
       </>
     </div>
   );
