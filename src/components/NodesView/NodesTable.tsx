@@ -7,11 +7,11 @@ import {
 import Button from "@mui/material/Button";
 import { Backdrop } from "@mui/material";
 import { useMemo, useState } from "react";
+import { StateSetters } from "../../services/StateSetters";
 
 interface Props {
   data: Node[];
-  columnFilters: any;
-  setColumnFilters: any;
+  stateSetters: StateSetters;
 }
 
 const getStringValues = (data: Node[], property_name: keyof Node): string[] => {
@@ -20,7 +20,7 @@ const getStringValues = (data: Node[], property_name: keyof Node): string[] => {
   ]).sort();
 };
 
-const NodesTable = ({ data, columnFilters, setColumnFilters }: Props) => {
+const NodesTable = ({ data, stateSetters }: Props) => {
   const columns = useMemo<MRT_ColumnDef<Node>[]>(
     () => [
       {
@@ -72,7 +72,7 @@ const NodesTable = ({ data, columnFilters, setColumnFilters }: Props) => {
         accessorKey: "partitions",
         header: "Partitions",
         Cell: ({ row }) => {
-          return row.original.partitions?.join(',');
+          return row.original.partitions?.join(",");
         },
         filterVariant: "multi-select",
         filterSelectOptions: [
@@ -99,7 +99,14 @@ const NodesTable = ({ data, columnFilters, setColumnFilters }: Props) => {
       //{ accessorKey: "next_state_after_reboot_flags: string[];
       //{ accessorKey: "address: string;
       //{ accessorKey: "hostname", header: "Hostname" },
-      { accessorKey: "state", header: "State" },
+      {
+        accessorKey: "state",
+        header: "State",
+        filterVariant: "multi-select",
+        filterSelectOptions: [
+          ...new Set(data.map((node: Node) => node.state)),
+        ].sort(),
+      },
       //{ accessorKey: "state_flags: string[];
       //{ accessorKey: "operating_system: string;
       //{ accessorKey: "owner: string;
@@ -126,6 +133,9 @@ const NodesTable = ({ data, columnFilters, setColumnFilters }: Props) => {
 
   const [backdropToggle, setBackdropToggle] = useState(false);
   const [backdropId, setBackdropId] = useState("");
+
+  const [columnFilters, setColumnFilters] = stateSetters.columnFilters;
+  const [columnVisibility, setColumnVisibility] = stateSetters.columnVisibility;
 
   const hasEnabledFilters = () => {
     return (
@@ -177,8 +187,10 @@ const NodesTable = ({ data, columnFilters, setColumnFilters }: Props) => {
       },
     }),
     onColumnFiltersChange: setColumnFilters,
+    onColumnVisibilityChange: setColumnVisibility,
     state: {
       columnFilters,
+      columnVisibility,
     },
     renderTopToolbarCustomActions: ({ table }) => (
       <div className="d-flex">
@@ -193,27 +205,27 @@ const NodesTable = ({ data, columnFilters, setColumnFilters }: Props) => {
 
   return (
     <div>
-        <MaterialReactTable table={table} />
+      <MaterialReactTable table={table} />
 
-        <Backdrop
-          sx={{ color: "#aaa", zIndex: (theme) => theme.zIndex.drawer + 1 }}
-          open={backdropToggle}
-          onClick={() => {
-            setBackdropToggle(!backdropToggle);
-          }}
-        >
-          <div className="h-75 bg-white text-muted rounded overflow-auto">
-            {data
-              .filter((d) => d.name === backdropId)
-              .map((d) => {
-                return (
-                  <div key={d.name} className="mx-3 my-3">
-                    <pre>{JSON.stringify(d, null, 2)}</pre>
-                  </div>
-                );
-              })}
-          </div>
-        </Backdrop>
+      <Backdrop
+        sx={{ color: "#aaa", zIndex: (theme) => theme.zIndex.drawer + 1 }}
+        open={backdropToggle}
+        onClick={() => {
+          setBackdropToggle(!backdropToggle);
+        }}
+      >
+        <div className="h-75 bg-white text-muted rounded overflow-auto">
+          {data
+            .filter((d) => d.name === backdropId)
+            .map((d) => {
+              return (
+                <div key={d.name} className="mx-3 my-3">
+                  <pre>{JSON.stringify(d, null, 2)}</pre>
+                </div>
+              );
+            })}
+        </div>
+      </Backdrop>
     </div>
   );
 };

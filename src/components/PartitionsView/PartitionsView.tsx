@@ -6,6 +6,7 @@ import Response from "../../services/slurm-monitor/response";
 
 import Partition from "./Partition";
 import PartitionsTable from "./PartitionsTable";
+import { StateSetters } from "../../services/StateSetters";
 
 const endpoint = new SlurmMonitorEndpoint("/partitions");
 interface PartitionsResponse extends Response {
@@ -13,11 +14,10 @@ interface PartitionsResponse extends Response {
 }
 
 interface Props {
-  columnFilters: any;
-  setColumnFilters: any;
+  stateSetters: StateSetters;
 }
 
-const PartitionsView = ({ columnFilters, setColumnFilters }: Props) => {
+const PartitionsView = ({ stateSetters }: Props) => {
   const [error, setError] = useState<Error>();
 
   const fetchPartitions = async () => {
@@ -61,8 +61,7 @@ const PartitionsView = ({ columnFilters, setColumnFilters }: Props) => {
       <>
         <PartitionsTable
           data={prepared_data}
-          columnFilters={columnFilters}
-          setColumnFilters={setColumnFilters}
+          stateSetters={stateSetters}
         />
       </>
     </div>

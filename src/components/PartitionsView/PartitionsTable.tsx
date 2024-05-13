@@ -1,9 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import "./PartitionList.module.css";
-import { useQuery } from "@tanstack/react-query";
-import axios from "axios";
-
-import { DataGrid, GridToolbar } from "@mui/x-data-grid";
 import MetaData from "../ResponseMetaData";
 import Partition from "./Partition";
 import {
@@ -12,11 +8,11 @@ import {
   useMaterialReactTable,
 } from "material-react-table";
 import { Backdrop, Button } from "@mui/material";
+import { StateSetters } from "../../services/StateSetters";
 
 interface Props {
   data: Partition[];
-  columnFilters: any;
-  setColumnFilters: any;
+  stateSetters: StateSetters;
 }
 
 interface PartitionsResponse {
@@ -25,7 +21,7 @@ interface PartitionsResponse {
   partitions: Partition[];
 }
 
-const PartitionsTable = ({ data, columnFilters, setColumnFilters }: Props) => {
+const PartitionsTable = ({ data, stateSetters }: Props) => {
   const columns = useMemo<MRT_ColumnDef<Partition>[]>(
     () => [
       {
@@ -50,6 +46,9 @@ const PartitionsTable = ({ data, columnFilters, setColumnFilters }: Props) => {
 
   const [backdropToggle, setBackdropToggle] = useState(false);
   const [backdropId, setBackdropId] = useState("");
+
+  const [columnFilters, setColumnFilters] = stateSetters.columnFilters;
+  const [columnVisibility, setColumnVisibility] = stateSetters.columnVisibility;
 
   const hasEnabledFilters = () => {
     return (
@@ -86,8 +85,10 @@ const PartitionsTable = ({ data, columnFilters, setColumnFilters }: Props) => {
       },
     }),
     onColumnFiltersChange: setColumnFilters,
+    onColumnVisibilityChange: setColumnVisibility,
     state: {
       columnFilters,
+      columnVisibility,
     },
     renderTopToolbarCustomActions: ({ table }) => (
       <div className="d-flex">

@@ -8,6 +8,7 @@ import NodesTable from "./NodesTable";
 
 import SlurmMonitorEndpoint from "../../services/slurm-monitor/endpoint";
 import Response from "../../services/slurm-monitor/response";
+import { StateSetters } from "../../services/StateSetters";
 
 const endpoint = new SlurmMonitorEndpoint("/nodes");
 interface NodesResponse extends Response {
@@ -15,11 +16,10 @@ interface NodesResponse extends Response {
 }
 
 interface Props {
-  columnFilters: any
-  setColumnFilters: any
+  stateSetters: StateSetters;
 }
 
-const NodesView = ({columnFilters, setColumnFilters } : Props) => {
+const NodesView = ({stateSetters} : Props) => {
   const [error, setError] = useState<Error>();
 
   const fetchNodes = async () => {
@@ -62,7 +62,7 @@ const NodesView = ({columnFilters, setColumnFilters } : Props) => {
     <div className="mx-5 flex flex-wrap justify-between">
       <h1 className="centered">Nodes</h1>
       <>
-        <NodesTable data={prepared_data} columnFilters={columnFilters} setColumnFilters={setColumnFilters} />
+        <NodesTable data={prepared_data} stateSetters={stateSetters} />
       </>
     </div>
   );

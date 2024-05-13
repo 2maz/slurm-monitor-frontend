@@ -165,8 +165,8 @@ const JobsTable = ({ data, stateSetters }: Props) => {
     onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
     state: {
-      columnFilters,
-      columnVisibility
+      columnFilters: columnFilters,
+      columnVisibility: columnVisibility
     },
     renderTopToolbarCustomActions: ({ table }) => (
       <div className="d-flex">

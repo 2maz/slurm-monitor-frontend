@@ -16,6 +16,10 @@ import { LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterLuxon } from "@mui/x-date-pickers/AdapterLuxon";
 import NodesView from "./components/NodesView";
 
+import "@mantine/core/styles.css";
+import "@mantine/dates/styles.css";
+import "mantine-react-table/styles.css";
+
 const theme = createTheme({});
 
 function App() {
@@ -23,11 +27,14 @@ function App() {
     window.sessionStorage.getItem("view") || "jobs"
   );
 
-  const [nodesFilter, setNodesFilter] = useState<MRT_ColumnFiltersState>([]);
-  const [partitionsFilter, setPartitionsFilter] = useState<MRT_ColumnFiltersState>([]);
+  const nodesFilterState = useState<MRT_ColumnFiltersState>([]);
+  const nodesVisibilityState = useState<MRT_VisibilityState>({});
+
+  const partitionsFilterState = useState<MRT_ColumnFiltersState>([]);
+  const partitionsVisibilityState = useState<MRT_VisibilityState>({});
 
   const jobsFilterState = useState<MRT_ColumnFiltersState>([]);
-  const jobsVisibilityState = useState<MRT_VisibilityState[]>();
+  const jobsVisibilityState = useState<MRT_VisibilityState>({});
 
   useEffect(() => {
     document.title = "ex3 - Status: " + view;
@@ -75,14 +82,18 @@ function App() {
             )}
             {view && view == "nodes" && (
               <NodesView
-                columnFilters={nodesFilter}
-                setColumnFilters={setNodesFilter}
+                stateSetters={{
+                  columnFilters: nodesFilterState,
+                  columnVisibility: nodesVisibilityState
+                }}
               />
             )}
             {view && view == "partitions" && (
               <PartitionsView
-                columnFilters={partitionsFilter}
-                setColumnFilters={setPartitionsFilter}
+                stateSetters={{
+                  columnFilters: partitionsFilterState,
+                  columnVisibility: partitionsVisibilityState
+                }}
               />
             )}
           </Box>
