@@ -8,10 +8,11 @@ import Job from "./Job";
 import ArrowOutwordIcon from "@mui/icons-material/ArrowOutward";
 import { Backdrop, Button } from "@mui/material";
 
+import { StateSetters } from "../../services/StateSetters";
+
 interface Props {
   data: Job[];
-  columnFilters: any;
-  setColumnFilters: any;
+  stateSetters: StateSetters
 }
 
 const getStringValues = (data: Job[], property_name: keyof Job): string[] => {
@@ -20,7 +21,7 @@ const getStringValues = (data: Job[], property_name: keyof Job): string[] => {
   ]).sort();
 };
 
-const JobsTable = ({ data, columnFilters, setColumnFilters }: Props) => {
+const JobsTable = ({ data, stateSetters }: Props) => {
   const columns = useMemo<MRT_ColumnDef<Job>[]>(
     () => [
       {
@@ -124,9 +125,12 @@ const JobsTable = ({ data, columnFilters, setColumnFilters }: Props) => {
   const [backdropToggle, setBackdropToggle] = useState(false);
   const [backdropId, setBackdropId] = useState(-1);
 
+  const [columnFilters, setColumnFilters] = stateSetters.columnFilters;
+  const [columnVisibility, setColumnVisibility] = stateSetters.columnVisibility;
+
   const hasEnabledFilters = () => {
     return (
-      columnFilters.filter(
+      stateSetters.columnFilters[0].filter(
         (filter: { id: string; value: any }) => !filter.id.endsWith("time")
       ).length > 0
     );
@@ -159,8 +163,10 @@ const JobsTable = ({ data, columnFilters, setColumnFilters }: Props) => {
       },
     }),
     onColumnFiltersChange: setColumnFilters,
+    onColumnVisibilityChange: setColumnVisibility,
     state: {
       columnFilters,
+      columnVisibility
     },
     renderTopToolbarCustomActions: ({ table }) => (
       <div className="d-flex">

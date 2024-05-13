@@ -8,7 +8,7 @@ import SegmentIcon from "@mui/icons-material/Segment";
 import AccountTreeIcon from "@mui/icons-material/AccountTree";
 import DirectionsRunsTwoToneIcon from "@mui/icons-material/DirectionsRunTwoTone";
 
-import { MRT_ColumnFiltersState } from "material-react-table";
+import { MRT_ColumnFiltersState, MRT_VisibilityState } from "material-react-table";
 import JobsView from "./components/JobsView";
 import PartitionsView from "./components/PartitionsView";
 
@@ -23,10 +23,11 @@ function App() {
     window.sessionStorage.getItem("view") || "jobs"
   );
 
-  const [jobsFilter, setJobsFilter] = useState<MRT_ColumnFiltersState>([]);
   const [nodesFilter, setNodesFilter] = useState<MRT_ColumnFiltersState>([]);
-  const [partitionsFilter, setPartitionsFilter] =
-    useState<MRT_ColumnFiltersState>([]);
+  const [partitionsFilter, setPartitionsFilter] = useState<MRT_ColumnFiltersState>([]);
+
+  const jobsFilterState = useState<MRT_ColumnFiltersState>([]);
+  const jobsVisibilityState = useState<MRT_VisibilityState[]>();
 
   useEffect(() => {
     document.title = "ex3 - Status: " + view;
@@ -66,8 +67,10 @@ function App() {
             </Paper>
             {view && view == "jobs" && (
               <JobsView
-                columnFilters={jobsFilter}
-                setColumnFilters={setJobsFilter}
+                stateSetters={{
+                  columnFilters: jobsFilterState,
+                  columnVisibility: jobsVisibilityState
+                }}
               />
             )}
             {view && view == "nodes" && (

@@ -6,6 +6,7 @@ import JobsTable from "./JobsTable";
 
 import SlurmMonitorEndpoint from "../../services/slurm-monitor/endpoint";
 import Response from "../../services/slurm-monitor/response";
+import { StateSetters } from "../../services/StateSetters";
 
 const endpoint = new SlurmMonitorEndpoint("/jobs");
 interface JobsResponse extends Response {
@@ -31,11 +32,10 @@ interface MlflowRunsResponse {
 }
 
 interface Props {
-  columnFilters: any
-  setColumnFilters: any
+  stateSetters: StateSetters;
 }
 
-const JobsView = ({columnFilters, setColumnFilters } : Props) => {
+const JobsView = ({ stateSetters } : Props) => {
   const [error, setError] = useState<Error>();
   const [refreshInterval, setRefreshInterval] = useState(10000);
   const [refreshTime, setRefreshTime] = useState<Date>(new Date());
@@ -113,7 +113,7 @@ const JobsView = ({columnFilters, setColumnFilters } : Props) => {
         </label>
       </div>
       <>
-        <JobsTable data={prepared_data} columnFilters={columnFilters} setColumnFilters={setColumnFilters} />
+        <JobsTable data={prepared_data} stateSetters={stateSetters} />
       </>
     </div>
   );
