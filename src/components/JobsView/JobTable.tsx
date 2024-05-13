@@ -1,11 +1,9 @@
 import {
-  MRT_Cell,
   MRT_ColumnDef,
-  MRT_ColumnFiltersState,
   MaterialReactTable,
   useMaterialReactTable,
 } from "material-react-table";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo,useState } from "react";
 import Job from "./Job";
 import ArrowOutwordIcon from "@mui/icons-material/ArrowOutward";
 import { Backdrop, Button } from "@mui/material";
@@ -18,17 +16,8 @@ interface Props {
   setColumnFilters: any;
 }
 
-interface getDateProps {
-  cell: MRT_Cell<Job, null>;
-}
-
-const getDate = ({ cell }: getDateProps) => {
-  const date = new Date(cell.getValue<number>() * 1000);
-  return date.toUTCString();
-};
-
-const getValues = (data: Job[], property_name: keyof Job) => {
-  return Array.from([...new Set(data.map((job) => job[property_name]))]).sort();
+const getStringValues = (data: Job[], property_name: keyof Job) : string[] => {
+  return Array.from([...new Set(data.map((job) => String(job[property_name])))]).sort();
 };
 
 const JobTable = ({ data, columnFilters, setColumnFilters }: Props) => {
@@ -50,14 +39,14 @@ const JobTable = ({ data, columnFilters, setColumnFilters }: Props) => {
         header: "Partition",
         grow: false,
         filterVariant: "multi-select",
-        filterSelectOptions: getValues(data, "partition"),
+        filterSelectOptions: getStringValues(data, "partition"),
       },
       {
         accessorKey: "nodes",
         header: "Nodes",
         grow: false,
         filterVariant: "multi-select",
-        filterSelectOptions: getValues(data, "nodes"),
+        filterSelectOptions: getStringValues(data, "nodes"),
       },
       {
         accessorKey: "job_state",
@@ -108,7 +97,7 @@ const JobTable = ({ data, columnFilters, setColumnFilters }: Props) => {
         accessorKey: "state_reason",
         header: "State Reason",
         filterVariant: "multi-select",
-        filterSelectOptions: getValues(data, "state_reason"),
+        filterSelectOptions: getStringValues(data, "state_reason"),
         Cell: ({ cell }) => {
           const cellValue = cell.getValue<string>();
           return cellValue != "None" ? cellValue : "";
