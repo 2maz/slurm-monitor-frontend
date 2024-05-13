@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import Job from "./Job";
-import JobTable from "./JobTable";
+import JobsTable from "./JobsTable";
 
 import SlurmMonitorEndpoint from "../../services/slurm-monitor/endpoint";
 import Response from "../../services/slurm-monitor/response";
@@ -113,7 +113,7 @@ const JobsView = ({columnFilters, setColumnFilters } : Props) => {
         </label>
       </div>
       <>
-        <JobTable data={prepared_data} columnFilters={columnFilters} setColumnFilters={setColumnFilters} />
+        <JobsTable data={prepared_data} columnFilters={columnFilters} setColumnFilters={setColumnFilters} />
       </>
     </div>
   );

@@ -1,0 +1,130 @@
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import "./PartitionList.module.css";
+import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
+
+import { DataGrid, GridToolbar } from "@mui/x-data-grid";
+import MetaData from "../ResponseMetaData";
+import Partition from "./Partition";
+import {
+  MRT_ColumnDef,
+  MaterialReactTable,
+  useMaterialReactTable,
+} from "material-react-table";
+import { Backdrop, Button } from "@mui/material";
+
+interface Props {
+  data: Partition[];
+  columnFilters: any;
+  setColumnFilters: any;
+}
+
+interface PartitionsResponse {
+  meta: MetaData;
+  errors: string[];
+  partitions: Partition[];
+}
+
+const PartitionsTable = ({ data, columnFilters, setColumnFilters }: Props) => {
+  const columns = useMemo<MRT_ColumnDef<Partition>[]>(
+    () => [
+      {
+        accessorKey: "name",
+        header: "Name",
+      },
+      {
+        accessorKey: "nodes",
+        header: "Nodes",
+      },
+      { accessorKey: "total_cpus", header: "Total CPUs" },
+      { accessorKey: "total_nodes", header: "Total Nodes" },
+      { accessorKey: "flags", header: "Flags" },
+      { accessorKey: "maximum_cpus_per_job", header: "Max CPU/Jobs" },
+      { accessorKey: "maximum_nodes_per_job", header: "Max Nodes/Jobs" },
+      { accessorKey: "maximum_memory_per_job", header: "Max Memory/Jobs" },
+      { accessorKey: "max_time_limit", header: "Max Time Limit" },
+      { accessorKey: "nodes_online", header: "Nodes Online" },
+    ],
+    [data]
+  );
+
+  const [backdropToggle, setBackdropToggle] = useState(false);
+  const [backdropId, setBackdropId] = useState("");
+
+  const hasEnabledFilters = () => {
+    return (
+      columnFilters.filter(
+        (filter: { id: string; value: any }) => !filter.id.endsWith("time")
+      ).length > 0
+    );
+  };
+
+  const table = useMaterialReactTable({
+    columns: columns,
+    data: data, //must be memoized or stable (useState, useMemo, defined outside of this component, etc.)
+    //layoutMode: "grid-no-grow",
+    //enableColumnResizing: true,
+    enableGrouping: true,
+    enableStickyHeader: true,
+    //enableStickyFooter: true
+    enablePagination: false,
+    // row virtualization helps to render only the visual data
+    enableRowVirtualization: true,
+    initialState: {
+      density: "compact",
+      showColumnFilters: hasEnabledFilters(),
+    },
+    // disable when memo feature is used
+    enableDensityToggle: true,
+    muiTableBodyRowProps: ({ row }) => ({
+      onDoubleClick: (event) => {
+        setBackdropToggle(true);
+        setBackdropId(row.getValue<string>("name"));
+      },
+      style: {
+        cursor: "pointer", //you might want to change the cursor too when adding an onClick
+      },
+    }),
+    onColumnFiltersChange: setColumnFilters,
+    state: {
+      columnFilters,
+    },
+    renderTopToolbarCustomActions: ({ table }) => (
+      <div className="d-flex">
+        <Button onClick={resetState}>Reset Filters</Button>
+      </div>
+    ),
+  });
+
+  const resetState = () => {
+    setColumnFilters([]);
+  };
+
+  return (
+    <div>
+      <MaterialReactTable table={table} />
+
+      <Backdrop
+        sx={{ color: "#aaa", zIndex: (theme) => theme.zIndex.drawer + 1 }}
+        open={backdropToggle}
+        onClick={() => {
+          setBackdropToggle(!backdropToggle);
+        }}
+      >
+        <div className="h-75 bg-white text-muted rounded overflow-auto">
+          {data
+            .filter((d) => d.name === backdropId)
+            .map((d) => {
+              return (
+                <div key={d.name} className="mx-3 my-3">
+                  <pre>{JSON.stringify(d, null, 2)}</pre>
+                </div>
+              );
+            })}
+        </div>
+      </Backdrop>
+    </div>
+  );
+};
+
+export default PartitionsTable;

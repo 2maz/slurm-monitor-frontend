@@ -3,12 +3,10 @@ import {
   MaterialReactTable,
   useMaterialReactTable,
 } from "material-react-table";
-import { useMemo,useState } from "react";
+import { useMemo, useState } from "react";
 import Job from "./Job";
 import ArrowOutwordIcon from "@mui/icons-material/ArrowOutward";
 import { Backdrop, Button } from "@mui/material";
-import { LocalizationProvider } from "@mui/x-date-pickers";
-import { AdapterLuxon } from "@mui/x-date-pickers/AdapterLuxon";
 
 interface Props {
   data: Job[];
@@ -16,11 +14,13 @@ interface Props {
   setColumnFilters: any;
 }
 
-const getStringValues = (data: Job[], property_name: keyof Job) : string[] => {
-  return Array.from([...new Set(data.map((job) => String(job[property_name])))]).sort();
+const getStringValues = (data: Job[], property_name: keyof Job): string[] => {
+  return Array.from([
+    ...new Set(data.map((job) => String(job[property_name]))),
+  ]).sort();
 };
 
-const JobTable = ({ data, columnFilters, setColumnFilters }: Props) => {
+const JobsTable = ({ data, columnFilters, setColumnFilters }: Props) => {
   const columns = useMemo<MRT_ColumnDef<Job>[]>(
     () => [
       {
@@ -125,8 +125,12 @@ const JobTable = ({ data, columnFilters, setColumnFilters }: Props) => {
   const [backdropId, setBackdropId] = useState(-1);
 
   const hasEnabledFilters = () => {
-    return columnFilters.filter((filter: { 'id': string, 'value': any} ) => !filter.id.endsWith("time")).length > 0
-  }
+    return (
+      columnFilters.filter(
+        (filter: { id: string; value: any }) => !filter.id.endsWith("time")
+      ).length > 0
+    );
+  };
 
   const table = useMaterialReactTable({
     columns: columns,
@@ -136,27 +140,15 @@ const JobTable = ({ data, columnFilters, setColumnFilters }: Props) => {
     enableGrouping: true,
     enableStickyHeader: true,
     //enableStickyFooter: true
-    //mantineTableContainerProps: { style: { maxHeight: 1200 } },
     enablePagination: false,
     // row virtualization helps to render only the visual data
     enableRowVirtualization: true,
-    //enable changing filter mode for all columns unless explicitly disabled in a column def
-    //enableColumnFilterModes: true,
     initialState: {
       density: "compact",
       showColumnFilters: hasEnabledFilters(),
     },
     // disable when memo feature is used
     enableDensityToggle: true,
-    // row pinning does not work properly
-    // enableRowPinning: true,
-    // rowPinningDisplayMode: 'select-top',
-    //enableRowActions: true,
-    // renderRowActionMenuItems: ({ row }) => (
-    //   <>
-    //     <Menu.Item onClick={() => { console.log("PIN", row.id); row.pin('top') }}>Info</Menu.Item>
-    //   </>
-    // ),
     muiTableBodyRowProps: ({ row }) => ({
       onDoubleClick: (event) => {
         setBackdropToggle(true);
@@ -183,31 +175,29 @@ const JobTable = ({ data, columnFilters, setColumnFilters }: Props) => {
 
   return (
     <div>
-      <LocalizationProvider dateAdapter={AdapterLuxon} adapterLocale="no">
-        <MaterialReactTable table={table} />
+      <MaterialReactTable table={table} />
 
-        <Backdrop
-          sx={{ color: "#aaa", zIndex: (theme) => theme.zIndex.drawer + 1 }}
-          open={backdropToggle}
-          onClick={() => {
-            setBackdropToggle(!backdropToggle);
-          }}
-        >
-          <div className="h-75 bg-white text-muted rounded overflow-auto">
-            {data
-              .filter((d) => d.job_id === backdropId)
-              .map((d) => {
-                return (
-                  <div key={d.job_id} className="mx-3 my-3">
-                    <pre>{JSON.stringify(d, null, 2)}</pre>
-                  </div>
-                );
-              })}
-          </div>
-        </Backdrop>
-      </LocalizationProvider>
+      <Backdrop
+        sx={{ color: "#aaa", zIndex: (theme) => theme.zIndex.drawer + 1 }}
+        open={backdropToggle}
+        onClick={() => {
+          setBackdropToggle(!backdropToggle);
+        }}
+      >
+        <div className="h-75 bg-white text-muted rounded overflow-auto">
+          {data
+            .filter((d) => d.job_id === backdropId)
+            .map((d) => {
+              return (
+                <div key={d.job_id} className="mx-3 my-3">
+                  <pre>{JSON.stringify(d, null, 2)}</pre>
+                </div>
+              );
+            })}
+        </div>
+      </Backdrop>
     </div>
   );
 };
 
-export default JobTable;
+export default JobsTable;
