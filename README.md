@@ -1,30 +1,40 @@
-# React + TypeScript + Vite
+# Slurm Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This package provides a React-based Frontend to visualize SLURM-based data.
 
-Currently, two official plugins are available:
+The SLURM data itself is queried from [slurmrestd](https://slurm.schedmd.com/slurmrestd.html) using INETD mode.
+The python package [slurm-monitor](https://github.com/2maz/slurm-monitor) permits to start a endpoint that exposes a REST-interface to provide public access to the SLURM data.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Installation
 
-## Expanding the ESLint configuration
+Install nvm and latest npm following the [instructions](https://github.com/nvm-sh/nvm), e.g.,
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
-
-- Configure the top-level `parserOptions` property like this:
-
-```js
-export default {
-  // other rules...
-  parserOptions: {
-    ecmaVersion: 'latest',
-    sourceType: 'module',
-    project: ['./tsconfig.json', './tsconfig.node.json'],
-    tsconfigRootDir: __dirname,
-  },
-}
+```
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+    ./install.sh
+    nvm install node # where "node" is an alias for the latest version
 ```
 
-- Replace `plugin:@typescript-eslint/recommended` to `plugin:@typescript-eslint/recommended-type-checked` or `plugin:@typescript-eslint/strict-type-checked`
-- Optionally add `plugin:@typescript-eslint/stylistic-type-checked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and add `plugin:react/recommended` & `plugin:react/jsx-runtime` to the `extends` list
+After cloning this package install all packages:
+
+```
+    npm i
+```
+
+Try to run the ui in development mode:
+
+```
+    npm run dev
+```
+
+![nodes](./docs/images/view-nodes.png "Nodes View")
+
+
+
+# License
+
+Copyright (c) 2024 Thomas Roehr, Simula Research Laboratory
+
+This project is licensed under the terms of the [New BSD License](https://opensource.org/license/BSD-3-clause).
+You are free to use, modify, and distribute this work, subject to the
+conditions specified in the LICENSE file.
