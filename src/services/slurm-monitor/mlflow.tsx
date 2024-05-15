@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import React from "react";
 import axios, { AxiosInstance, AxiosResponse } from "axios";
 
 interface Experiment {
@@ -24,6 +23,10 @@ interface MLFlowRunInfo {
     user_id: string;
 };
 
+interface MLFlowRunData {
+    params?: {key: string, value: string}[];
+}
+
 export interface MLFlowSlurmRunInfo extends MLFlowRunInfo {
     SLURM_JOBID?: string;
     SLURM_JOB_CPUS_PER_NODE?: string;
@@ -37,6 +40,11 @@ export interface MLFlowSlurmRunInfo extends MLFlowRunInfo {
     SLURM_JOB_USER?: string
     mlflow_run_uri?: string;
 };
+
+interface MLFlowRun {
+    info: MLFlowRunInfo;
+    data: MLFlowRunData;
+}
 
 interface Props {
   url: string;
@@ -81,18 +89,18 @@ const MLFlowSlurmMapper = ({ url, updateFn }: Props) => {
       )
       .then((response: AxiosResponse) => {
         if (response.status == 200) {
-          const runs = response.data["runs"];
+          const runs : MLFlowRun[] = response.data["runs"];
           if(runs)
           {
-            const slurm_related_runs = runs.filter(run => run["data"]["params"].filter(param => param["key"] === 'SLURM_JOB_ID').length > 0);
+            const slurm_related_runs = runs.filter((run : MLFlowRun) => run.data.params && run.data.params.filter(param => param["key"] === 'SLURM_JOB_ID').length > 0);
             const mapping : MLFlowSlurmRunInfo[] = slurm_related_runs.map(run => {
-                const slurm_job_info : MLFlowSlurmRunInfo = run["data"]["params"].reduce((acc, curr: Param) => {
+                const slurm_job_info : MLFlowSlurmRunInfo = run.data.params ? run.data.params.reduce((acc : any, curr: Param) => {
                     const {key, value} = curr;
                     if(key.startsWith("SLURM_")) {
                         acc[key] = value;
                     }
                     return acc;
-                },{...run["info"]});
+                },{...run["info"]}) : run['info'];
 
                 // Append the url to access the job
                 return {...slurm_job_info, mlflow_run_uri: url + "#/experiments/"+ slurm_job_info['experiment_id'] + "/runs/" + slurm_job_info['run_uuid']};
@@ -124,7 +132,7 @@ const MLFlowSlurmMapper = ({ url, updateFn }: Props) => {
     enabled: experiment_ids !== undefined && experiment_ids.length > 0
   });
 
-  return <></>;
+  return (<div/>);
 };
 
 export default MLFlowSlurmMapper;

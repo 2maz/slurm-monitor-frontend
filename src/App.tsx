@@ -152,7 +152,7 @@ function App() {
   return (
     <>
       {mlflowUrls.map(url => 
-      <MLFlowSlurmMapper url={url} updateFn={(runs : MLFlowSlurmRunInfo[]) => {
+      <MLFlowSlurmMapper key={"slurm-mapper-"+url} url={url} updateFn={(runs : MLFlowSlurmRunInfo[]) => {
         const newSlurmJobs : MLFlowSlurmRunInfo[] = slurmJobs.filter((info : MLFlowSlurmRunInfo) => !info.mlflow_run_uri?.startsWith(url)).concat(runs);
         setSlurmJobs(newSlurmJobs);
       }}/>)}

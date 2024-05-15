@@ -7,6 +7,8 @@ import JobsTable from "./JobsTable";
 import SlurmMonitorEndpoint from "../../services/slurm-monitor/endpoint";
 import Response from "../../services/slurm-monitor/response";
 import { StateSetters } from "../../services/StateSetters";
+import useAppState from "../../AppState";
+import { number } from "zod";
 
 const endpoint = new SlurmMonitorEndpoint("/jobs");
 interface JobsResponse extends Response {
@@ -40,6 +42,8 @@ const JobsView = ({ stateSetters } : Props) => {
   const [refreshInterval, setRefreshInterval] = useState(10000);
   const [refreshTime, setRefreshTime] = useState<Date>(new Date());
 
+  const mlflowSlurmJobs = useAppState((state) => state.slurmRuns);
+
   const fetchJobs = () => {
     const { request, cancel } = endpoint.get();
 
@@ -54,30 +58,12 @@ const JobsView = ({ stateSetters } : Props) => {
       });
   };
 
-  // const fetchMlflowRuns = () =>
-  //   axios
-  //     .get<MlflowRunsResponse>('http://srl-login3.ex3.simula.no:12000/api/v1/monitor/slurm-runs/ai-biostrat')
-  //     .then(({ data }) => {
-  //       return data?.runs;
-  //     })
-  //     .catch((error) => {
-  //       setError(error);
-  //       return [];
-  //     });
-
   const { data } = useQuery({
     queryKey: ["jobs"],
     queryFn: fetchJobs,
     initialData: [],
     refetchInterval: refreshInterval,
   });
-
-  // const { data: mlflow_runs } = useQuery({
-  //   queryKey: ["mlflow-runs"],
-  //   queryFn: fetchMlflowRuns,
-  //   initialData: [],
-  //   refetchInterval: refreshInterval,
-  // });
 
   if (data?.length == 0)
     return (
@@ -89,10 +75,10 @@ const JobsView = ({ stateSetters } : Props) => {
       </>
     );
 
-  const prepared_data = data.map((job) => ({
+  const prepared_data = data.map((job : Job) => ({
     ...job,
     id: job.job_id,
-    //   // mlflow_ref: mlflow_runs.filter(r => r.slurm_job_id == job.job_id)[0]?.ref_url
+    mlflow_ref: mlflowSlurmJobs.filter(r => Number(r.SLURM_JOB_ID) == job.job_id)[0]?.mlflow_run_uri
   }));
 
   return (

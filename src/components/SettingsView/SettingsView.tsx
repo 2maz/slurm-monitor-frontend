@@ -163,7 +163,7 @@ const SettingsView = () => {
               {urls &&
                 urls.map((url) => (
                   <>
-                    <ListItem key={url} id={url}>
+                    <ListItem key={"list-item-"}>
                       <ListItemButton
                         sx={{ maxWidth: 50 }}
                         onClick={() => {
@@ -173,7 +173,7 @@ const SettingsView = () => {
                       >
                         <DeleteIcon />
                       </ListItemButton>
-                      <ValidatedLink href={url} validate={url + MLFLOW_VALIDATION_SUFFIX} variant="h6">
+                      <ValidatedLink key={"validate-"+url} href={url} validate={url + MLFLOW_VALIDATION_SUFFIX} variant="h6">
                         {url}
                       </ValidatedLink>
                     </ListItem>
