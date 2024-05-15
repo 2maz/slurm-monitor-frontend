@@ -11,7 +11,6 @@ Install nvm and latest npm following the [instructions](https://github.com/nvm-s
 
 ```
     curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
-    ./install.sh
     nvm install node # where "node" is an alias for the latest version
 ```
 

@@ -9,7 +9,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useState } from "react";
 import { z } from "zod";
 import { FieldValues, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -20,7 +20,7 @@ import TabContext from "@mui/lab/TabContext";
 import TabList from "@mui/lab/TabList";
 import TabPanel from "@mui/lab/TabPanel";
 import { Divider } from "@mantine/core";
-import axios, { AxiosResponse } from "axios";
+import axios from "axios";
 import { useQuery } from "@tanstack/react-query";
 
 import useAppState from '../../AppState';
@@ -162,8 +162,8 @@ const SettingsView = () => {
             <List dense={true}>
               {urls &&
                 urls.map((url) => (
-                  <>
-                    <ListItem key={"list-item-"}>
+                  <div key={url}>
+                    <ListItem>
                       <ListItemButton
                         sx={{ maxWidth: 50 }}
                         onClick={() => {
@@ -177,7 +177,7 @@ const SettingsView = () => {
                         {url}
                       </ValidatedLink>
                     </ListItem>
-                  </>
+                  </div>
                 ))}
             </List>
           </div>
