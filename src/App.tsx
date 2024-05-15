@@ -7,6 +7,7 @@ import { BottomNavigation, BottomNavigationAction } from "@mui/material";
 import SegmentIcon from "@mui/icons-material/Segment";
 import AccountTreeIcon from "@mui/icons-material/AccountTree";
 import DirectionsRunsTwoToneIcon from "@mui/icons-material/DirectionsRunTwoTone";
+import SettingsIcon from '@mui/icons-material/Settings';
 
 import {
   MRT_ColumnFiltersState,
@@ -22,6 +23,7 @@ import NodesView from "./components/NodesView";
 import "@mantine/core/styles.css";
 import "@mantine/dates/styles.css";
 import "mantine-react-table/styles.css";
+import SettingsView from "./components/SettingsView";
 
 const theme = createTheme({});
 
@@ -145,11 +147,8 @@ function App() {
     <>
       <LocalizationProvider dateAdapter={AdapterLuxon} adapterLocale="no">
         <MantineProvider theme={theme}>
-          <Box sx={{ pb: 7 }}>
-            <Paper
-              sx={{ position: "fixed", bottom: 0, left: 0, right: 0 }}
-              elevation={3}
-            >
+          <Box>
+            <Paper>
               <BottomNavigation showLabels value={view}>
                 <BottomNavigationAction
                   label="Partitions"
@@ -165,6 +164,11 @@ function App() {
                   label="Jobs"
                   icon={<DirectionsRunsTwoToneIcon />}
                   onClick={() => selectView("jobs")}
+                />
+                <BottomNavigationAction
+                  label="Settings"
+                  icon={<SettingsIcon />}
+                  onClick={() => selectView("settings")}
                 />
               </BottomNavigation>
             </Paper>
@@ -191,6 +195,9 @@ function App() {
                   columnVisibility: partitionsVisibilityState,
                 }}
               />
+            )}
+            {view && view == "settings" && (
+              <SettingsView />
             )}
           </Box>
         </MantineProvider>

@@ -13,10 +13,12 @@
     "@emotion/react": "^11.11.4",
     "@emotion/styled": "^11.11.5",
     "@fontsource/roboto": "^5.0.13",
+    "@hookform/resolvers": "^3.3.4",
     "@mantine/core": "^7.8.1",
     "@mantine/modals": "^7.8.1",
     "@mantine/notifications": "^7.8.1",
     "@mui/icons-material": "^5.15.16",
+    "@mui/lab": "^5.0.0-alpha.170",
     "@mui/material": "^5.15.16",
     "@mui/x-data-grid": "^7.3.2",
     "@tanstack/react-query": "^5.32.0",
@@ -31,8 +33,11 @@
     "react": "^18.2.0",
     "react-data-table-component": "^7.6.2",
     "react-dom": "^18.2.0",
+    "react-hook-form": "^7.51.4",
     "react-md": "^5.1.6",
-    "react-timer-hook": "^3.0.7"
+    "react-router-dom": "^6.23.1",
+    "react-timer-hook": "^3.0.7",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/react": "^18.2.66",
