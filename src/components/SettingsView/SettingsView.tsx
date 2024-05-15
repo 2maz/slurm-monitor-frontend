@@ -22,9 +22,9 @@ import TabPanel from "@mui/lab/TabPanel";
 import { Divider } from "@mantine/core";
 import axios, { AxiosResponse } from "axios";
 import { useQuery } from "@tanstack/react-query";
-import MLFlowSlurmMapper, { MLFlowSlurmRunInfo} from "../../services/slurm-monitor/mlflow";
 
-const MLFLOW_STORAGE_KEY = "mlflow-urls";
+import useAppState from '../../AppState';
+
 const MLFLOW_VALIDATION_SUFFIX = "/api/2.0/mlflow/experiments/search?max_results=1"
 
 const schema = z.object({
@@ -32,12 +32,6 @@ const schema = z.object({
 });
 
 type FormData = z.infer<typeof schema>;
-
-const getUrls = () => {
-  const urls = window.localStorage.getItem(MLFLOW_STORAGE_KEY);
-  if (urls !== null) return JSON.parse(urls);
-  return [];
-};
 
 interface ValidatedLinkProps {
   href: string;
@@ -66,7 +60,6 @@ const ValidatedLink = ({
         })
         .catch((reason) => {
           controller.abort();
-          console.log("REASON", reason);
           setError(reason.message);
           return "inaccessible";
         });
@@ -100,9 +93,9 @@ const ValidatedLink = ({
 };
 
 const SettingsView = () => {
-  const [value, setValue] = useState("1");
-  const [urls, setUrls] = useState<string[]>(getUrls());
-  const [slurmJobs, setSlurmJobs] = useState<MLFlowSlurmRunInfo[]>([]);
+  const [tabValue, setTabValue] = useState("1");
+  const urls = useAppState((state) => state.mlflowUrls);
+  const setUrls = useAppState((state) => state.updateMlflowUrls);
 
   const {
     register,
@@ -115,38 +108,20 @@ const SettingsView = () => {
 
 
   const onSubmit = (data: FieldValues) => {
-    const urls = window.localStorage.getItem(MLFLOW_STORAGE_KEY);
-
-    if (urls === null) {
-      const newUrls = [data.url];
-      window.localStorage.setItem(MLFLOW_STORAGE_KEY, JSON.stringify(newUrls));
-      setUrls(newUrls);
-    } else {
-      const existingUrls: string[] = JSON.parse(urls);
-      if (existingUrls.includes(data.url)) return;
-
-      const newUrls = [...existingUrls, data.url];
-      window.localStorage.setItem(MLFLOW_STORAGE_KEY, JSON.stringify(newUrls));
-      setUrls(newUrls);
-    }
-
+    const newUrls = [...urls, data.url];
+    setUrls(newUrls);
     reset();
   };
 
   const handleRemoveUrl = (url: string) => {
-    const data = window.localStorage.getItem(MLFLOW_STORAGE_KEY);
-    if (data === null) return;
+    if (!urls.includes(url)) return;
 
-    const existingUrls: string[] = JSON.parse(data);
-    if (!existingUrls.includes(url)) return;
-
-    const newUrls = existingUrls.filter((u) => u !== url);
-    window.localStorage.setItem(MLFLOW_STORAGE_KEY, JSON.stringify(newUrls));
+    const newUrls = urls.filter((u: string) => u !== url);
     setUrls(newUrls);
   };
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: string) => {
-    setValue(newValue);
+  const handleTabChange = (event: React.SyntheticEvent, newTabValue: string) => {
+    setTabValue(newTabValue);
   };
 
   return (
@@ -154,7 +129,7 @@ const SettingsView = () => {
       <Typography sx={{ mt: 4, mb: 2 }} variant="h2" component="div">
         Settings
       </Typography>
-      <TabContext value={value}>
+      <TabContext value={tabValue}>
         <TabList onChange={handleTabChange} aria-label="Tabs">
           <Tab label="MLFlow" value="1" />
         </TabList>
@@ -198,10 +173,6 @@ const SettingsView = () => {
                       >
                         <DeleteIcon />
                       </ListItemButton>
-                      <MLFlowSlurmMapper url={url} updateFn={(runs : MLFlowSlurmRunInfo[]) => {
-                        const newSlurmJobs : MLFlowSlurmRunInfo[] = slurmJobs.filter((info : MLFlowSlurmRunInfo) => !info.mlflow_run_uri?.startsWith(url)).concat(runs);
-                        setSlurmJobs(newSlurmJobs);
-                      }}/>
                       <ValidatedLink href={url} validate={url + MLFLOW_VALIDATION_SUFFIX} variant="h6">
                         {url}
                       </ValidatedLink>

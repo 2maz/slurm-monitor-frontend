@@ -24,6 +24,8 @@ import "@mantine/core/styles.css";
 import "@mantine/dates/styles.css";
 import "mantine-react-table/styles.css";
 import SettingsView from "./components/SettingsView";
+import useAppState from "./AppState";
+import MLFlowSlurmMapper, { MLFlowSlurmRunInfo } from "./services/slurm-monitor/mlflow";
 
 const theme = createTheme({});
 
@@ -100,6 +102,10 @@ function App() {
     getFromStorage("jobsVisibility", {})
   );
 
+  const mlflowUrls = useAppState((state) => state.mlflowUrls);
+  const slurmJobs = useAppState((state) => state.slurmRuns);
+  const setSlurmJobs = useAppState((state) => state.updateSlurmRuns);
+
   useEffect(() => {
     document.title = "ex3 - Status: " + view;
   });
@@ -145,6 +151,12 @@ function App() {
 
   return (
     <>
+      {mlflowUrls.map(url => 
+      <MLFlowSlurmMapper url={url} updateFn={(runs : MLFlowSlurmRunInfo[]) => {
+        const newSlurmJobs : MLFlowSlurmRunInfo[] = slurmJobs.filter((info : MLFlowSlurmRunInfo) => !info.mlflow_run_uri?.startsWith(url)).concat(runs);
+        setSlurmJobs(newSlurmJobs);
+      }}/>)}
+
       <LocalizationProvider dateAdapter={AdapterLuxon} adapterLocale="no">
         <MantineProvider theme={theme}>
           <Box>
