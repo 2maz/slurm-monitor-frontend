@@ -8,6 +8,7 @@ import SegmentIcon from "@mui/icons-material/Segment";
 import AccountTreeIcon from "@mui/icons-material/AccountTree";
 import DirectionsRunsTwoToneIcon from "@mui/icons-material/DirectionsRunTwoTone";
 import SettingsIcon from '@mui/icons-material/Settings';
+import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
 
 import {
   MRT_ColumnFiltersState,
@@ -15,6 +16,7 @@ import {
 } from "material-react-table";
 import JobsView from "./components/JobsView";
 import PartitionsView from "./components/PartitionsView";
+import GPUStatusView from "./components/GPUStatusView";
 
 import { LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterLuxon } from "@mui/x-date-pickers/AdapterLuxon";
@@ -178,6 +180,11 @@ function App() {
                   onClick={() => selectView("jobs")}
                 />
                 <BottomNavigationAction
+                  label="GPUStatus"
+                  icon={<MonitorHeartIcon />}
+                  onClick={() => selectView("gpu_status")}
+                />
+                <BottomNavigationAction
                   label="Settings"
                   icon={<SettingsIcon />}
                   onClick={() => selectView("settings")}
@@ -207,6 +214,9 @@ function App() {
                   columnVisibility: partitionsVisibilityState,
                 }}
               />
+            )}
+            {view && view == "gpu_status" && (
+              <GPUStatusView />
             )}
             {view && view == "settings" && (
               <SettingsView />
