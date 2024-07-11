@@ -5,8 +5,6 @@ import SlurmMonitorEndpoint from "../../services/slurm-monitor/endpoint";
 import Response from "../../services/slurm-monitor/response";
 import { LineChart, Line, Tooltip, XAxis, YAxis, Legend, CartesianGrid } from 'recharts';
 
-const endpoint = new SlurmMonitorEndpoint("/gpustatus?node=g001");
-
 interface GPUStatus {
     name: string;
     uuid: string;
@@ -33,7 +31,7 @@ interface GPUDataSeriesResponse extends Response {
 
 const dummy_data : GPUDataSeries[] = [
     {
-        label: "Node g001 Tesla A100",
+        label: "g001-gpu-0",
         data: [
             {   name: "Tesla A100", 
                 uuid: "abc",
@@ -60,12 +58,12 @@ const dummy_data : GPUDataSeries[] = [
         ]
     },
     {
-        label: "Node n001",
+        label: "n010-gpu-0",
         data: [
             {   name: "Tesla Volta", 
                 uuid: "abcd",
                 local_id: 0,
-                node: "n001",
+                node: "n010",
                 temperature_gpu: 10,
                 power_draw: 20,
                 utilization_gpu: 35,
@@ -76,7 +74,7 @@ const dummy_data : GPUDataSeries[] = [
             {   name: "Tesla Volta", 
                 uuid: "abcd",
                 local_id: 0,
-                node: "n001",
+                node: "n010",
                 temperature_gpu: 30,
                 power_draw: 80,
                 utilization_gpu: 30,
@@ -90,7 +88,11 @@ const dummy_data : GPUDataSeries[] = [
  
 //https://srl-login3.ex3.simula.no:12001/api/v1/monitor/gpustatus?node=g001
 
-const GPUStatusView = () => {
+interface Props {
+  nodename: string;
+}
+
+const GPUStatusView = ({nodename} : Props) => {
   const [error, setError] = useState<Error>();
 
   const primaryAxis = useMemo(
@@ -109,6 +111,7 @@ const GPUStatusView = () => {
     []
   )
 
+  const endpoint = new SlurmMonitorEndpoint("/gpustatus?node=" + nodename);
   const fetchStatus = async () => {
     const { request, cancel } = endpoint.get();
 
@@ -124,28 +127,32 @@ const GPUStatusView = () => {
       });
   };
 
-  const { data: gpu_data_timeseries_list } = useQuery<GPUDataSeries[]>({
-    queryKey: ["gpu_status"],
-    queryFn: fetchStatus,
-    initialData: [],
-    refetchInterval: 1000*60, // refresh every minute
-  });
+  //const { data: gpu_data_timeseries_list } = useQuery<GPUDataSeries[]>({
+  //  queryKey: ["gpu_status"],
+  //  queryFn: fetchStatus,
+  //  initialData: [],
+  //  refetchInterval: 1000*60, // refresh every minute
+  //});
+
+  const gpu_data_timeseries_list = dummy_data
 
   console.log(gpu_data_timeseries_list);
   //data.map((series_data : GPUDataSeries, index) => series_data);
 
+  // Examples: https://recharts.org/en-US/examples/HighlightAndZoomLineChart
   return (
     <>
-    <h1>GPU Utilization</h1>
-    <div className="d-flex justify-content-start">
+    <h2>Node: {nodename}</h2>
+    <div className="d-flex justify-content-start my-3">
     { gpu_data_timeseries_list &&
         gpu_data_timeseries_list.map((series_data : GPUDataSeries) => (
         <div className="mx-5" key={series_data.label}>
-          <h3>{series_data.label}</h3>
+          <h5>{series_data.label.replace(nodename + '-','')}</h5>
           <LineChart width={400} height={300} data={series_data.data}>
             <Line yAxisId="1" type="monotone" dataKey="utilization_gpu" stroke="#8884d8"/>
             <Line yAxisId="1" type="monotone" dataKey="utilization_memory" stroke="#888400"/>
             <Line yAxisId="2" type="monotone" dataKey="power_draw" stroke="#ff8400"/>
+            <Line yAxisId="2" type="monotone" dataKey="temperature_gpu" stroke="#008400"/>
             <CartesianGrid strokeDasharray="3 3"/>
             <XAxis dataKey="timestamp"/>
             <YAxis orientation="left" domain={[0,100]} yAxisId="1"
@@ -159,7 +166,7 @@ const GPUStatusView = () => {
             />
             <YAxis orientation="right" domain={[0,500]} yAxisId="2" 
               label={{
-                value: `Watt (W)`,
+                value: `Watt (W) / °C`,
                 style: { textAnchor: 'middle' },
                 angle: -90,
                 position: 'right',

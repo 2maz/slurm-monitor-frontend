@@ -77,6 +77,19 @@ const makePersistent = (
   ];
 };
 
+const gpu_nodes = [
+  "g001",
+  "g002",
+  "n009",
+  "n010",
+  "n011",
+  "n012",
+  "n013",
+  "n014",
+  "n015",
+  "n016",
+  "h001",
+]
 
 function App() {
   /// State that remembers the currently selected view (one of partitions, nodes, jobs)
@@ -216,7 +229,14 @@ function App() {
               />
             )}
             {view && view == "gpu_status" && (
-              <GPUStatusView />
+              <>
+              <h1>GPU Status</h1>
+              {
+                gpu_nodes.map((nodename) =>
+                    <GPUStatusView nodename={nodename} />
+                )
+              }
+              </>
             )}
             {view && view == "settings" && (
               <SettingsView />
