@@ -101,7 +101,7 @@ const SettingsView = () => {
     register,
     handleSubmit,
     reset,
-    formState: { errors },
+    formState: { errors, isValid },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
   });
@@ -150,6 +150,7 @@ const SettingsView = () => {
                   endIcon={<SaveIcon />}
                   type="submit"
                   disableElevation
+                  disabled={!isValid}
                 >
                   Save
                 </Button>
