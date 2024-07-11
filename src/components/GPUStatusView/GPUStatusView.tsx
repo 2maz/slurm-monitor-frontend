@@ -3,13 +3,14 @@ import { useQuery } from "@tanstack/react-query";
 
 import SlurmMonitorEndpoint from "../../services/slurm-monitor/endpoint";
 import Response from "../../services/slurm-monitor/response";
-import { LineChart, Line, XAxis, YAxis } from 'recharts';
+import { LineChart, Line, Tooltip, XAxis, YAxis, Legend, CartesianGrid } from 'recharts';
 
 const endpoint = new SlurmMonitorEndpoint("/gpustatus?node=g001");
 
 interface GPUStatus {
     name: string;
     uuid: string;
+    local_id: number;
     node: string;
     temperature_gpu: number;
     power_draw: number;
@@ -36,6 +37,7 @@ const dummy_data : GPUDataSeries[] = [
         data: [
             {   name: "Tesla A100", 
                 uuid: "abc",
+                local_id: 0,
                 node: "g001",
                 temperature_gpu: 10,
                 power_draw: 40,
@@ -46,6 +48,7 @@ const dummy_data : GPUDataSeries[] = [
             },
             {   name: "Tesla A100", 
                 uuid: "abc",
+                local_id: 0,
                 node: "g001",
                 temperature_gpu: 90,
                 power_draw: 120,
@@ -61,6 +64,7 @@ const dummy_data : GPUDataSeries[] = [
         data: [
             {   name: "Tesla Volta", 
                 uuid: "abcd",
+                local_id: 0,
                 node: "n001",
                 temperature_gpu: 10,
                 power_draw: 20,
@@ -71,6 +75,7 @@ const dummy_data : GPUDataSeries[] = [
             },
             {   name: "Tesla Volta", 
                 uuid: "abcd",
+                local_id: 0,
                 node: "n001",
                 temperature_gpu: 30,
                 power_draw: 80,
@@ -131,19 +136,42 @@ const GPUStatusView = () => {
 
   return (
     <>
-    <div>GPUStatusView: GPU Utilization</div>
+    <h1>GPU Utilization</h1>
+    <div className="d-flex justify-content-start">
     { gpu_data_timeseries_list &&
         gpu_data_timeseries_list.map((series_data : GPUDataSeries) => (
-        <div key={series_data.label}>
+        <div className="mx-5" key={series_data.label}>
           <h3>{series_data.label}</h3>
-          <LineChart width={800} height={250} data={series_data.data}>
-            <Line type="monotone" dataKey="utilization_gpu" stroke="#8884d8"/>
+          <LineChart width={400} height={300} data={series_data.data}>
+            <Line yAxisId="1" type="monotone" dataKey="utilization_gpu" stroke="#8884d8"/>
+            <Line yAxisId="1" type="monotone" dataKey="utilization_memory" stroke="#888400"/>
+            <Line yAxisId="2" type="monotone" dataKey="power_draw" stroke="#ff8400"/>
+            <CartesianGrid strokeDasharray="3 3"/>
             <XAxis dataKey="timestamp"/>
-            <YAxis domain={[0,100]} />
+            <YAxis orientation="left" domain={[0,100]} yAxisId="1"
+              label={{
+                value: `percentage (%)`,
+                style: { textAnchor: 'middle' },
+                angle: -90,
+                position: 'left',
+                offset: 0,
+              }}
+            />
+            <YAxis orientation="right" domain={[0,500]} yAxisId="2" 
+              label={{
+                value: `Watt (W)`,
+                style: { textAnchor: 'middle' },
+                angle: -90,
+                position: 'right',
+                offset: 0,
+              }}
+            />
+            <Tooltip></Tooltip>
+            <Legend></Legend>
           </LineChart>
-        <br/>
         </div>))
     }
+    </div>
     </>
   )
 }
