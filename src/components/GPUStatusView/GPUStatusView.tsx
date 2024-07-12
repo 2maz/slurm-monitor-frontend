@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import SlurmMonitorEndpoint from "../../services/slurm-monitor/endpoint";
 import Response from "../../services/slurm-monitor/response";
 import { LineChart, Line, Tooltip, XAxis, YAxis, Legend, CartesianGrid } from 'recharts';
+import moment from "moment";
 
 interface GPUStatus {
     name: string;
@@ -117,7 +118,6 @@ const GPUStatusView = ({nodename} : Props) => {
 
     return request
       .then(({ data }) => {
-        console.log(data);
         return data ? data.gpu_status : [];
       })
       .catch((error) => {
@@ -127,17 +127,12 @@ const GPUStatusView = ({nodename} : Props) => {
       });
   };
 
-  //const { data: gpu_data_timeseries_list } = useQuery<GPUDataSeries[]>({
-  //  queryKey: ["gpu_status"],
-  //  queryFn: fetchStatus,
-  //  initialData: [],
-  //  refetchInterval: 1000*60, // refresh every minute
-  //});
-
-  const gpu_data_timeseries_list = dummy_data
-
-  console.log(gpu_data_timeseries_list);
-  //data.map((series_data : GPUDataSeries, index) => series_data);
+  const { data: gpu_data_timeseries_list } = useQuery<GPUDataSeries[]>({
+    queryKey: ["gpu_status", nodename],
+    queryFn: fetchStatus,
+    initialData: [],
+    refetchInterval: 1000*60, // refresh every minute
+  });
 
   // Examples: https://recharts.org/en-US/examples/HighlightAndZoomLineChart
   return (
@@ -154,7 +149,7 @@ const GPUStatusView = ({nodename} : Props) => {
             <Line yAxisId="2" type="monotone" dataKey="power_draw" stroke="#ff8400"/>
             <Line yAxisId="2" type="monotone" dataKey="temperature_gpu" stroke="#008400"/>
             <CartesianGrid strokeDasharray="3 3"/>
-            <XAxis dataKey="timestamp"/>
+            <XAxis dataKey="timestamp" tickFormatter={timestamp => moment(timestamp).format("HH:mm")} />
             <YAxis orientation="left" domain={[0,100]} yAxisId="1"
               label={{
                 value: `percentage (%)`,

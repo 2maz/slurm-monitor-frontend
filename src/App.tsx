@@ -22,6 +22,8 @@ import { LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterLuxon } from "@mui/x-date-pickers/AdapterLuxon";
 import NodesView from "./components/NodesView";
 
+import moment from 'moment';
+
 import "@mantine/core/styles.css";
 import "@mantine/dates/styles.css";
 import "mantine-react-table/styles.css";
@@ -164,6 +166,8 @@ function App() {
     window.sessionStorage.setItem("view", name);
   };
 
+  const currentTime = new Date().toString();
+
   return (
     <>
       {mlflowUrls.map(url => 
@@ -230,7 +234,7 @@ function App() {
             )}
             {view && view == "gpu_status" && (
               <>
-              <h1>GPU Status</h1>
+              <h1>GPU Status: {currentTime}</h1>
               {
                 gpu_nodes.map((nodename) =>
                     <GPUStatusView nodename={nodename} />
