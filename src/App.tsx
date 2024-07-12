@@ -237,7 +237,11 @@ function App() {
               <h1>GPU Status: {currentTime}</h1>
               {
                 gpu_nodes.map((nodename) =>
-                    <GPUStatusView nodename={nodename} />
+                  (
+                    <div key={nodename}>
+                      <GPUStatusView nodename={nodename} />
+                    </div>
+                  )
                 )
               }
               </>
