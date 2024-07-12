@@ -82,6 +82,10 @@ const makePersistent = (
 const gpu_nodes = [
   "g001",
   "g002",
+  "n001",
+  "n002",
+  "n003",
+  "n004",
   "n009",
   "n010",
   "n011",
