@@ -62,9 +62,9 @@ const NodesTable = ({ data, stateSetters }: Props) => {
           return availableGPUs(row.original) <= 0 ? (
             ""
           ) : (
-            <p className={textColor}>
+            <div className={textColor}>
               {cell.getValue<string>()} (unused: {free})
-            </p>
+            </div>
           );
         },
       },
@@ -106,6 +106,15 @@ const NodesTable = ({ data, stateSetters }: Props) => {
         filterSelectOptions: [
           ...new Set(data.map((node: Node) => node.state)),
         ].sort(),
+        Cell: ({ row, cell }) => {
+          if(cell.getValue() == "down")
+            return (
+            <div className="text-danger">
+              {cell.getValue<string>()} &#x26a0;
+            </div>
+          )
+          return cell.getValue<string>();
+        },
       },
       //{ accessorKey: "state_flags: string[];
       //{ accessorKey: "operating_system: string;
