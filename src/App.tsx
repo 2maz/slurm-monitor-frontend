@@ -239,6 +239,18 @@ function App() {
             {view && view == "gpu_status" && (
               <>
               <h1>GPU Status: {currentTime}</h1>
+              <h3>Usage</h3>
+              <p>The following nodes statistics are updated every minute. If you cannot see data in the graph
+                the nodes is likely down. In this case check the 'nodes' view.
+              </p>
+              <p>
+                In order to identify the GPUs which your current job is using, you have (for now) to inspect it manually, i.e.,
+                double click on the job (in 'jobs' view) and see the detailed listing of job parameters.
+                Look for 'gres_detail'. The gpu indices mentioned there (IDX: 1,3 or ranges IDX:0-2) tell you at what gpu-X chart 
+                you have to look.
+                This allows you to verify that you are actually using the GPU and not justify
+                reserving it.
+              </p>
               {
                 gpu_nodes.map((nodename) =>
                   (
