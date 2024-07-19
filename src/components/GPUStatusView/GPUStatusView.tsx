@@ -91,9 +91,13 @@ const dummy_data : GPUDataSeries[] = [
 
 interface Props {
   nodename: string;
+  logical_ids?: number[] | null;
+  start_time_in_s?: number | null;
+  end_time_in_s?: number | null;
+  resolution_in_s?: number | null;
 }
 
-const GPUStatusView = ({nodename} : Props) => {
+const GPUStatusView = ({nodename, logical_ids, start_time_in_s, end_time_in_s, resolution_in_s} : Props) => {
   const [error, setError] = useState<Error>();
 
   const primaryAxis = useMemo(
@@ -112,7 +116,18 @@ const GPUStatusView = ({nodename} : Props) => {
     []
   )
 
-  const endpoint = new SlurmMonitorEndpoint("/gpustatus?node=" + nodename);
+  var query_name= "/gpustatus?node=" + nodename
+  if(start_time_in_s != undefined) {
+    query_name = query_name + "&start_time_in_s=" + start_time_in_s
+  }
+  if(end_time_in_s != undefined) {
+    query_name = query_name + "&end_time_in_s=" + end_time_in_s
+  }
+  if(resolution_in_s != undefined) {
+    query_name = query_name + "&resolution_in_s=" + resolution_in_s
+  }
+  const endpoint = new SlurmMonitorEndpoint(query_name);
+
   const fetchStatus = async () => {
     const { request, cancel } = endpoint.get();
 
@@ -128,7 +143,7 @@ const GPUStatusView = ({nodename} : Props) => {
   };
 
   const { data: gpu_data_timeseries_list } = useQuery<GPUDataSeries[]>({
-    queryKey: ["gpu_status", nodename],
+    queryKey: ["gpu_status", nodename, start_time_in_s, end_time_in_s, resolution_in_s],
     queryFn: fetchStatus,
     initialData: [],
     refetchInterval: 1000*60, // refresh every minute
@@ -140,7 +155,9 @@ const GPUStatusView = ({nodename} : Props) => {
     <h2>Node: {nodename}</h2>
     <div className="d-flex justify-content-start my-3">
     { gpu_data_timeseries_list &&
-        gpu_data_timeseries_list.map((series_data : GPUDataSeries) => (
+        gpu_data_timeseries_list
+          .filter((value: GPUDataSeries, index) => logical_ids == null || logical_ids?.includes(index))
+          .map((series_data : GPUDataSeries) => (
         <div className="mx-5" key={series_data.label}>
           <h5>{series_data.label.replace(nodename + '-','')}</h5>
           <LineChart width={400} height={300} data={series_data.data}>

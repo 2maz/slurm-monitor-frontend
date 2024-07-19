@@ -9,6 +9,7 @@ import ArrowOutwordIcon from "@mui/icons-material/ArrowOutward";
 import { Backdrop, Button } from "@mui/material";
 
 import { StateSetters } from "../../services/StateSetters";
+import JobView from "../JobView";
 
 interface Props {
   data: Job[];
@@ -111,7 +112,7 @@ const JobsTable = ({ data, stateSetters }: Props) => {
           const cellValue = cell.getValue<string>();
           if (cellValue)
             return (
-              <a href={cellValue}>
+              <a href={cellValue} target="_blank">
                 <ArrowOutwordIcon />
               </a>
             );
@@ -194,11 +195,13 @@ const JobsTable = ({ data, stateSetters }: Props) => {
           {data
             .filter((d) => d.job_id === backdropId)
             .map((d) => {
-              return (
+              return <>
                 <div key={d.job_id} className="mx-3 my-3">
+                  <JobView job_id={d.job_id}/>
+                  <h3>Job Details</h3>
                   <pre>{JSON.stringify(d, null, 2)}</pre>
                 </div>
-              );
+              </>
             })}
         </div>
       </Backdrop>
