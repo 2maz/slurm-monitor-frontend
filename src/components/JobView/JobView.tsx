@@ -9,6 +9,7 @@ interface Props {
 
 interface JobStatus {
     job_id: number;
+    batch_host: string;
     gres_detail: number[];
     start_time: number;
     end_time: number;
@@ -42,12 +43,12 @@ const JobView = ({ job_id } : Props) => {
   if(!job_status)
     return <><h2>GPU Usage</h2>Loading ...</>
 
-  if(job_status.gres_detail.length > 0)
+  if(job_status.gres_detail && job_status.gres_detail.length > 0)
   {
       return <>
           <h2>GPU Usage</h2>
           <GPUStatusView
-                              nodename="g001" 
+                              nodename={job_status.batch_host}
                               logical_ids={job_status.gres_detail}
                               start_time_in_s={job_status.start_time}
                               end_time_in_s={job_status.end_time}

@@ -126,6 +126,9 @@ const GPUStatusView = ({nodename, logical_ids, start_time_in_s, end_time_in_s, r
   if(resolution_in_s != undefined) {
     query_name = query_name + "&resolution_in_s=" + resolution_in_s
   }
+  if(logical_ids != undefined) {
+    query_name = query_name + "&local_indices=" + logical_ids
+  }
   const endpoint = new SlurmMonitorEndpoint(query_name);
 
   const fetchStatus = async () => {
@@ -143,7 +146,7 @@ const GPUStatusView = ({nodename, logical_ids, start_time_in_s, end_time_in_s, r
   };
 
   const { data: gpu_data_timeseries_list } = useQuery<GPUDataSeries[]>({
-    queryKey: ["gpu_status", nodename, start_time_in_s, end_time_in_s, resolution_in_s],
+    queryKey: ["gpu_status", nodename, logical_ids, start_time_in_s, end_time_in_s, resolution_in_s],
     queryFn: fetchStatus,
     initialData: [],
     refetchInterval: 1000*60, // refresh every minute
@@ -156,7 +159,6 @@ const GPUStatusView = ({nodename, logical_ids, start_time_in_s, end_time_in_s, r
     <div className="d-flex justify-content-start my-3">
     { gpu_data_timeseries_list &&
         gpu_data_timeseries_list
-          .filter((value: GPUDataSeries, index) => logical_ids == null || logical_ids?.includes(index))
           .map((series_data : GPUDataSeries) => (
         <div className="mx-5" key={series_data.label}>
           <h5>{series_data.label.replace(nodename + '-','')}</h5>
