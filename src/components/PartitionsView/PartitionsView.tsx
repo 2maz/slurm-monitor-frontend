@@ -44,8 +44,10 @@ const PartitionsView = ({ stateSetters }: Props) => {
     return (
       <>
         <h1 className="mx-5 centered">Partitions</h1>
-        {error && (
+        {error && (<>
           <p className="text-danger">No data available: {error.message}</p>
+          {endpoint.selfSignedErrorMessage()}
+          </>
         )}
       </>
     );

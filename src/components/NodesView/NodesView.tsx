@@ -48,7 +48,10 @@ const NodesView = ({stateSetters} : Props) => {
       <>
         <h1 className="mx-5 centered">Nodes</h1>
         {error && (
+          <>
           <p className="text-danger">No data available: {error.message}</p>
+          {endpoint.selfSignedErrorMessage()}
+          </>
         )}
       </>
     );

@@ -70,7 +70,10 @@ const JobsView = ({ stateSetters } : Props) => {
       <>
         <h1 className="mx-5 centered">Jobs</h1>
         {error && (
+          <>
           <p className="text-danger">No data available: {error.message}</p>
+          {endpoint.selfSignedErrorMessage()}
+          </>
         )}
       </>
     );
