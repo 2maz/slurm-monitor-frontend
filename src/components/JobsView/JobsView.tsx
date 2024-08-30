@@ -85,14 +85,15 @@ const JobsView = ({ stateSetters } : Props) => {
     <div className="mx-5 flex flex-wrap justify-between">
       <h1 className="centered">Jobs</h1>
       <div className="mr-3 d-flex">
-        <label className="mx-3">Refresh Interval (in ms):</label>
+        <label className="mx-3">Refresh Interval (in s):</label>
         <input
           className="mb-3"
-          value={refreshInterval}
+          value={refreshInterval/1000}
           type="number"
           onChange={(e) => {
-            setRefreshInterval(e.target.valueAsNumber);
+            setRefreshInterval(e.target.valueAsNumber*1000);
           }}
+          min="5"
         />
         <label className="mx-3">
           Last refresh: {refreshTime.toUTCString()}
