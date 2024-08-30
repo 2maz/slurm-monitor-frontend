@@ -111,7 +111,11 @@ function App() {
     getFromStorage("nodesFilter", [])
   );
   const [nodesVisibility, setNodesVisibility] = useState<MRT_VisibilityState>(
-    getFromStorage("nodesVisibility", {})
+    getFromStorage("nodesVisibility", {
+      "alloc_cpus": false,
+      "cores": false,
+      "alloc_memory": false, // only getting zeros here
+    })
   );
 
   const [jobsFilter, setJobsFilter] = useState<MRT_ColumnFiltersState>(

@@ -25,7 +25,7 @@ const NodesTable = ({ data, stateSetters }: Props) => {
     () => [
       {
         accessorKey: "name",
-        header: "Job Name",
+        header: "Node Name",
         //grow: false,
       },
       {
@@ -49,20 +49,21 @@ const NodesTable = ({ data, stateSetters }: Props) => {
         accessorKey: "free_memory",
         header: "Free Memory",
       },
-      { accessorKey: "cpus", header: "CPUs" },
-      { accessorKey: "gres", header: "Resources" },
+      { accessorKey: "cpus", header: "CPUs", },
+      { accessorKey: "gres", header: "General Resources" },
       {
         accessorKey: "gres_used",
-        header: "Used Resources",
+        header: "Resources (Status)",
         Cell: ({ row, cell }) => {
           const free = freeResources(row.original);
           if (!row.original.gres) return "";
 
           const textColor = free > 0 ? "text-success" : "text-danger";
+          const titleText = free > 0 ? free + " GPUs are available" : "No GPU available";
           return availableGPUs(row.original) <= 0 ? (
             ""
           ) : (
-            <div className={textColor}>
+            <div className={textColor} title={titleText}>
               {cell.getValue<string>()} (unused: {free})
             </div>
           );
@@ -134,8 +135,24 @@ const NodesTable = ({ data, stateSetters }: Props) => {
       //{ accessorKey: "tres_weighted: number;
       //{ accessorKey: "slurmd_version: string;
       { accessorKey: "alloc_memory", header: "Allocated Memory" },
-      { accessorKey: "alloc_cpus", header: "Allocated CPUs" },
-      { accessorKey: "idle_cpus", header: "Idle CPUs" },
+      { accessorKey: "alloc_cpus",
+        header: "CPUs (allocated)",
+        Cell: ({ row }) => {
+          const textColor = row.original.cpus == row.original.alloc_cpus ? "text-danger" : "text-normal"
+          return <div className={textColor}>
+              {row.original.alloc_cpus}
+            </div>
+        },
+      },
+      { accessorKey: "idle_cpus", header: "Idle CPUs",
+        Cell: ({ row }) => {
+          const textColor = 0 == row.original.idle_cpus ? "text-danger" : "text-normal"
+          const titleText = 0 == row.original.idle_cpus ? "Currently no remaining cpus" : row.original.idle_cpus + " available CPUs"
+          return <div className={textColor} title={titleText}>
+              {row.original.idle_cpus}
+            </div>
+        },
+       },
     ],
     [data]
   );
@@ -158,30 +175,32 @@ const NodesTable = ({ data, stateSetters }: Props) => {
     columns: columns,
     data: data, //must be memoized or stable (useState, useMemo, defined outside of this component, etc.)
     //layoutMode: "grid-no-grow",
-    //enableColumnResizing: true,
+    enableColumnResizing: true,
+    columnResizeMode: 'onChange',
     enableGrouping: true,
     enableStickyHeader: true,
     //enableStickyFooter: true
     enablePagination: false,
     // row virtualization helps to render only the visual data
-    enableRowVirtualization: true,
+    //enableRowVirtualization: true,
+    enableColumnVirtualization: true,
     initialState: {
       density: "compact",
       showColumnFilters: hasEnabledFilters(),
       columnOrder: [
         "name",
         "architecture",
-        "operating_system",
-        "cores",
-        "free_memory",
         "cpus",
+        "idle_cpus",
         "gres",
         "gres_used",
+        "free_memory",
         "partitions",
         "state",
+        "operating_system",
         "alloc_memory",
         "alloc_cpus",
-        "idle_cpus",
+        "cores",
       ],
     },
     // disable when memo feature is used
