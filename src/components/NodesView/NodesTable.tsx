@@ -43,6 +43,7 @@ const NodesTable = ({ data, stateSetters }: Props) => {
         filterSelectOptions: [
           ...new Set(data.map((node: Node) => node.operating_system)),
         ].sort(),
+        grow: 1
       },
       { accessorKey: "cores", header: "Cores" },
       {
@@ -68,6 +69,7 @@ const NodesTable = ({ data, stateSetters }: Props) => {
             </div>
           );
         },
+        grow: 1
       },
       {
         accessorKey: "partitions",
