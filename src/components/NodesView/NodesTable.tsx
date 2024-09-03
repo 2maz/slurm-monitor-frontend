@@ -51,7 +51,23 @@ const NodesTable = ({ data, stateSetters }: Props) => {
         header: "Free Memory",
       },
       { accessorKey: "cpus", header: "CPUs", },
-      { accessorKey: "gres", header: "General Resources" },
+      {
+        accessorKey: "gres",
+        header: "General Resources",
+        grow: 1
+      },
+      {
+        accessorKey: "gpu_model",
+        header: "GPU Model",
+        Cell: ({ cell }) => {
+          const value = cell.getValue<string>()
+          return <div title={value}>{value}</div>
+        }
+      },
+      {
+        accessorKey: "gpu_memory",
+        header: "GPU Memory (GB)",
+      },
       {
         accessorKey: "gres_used",
         header: "Resources (Status)",
@@ -195,6 +211,8 @@ const NodesTable = ({ data, stateSetters }: Props) => {
         "cpus",
         "idle_cpus",
         "gres",
+        "gpu_model",
+        "gpu_memory",
         "gres_used",
         "free_memory",
         "partitions",

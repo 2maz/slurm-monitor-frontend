@@ -44,6 +44,11 @@ interface Node {
   alloc_memory: number;
   alloc_cpus: number;
   idle_cpus: number;
+
+  // comes from additional extra query of node info
+  gpu_model: string;
+  gpu_memory: number;
+
 }
 
 export const availableGPUs = (node: {gres: string}) => {
