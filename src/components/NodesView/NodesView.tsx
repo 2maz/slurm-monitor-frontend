@@ -81,14 +81,14 @@ const NodesView = ({stateSetters} : Props) => {
     refetchInterval: 1000*30, // refresh every 30 seconds
   });
 
-  const { data : gpu_infos } = useQuery({
-    queryKey: ["nodes", "gpu_infos"],
+  const { data : nodes_info } = useQuery({
+    queryKey: ["nodes", "info"],
     queryFn: fetchGPUInfos,
     initialData: {},
     refetchInterval: 1000*3600*24, // refresh daily
   });
 
-  if (data?.length == 0 && gpu_infos?.length == 0)
+  if (data?.length == 0 && nodes_info?.length == 0)
     return (
       <>
         <h1 className="mx-5 centered">Nodes</h1>
@@ -103,9 +103,9 @@ const NodesView = ({stateSetters} : Props) => {
 
   const prepared_data = data.map((node: Node) => ({
     ...node,
-    gpu_model: gpu_infos[node.name]?.gpus[0].name,
-    gpu_memory: gpu_infos[node.name]?.gpus[0].memory_total,
-    cpu_model: gpu_infos[node.name]?.cpus?.model,
+    gpu_model: nodes_info[node.name]?.gpus?.[0].name,
+    gpu_memory: nodes_info[node.name]?.gpus?.[0].memory_total,
+    cpu_model: nodes_info[node.name]?.cpus.model,
     id: node.name
   }));
 
