@@ -105,6 +105,7 @@ const NodesView = ({stateSetters} : Props) => {
     ...node,
     gpu_model: gpu_infos[node.name]?.gpus[0].name,
     gpu_memory: gpu_infos[node.name]?.gpus[0].memory_total,
+    cpu_model: gpu_infos[node.name]?.cpus?.model,
     id: node.name
   }));
 

@@ -49,6 +49,7 @@ interface Node {
   gpu_model: string;
   gpu_memory: number;
 
+  cpu_model: string
 }
 
 export const availableGPUs = (node: {gres: string}) => {
