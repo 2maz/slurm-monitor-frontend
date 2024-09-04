@@ -48,7 +48,7 @@ const NodesTable = ({ data, stateSetters }: Props) => {
       { accessorKey: "cores", header: "Cores" },
       {
         accessorKey: "free_memory",
-        header: "Free Memory",
+        header: "Free Memory (MB)",
       },
       { accessorKey: "cpus", header: "CPUs", },
       {
@@ -66,7 +66,7 @@ const NodesTable = ({ data, stateSetters }: Props) => {
       },
       {
         accessorKey: "gpu_memory",
-        header: "GPU Memory (GB)",
+        header: "GPU Memory (MB)",
       },
       {
         accessorKey: "gres_used",
