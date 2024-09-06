@@ -171,7 +171,7 @@ const GPUStatusView = ({nodename, logical_ids, start_time_in_s, end_time_in_s, r
             <XAxis dataKey="timestamp" tickFormatter={timestamp => moment(timestamp).format("HH:mm")} />
             <YAxis orientation="left" domain={[0,100]} yAxisId="1"
               label={{
-                value: `percentage (%)`,
+                value: `percentage (%) / °C`,
                 style: { textAnchor: 'middle' },
                 angle: -90,
                 position: 'left',
@@ -180,7 +180,7 @@ const GPUStatusView = ({nodename, logical_ids, start_time_in_s, end_time_in_s, r
             />
             <YAxis orientation="right" domain={[0,500]} yAxisId="2" 
               label={{
-                value: `Watt (W) / °C`,
+                value: `Watt (W)`,
                 style: { textAnchor: 'middle' },
                 angle: -90,
                 position: 'right',
