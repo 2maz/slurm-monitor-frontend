@@ -9,9 +9,9 @@ class SlurmMonitorEndpoint {
     this.endpoint = endpoint;
   }
 
-  get() {
+  get<T = Response>() {
     const controller = new AbortController();
-    const request = client.get< Response >(this.endpoint, {
+    const request = client.get<T>(this.endpoint, {
       signal: controller.signal,
     });
     return { request, cancel: () => controller.abort() };

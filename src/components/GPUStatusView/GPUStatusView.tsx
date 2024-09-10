@@ -95,26 +95,11 @@ interface Props {
   start_time_in_s?: number | null;
   end_time_in_s?: number | null;
   resolution_in_s?: number | null;
+  refresh_interval_in_s: number;
 }
 
-const GPUStatusView = ({nodename, logical_ids, start_time_in_s, end_time_in_s, resolution_in_s} : Props) => {
+const GPUStatusView = ({nodename, logical_ids, start_time_in_s, end_time_in_s, resolution_in_s, refresh_interval_in_s = 1000*60} : Props) => {
   const [error, setError] = useState<Error>();
-
-  const primaryAxis = useMemo(
-    (): AxisOptions<GPUStatus> => ({
-      getValue: datum => new Date(Date.parse(datum.timestamp))
-    }),
-    []
-  )
-
-  const secondaryAxes = useMemo(
-    (): AxisOptions<GPUStatus>[] => [
-      {
-        getValue: datum => datum.utilization_gpu,
-      },
-    ],
-    []
-  )
 
   var query_name= "/gpustatus?node=" + nodename
   if(start_time_in_s != undefined) {
@@ -132,10 +117,10 @@ const GPUStatusView = ({nodename, logical_ids, start_time_in_s, end_time_in_s, r
   const endpoint = new SlurmMonitorEndpoint(query_name);
 
   const fetchStatus = async () => {
-    const { request, cancel } = endpoint.get();
+    const { request, cancel } = endpoint.get<GPUDataSeriesResponse>();
 
     return request
-      .then(({ data }) => {
+      .then<GPUDataSeries[]>(({ data }) => {
         return data ? data.gpu_status : [];
       })
       .catch((error) => {
@@ -149,7 +134,7 @@ const GPUStatusView = ({nodename, logical_ids, start_time_in_s, end_time_in_s, r
     queryKey: ["gpu_status", nodename, logical_ids, start_time_in_s, end_time_in_s, resolution_in_s],
     queryFn: fetchStatus,
     initialData: [],
-    refetchInterval: 1000*60, // refresh every minute
+    refetchInterval: refresh_interval_in_s, // refresh every minute
   });
 
   // Examples: https://recharts.org/en-US/examples/HighlightAndZoomLineChart

@@ -194,15 +194,7 @@ const JobsTable = ({ data, stateSetters }: Props) => {
         <div className="h-75 bg-white text-muted rounded overflow-auto">
           {data
             .filter((d) => d.job_id === backdropId)
-            .map((d) => {
-              return <>
-                <div key={d.job_id} className="mx-3 my-3">
-                  <JobView job_id={d.job_id}/>
-                  <h3>Job Details</h3>
-                  <pre>{JSON.stringify(d, null, 2)}</pre>
-                </div>
-              </>
-            })}
+            .map((d) => <JobView job_id={d.job_id} job_data={d}/> )}
         </div>
       </Backdrop>
     </div>
