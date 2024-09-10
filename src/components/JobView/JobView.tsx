@@ -51,8 +51,6 @@ const JobView = ({ job_id } : Props) => {
                               nodename={job_status.batch_host}
                               logical_ids={job_status.gres_detail}
                               start_time_in_s={job_status.start_time}
-                              end_time_in_s={job_status.end_time}
-                              
           />
           </>
   } else {
