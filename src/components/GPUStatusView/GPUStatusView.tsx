@@ -101,7 +101,7 @@ interface Props {
 const GPUStatusView = ({nodename, logical_ids, start_time_in_s, end_time_in_s, resolution_in_s, refresh_interval_in_s = 1000*60} : Props) => {
   const [error, setError] = useState<Error>();
 
-  var query_name= "/gpustatus?node=" + nodename
+  var query_name= "/nodes/gpustatus?node=" + nodename
   if(start_time_in_s != undefined) {
     query_name = query_name + "&start_time_in_s=" + start_time_in_s
   }
