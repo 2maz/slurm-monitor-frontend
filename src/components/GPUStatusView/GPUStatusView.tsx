@@ -101,20 +101,22 @@ interface Props {
 const GPUStatusView = ({nodename, logical_ids, start_time_in_s, end_time_in_s, resolution_in_s, refresh_interval_in_s = 1000*60} : Props) => {
   const [error, setError] = useState<Error>();
 
-  var query_name= "/nodes/gpustatus?node=" + nodename
+  var query = "/nodes/"+ nodename + "/gpu_status"
+  var parameters = {}
   if(start_time_in_s != undefined) {
-    query_name = query_name + "&start_time_in_s=" + start_time_in_s
+    parameters = { ...parameters, "start_time_in_s": start_time_in_s}
   }
   if(end_time_in_s != undefined) {
-    query_name = query_name + "&end_time_in_s=" + end_time_in_s
+    parameters = { ...parameters, "end_time_in_s": end_time_in_s }
   }
   if(resolution_in_s != undefined) {
-    query_name = query_name + "&resolution_in_s=" + resolution_in_s
+    parameters = { ...parameters, "resolution_in_s": resolution_in_s }
   }
   if(logical_ids != undefined) {
-    query_name = query_name + "&local_indices=" + logical_ids
+    parameters = { ...parameters, "local_indices": logical_ids.join(",") }
   }
-  const endpoint = new SlurmMonitorEndpoint(query_name);
+
+  const endpoint = new SlurmMonitorEndpoint(query, parameters);
 
   const fetchStatus = async () => {
     const { request, cancel } = endpoint.get<GPUDataSeriesResponse>();
@@ -140,7 +142,7 @@ const GPUStatusView = ({nodename, logical_ids, start_time_in_s, end_time_in_s, r
   // Examples: https://recharts.org/en-US/examples/HighlightAndZoomLineChart
   return (
     <>
-    <h2>Node: {nodename}</h2>
+    <h4>Node: {nodename}</h4>
     <div className="d-flex justify-content-start my-3">
     { gpu_data_timeseries_list &&
         gpu_data_timeseries_list
