@@ -19,8 +19,10 @@ interface ProcessTimeseries {
 
 interface ProcessesStats {
     pids: number[];
+    active_pids: number[];
     accumulated: ProcessStatus[];
     timeseries: ProcessTimeseries;
+    timestamp: string;
 }
 
 interface NodesProcessesStats {
@@ -85,14 +87,14 @@ const CPUStatusView = ({job_id, start_time_in_s, end_time_in_s, resolution_in_s,
   if(nodes_processes) {
     Object.keys(nodes_processes).map((nodename: string) => (
       elements.push(
-            <><h4>Node: {nodename} - active processes:  {nodes_processes[nodename].pids.length}</h4>
+            <><h4>Node: {nodename} - active processes:  {nodes_processes[nodename].active_pids.length}</h4>
             <div className="mx-5" key="{job_id}-accumulated" >
               <LineChart width={300} height={250} data={nodes_processes[nodename].accumulated}>
                 <Line yAxisId="1" type="monotone" dataKey="cpu_percent" stroke="#8884d8"/>
                 <Line yAxisId="1" type="monotone" dataKey="memory_percent" stroke="#888400"/>
                 <CartesianGrid strokeDasharray="3 3"/>
                 <XAxis dataKey="timestamp" tickFormatter={timestamp => moment(timestamp).format("HH:mm")} />
-                <YAxis orientation="left" domain={[0, nodes_processes[nodename].pids.length*100]} yAxisId="1"
+                <YAxis orientation="left" domain={[0, nodes_processes[nodename].active_pids.length*100]} yAxisId="1"
                   label={{
                     value: `percentage (%)`,
                     style: { textAnchor: 'middle' },
