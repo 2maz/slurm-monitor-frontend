@@ -12,10 +12,14 @@ import { StateSetters } from "../../services/StateSetters";
 import MetaData from "../ResponseMetaData";
 
 const endpoint_nodes = new SlurmMonitorEndpoint("/nodes");
-const endpoint_gpuinfo = new SlurmMonitorEndpoint("/nodes/info");
+const endpoint_nodes_info = new SlurmMonitorEndpoint("/nodes/info");
 
 interface NodesResponse extends Response {
   nodes: Node[];
+}
+
+interface CPUInfo {
+  model_name: string;
 }
 
 interface GPUInfo {
@@ -26,6 +30,7 @@ interface GPUInfo {
 }
 
 interface NodeDataInfo {
+  cpus: CPUInfo[]
   gpus: GPUInfo[];
   errors: string[]
   meta: MetaData
@@ -60,8 +65,8 @@ const NodesView = ({stateSetters} : Props) => {
       });
   };
 
-  const fetchGPUInfos = async () => {
-    const { request, cancel } = endpoint_gpuinfo.get();
+  const fetchNodeInfos = async () => {
+    const { request, cancel } = endpoint_nodes_info.get<NodeInfoResponse>();
 
     return request
       .then(({ data }) => {
@@ -83,7 +88,7 @@ const NodesView = ({stateSetters} : Props) => {
 
   const { data : nodes_info } = useQuery({
     queryKey: ["nodes", "info"],
-    queryFn: fetchGPUInfos,
+    queryFn: fetchNodeInfos,
     initialData: {},
     refetchInterval: 1000*3600*24, // refresh daily
   });
@@ -103,7 +108,7 @@ const NodesView = ({stateSetters} : Props) => {
 
   const prepared_data = data.map((node: Node) => ({
     ...node,
-    gpu_model: nodes_info[node.name]?.gpus?.[0].name,
+    gpu_model: nodes_info[node.name]?.gpus?.[0].model,
     gpu_memory: nodes_info[node.name]?.gpus?.[0].memory_total,
     cpu_model: nodes_info[node.name]?.cpus.model,
     id: node.name
@@ -119,4 +124,5 @@ const NodesView = ({stateSetters} : Props) => {
   );
 };
 
+export type { NodeDataInfo };
 export default NodesView;

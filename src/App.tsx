@@ -28,6 +28,11 @@ import "mantine-react-table/styles.css";
 import SettingsView from "./components/SettingsView";
 import useAppState from "./AppState";
 import MLFlowSlurmMapper, { MLFlowSlurmRunInfo } from "./services/slurm-monitor/mlflow";
+import { useQuery } from "@tanstack/react-query";
+
+import Node from "./components/NodesView/Node";
+import { NodeDataInfo } from "./components/NodesView/NodesView";
+import SlurmMonitorEndpoint from "./services/slurm-monitor/endpoint";
 
 const theme = createTheme({});
 
@@ -77,29 +82,12 @@ const makePersistent = (
   ];
 };
 
-const gpu_nodes = [
-  "g001",
-  "g002",
-  "n001",
-  "n002",
-  "n003",
-  "n004",
-  "n009",
-  "n010",
-  "n011",
-  "n012",
-  "n013",
-  "n014",
-  "n015",
-  "n016",
-  "h001",
-]
-
 function App() {
   /// State that remembers the currently selected view (one of partitions, nodes, jobs)
   const [view, setView] = useState<string>(
     window.sessionStorage.getItem("view") || "jobs"
   );
+  const [error, setError] = useState<Error>();
 
   // State for column filters and visible columns for each view
   const [partitionsFilter, setPartitionsFilter] =
@@ -131,6 +119,29 @@ function App() {
 
   useEffect(() => {
     document.title = "ex3 - Status: " + view;
+  });
+
+  const endpoint = new SlurmMonitorEndpoint("/nodes/info")
+
+  const fetchNodesInfo = async () => {
+    const { request, cancel } = endpoint.get();
+
+    return request
+      .then(({ data }) => {
+        return data ? data.nodes : [];
+      })
+      .catch((error) => {
+        setError(error);
+        cancel();
+        return [];
+      });
+  };
+
+  const { data: nodes_info } = useQuery({
+    queryKey: ["nodes_info"],
+    queryFn: fetchNodesInfo,
+    initialData: [],
+    refetchInterval: 1000*3600*24,
   });
 
   // BEGIN: Ensure that state is stored in sessionStorage, so that is survives a refresh
@@ -250,15 +261,14 @@ function App() {
                 The associated GPU charts will be displayed there.
                 Alternatively, you can identify the GPU logical ids from the gres_detail property.
               </p>
-              {
-                gpu_nodes.map((nodename) =>
-                  (
-                    <div key={nodename}>
-                      <GPUStatusView nodename={nodename} />
-                    </div>
-                  )
+              {Object.keys(nodes_info).map((nodename) =>
+                nodes_info[nodename].gpus && (<>
+                  <div key={nodename}>
+                    <GPUStatusView nodename={nodename} />
+                  </div>
+                  </>
                 )
-              }
+              )}
               </>
             )}
             {view && view == "settings" && (

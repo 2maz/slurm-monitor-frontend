@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import SlurmMonitorEndpoint from "../../services/slurm-monitor/endpoint";
@@ -95,7 +95,7 @@ interface Props {
   start_time_in_s?: number | null;
   end_time_in_s?: number | null;
   resolution_in_s?: number | null;
-  refresh_interval_in_s: number;
+  refresh_interval_in_s?: number;
 }
 
 const GPUStatusView = ({nodename, logical_ids, start_time_in_s, end_time_in_s, resolution_in_s, refresh_interval_in_s = 1000*60} : Props) => {
