@@ -1,3 +1,3 @@
-import CPUStatusView from "./CPUStatusView";
+import CPUJobStatusView from "./CPUJobStatusView";
 
-export default CPUStatusView;
+export default CPUJobStatusView;

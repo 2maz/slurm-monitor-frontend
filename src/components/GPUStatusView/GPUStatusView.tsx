@@ -139,6 +139,8 @@ const GPUStatusView = ({nodename, logical_ids, start_time_in_s, end_time_in_s, r
     refetchInterval: refresh_interval_in_s, // refresh every minute
   });
 
+  if(gpu_data_timeseries_list.length == 0)
+    return <>No GPU data available</>
   // Examples: https://recharts.org/en-US/examples/HighlightAndZoomLineChart
   return (
     <>

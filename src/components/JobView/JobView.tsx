@@ -4,7 +4,7 @@ import SlurmMonitorEndpoint from '../../services/slurm-monitor/endpoint';
 import { useQuery } from '@tanstack/react-query';
 
 import Job from '../JobsView/Job';
-import CPUStatusView from '../CPUStatusView';
+import CPUJobStatusView from '../CPUStatusView';
 import moment from 'moment';
 
 interface Props {
@@ -87,7 +87,7 @@ const JobView = ({ job_id, job_data, refresh_interval_in_s = 1000*60 } : Props) 
 
   elements.push(<>
           <h3>CPU Usage</h3>
-          <CPUStatusView job_id={job_id}
+          <CPUJobStatusView job_id={job_id}
                          start_time_in_s={moment(job_status.start_time).unix()}
                          refresh_interval_in_s={refresh_interval_in_s}
           />

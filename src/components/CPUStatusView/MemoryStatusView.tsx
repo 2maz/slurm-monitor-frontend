@@ -5,25 +5,23 @@ import { LineChart, Line, Tooltip, XAxis, YAxis, Legend, CartesianGrid } from 'r
 import moment from "moment";
 import { useQuery } from "@tanstack/react-query";
 
-interface CPUStatus {
-
-    cpu_percent: number;
+interface MemoryStatus {
+    percent: number;
     timestamp: string;
-
 }
 
-interface CPUDataSeries {
+interface MemoryDataSeries {
     label: string;
-    data: CPUStatus[];
+    data: MemoryStatus[];
 }
 
 
-interface NodesCPUStatus {
-  [nodename: string]: CPUDataSeries;
+interface NodesMemoryStatus {
+  [nodename: string]: MemoryDataSeries;
 }
 
-interface NodesCPUStatusTimeseriesResponse extends Response {
-  cpu_status: NodesCPUStatus
+interface NodesMemoryStatusTimeseriesResponse extends Response {
+  memory_status: NodesMemoryStatus
 }
 
 interface Props {
@@ -37,7 +35,7 @@ interface Props {
 const CPUStatusView = ({nodename, start_time_in_s, end_time_in_s, resolution_in_s, refresh_interval_in_s = 1000*60} : Props) => {
   const [error, setError] = useState<Error>();
 
-  var query = "/nodes/"+ nodename + "/cpu_status";
+  var query = "/nodes/"+ nodename + "/memory_status";
 
   var parameters = {}
   if(start_time_in_s != undefined) {
@@ -52,14 +50,14 @@ const CPUStatusView = ({nodename, start_time_in_s, end_time_in_s, resolution_in_
 
   const endpoint = new SlurmMonitorEndpoint(query, parameters);
 
-  var initial_data : NodesCPUStatus = {}
+  var initial_data : NodesMemoryStatus = {}
 
   const fetchStatus = async () => {
-    const { request, cancel } = endpoint.get<NodesCPUStatusTimeseriesResponse>();
+    const { request, cancel } = endpoint.get<NodesMemoryStatusTimeseriesResponse>();
 
     return request
-      .then<NodesCPUStatus>(({ data }) => {
-        return data ? data.cpu_status : initial_data
+      .then<NodesMemoryStatus>(({ data }) => {
+        return data ? data.memory_status : initial_data
       })
       .catch((error) => {
         setError(error);
@@ -69,8 +67,8 @@ const CPUStatusView = ({nodename, start_time_in_s, end_time_in_s, resolution_in_
   };
 
 
-  const { data: nodes_processes } = useQuery<NodesCPUStatus>({
-    queryKey: ["nodes", "cpu_status", nodename, start_time_in_s, end_time_in_s, resolution_in_s],
+  const { data: nodes_processes } = useQuery<NodesMemoryStatus>({
+    queryKey: ["nodes", "memory_status", nodename, start_time_in_s, end_time_in_s, resolution_in_s],
     queryFn: fetchStatus,
     initialData: initial_data,
     refetchInterval: refresh_interval_in_s, // refresh every minute
@@ -83,7 +81,7 @@ const CPUStatusView = ({nodename, start_time_in_s, end_time_in_s, resolution_in_
             <><h4>Node: {nodename}</h4>
             <div className="mx-5" key="{job_id}-accumulated" >
               <LineChart width={300} height={250} data={nodes_processes[process_id].data}>
-                <Line yAxisId="1" type="monotone" dataKey="cpu_percent" stroke="#8884d8"/>
+                <Line yAxisId="1" type="monotone" dataKey="percent" stroke="#8884d8"/>
                 <CartesianGrid strokeDasharray="3 3"/>
                 <XAxis dataKey="timestamp" tickFormatter={timestamp => moment(timestamp).format("HH:mm")} />
                 <YAxis orientation="left" domain={[0, 100]} yAxisId="1"

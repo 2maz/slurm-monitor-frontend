@@ -8,6 +8,10 @@ import Button from "@mui/material/Button";
 import { Backdrop } from "@mui/material";
 import { useMemo, useState } from "react";
 import { StateSetters } from "../../services/StateSetters";
+import GPUStatusView from "../GPUStatusView";
+import CPUJobStatusView from "../CPUStatusView";
+import CPUStatusView from "../CPUStatusView/CPUStatusView";
+import MemoryStatusView from "../CPUStatusView/MemoryStatusView";
 
 interface Props {
   data: Node[];
@@ -269,9 +273,22 @@ const NodesTable = ({ data, stateSetters }: Props) => {
             .filter((d) => d.name === backdropId)
             .map((d) => {
               return (
-                <div key={d.name} className="mx-3 my-3">
-                  <pre>{JSON.stringify(d, null, 2)}</pre>
+                <>
+                <div key={d.name + "-cpu"} className="mx-3 my-3">
+                <h2>CPU Status (accumulated)</h2>
+                <CPUStatusView nodename={d.name}/>
                 </div>
+                <div key={d.name + "-memory"} className="mx-3 my-3">
+                <h2>Memory Status</h2>
+                <MemoryStatusView nodename={d.name}/>
+                </div>
+                <div key={d.name + "-gpu"} className="mx-3 my-3">
+                <h2>GPU Status</h2>
+                  <GPUStatusView nodename={d.name}/>
+                </div>
+
+                  <pre>{JSON.stringify(d, null, 2)}</pre>
+              </>
               );
             })}
         </div>
