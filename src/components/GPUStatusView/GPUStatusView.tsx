@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import SlurmMonitorEndpoint from "../../services/slurm-monitor/endpoint";
 import Response from "../../services/slurm-monitor/response";
 import { LineChart, Line, Tooltip, XAxis, YAxis, Legend, CartesianGrid } from 'recharts';
+import { BarLoader } from 'react-spinners';
 import moment from "moment";
 
 interface GPUStatus {
@@ -132,15 +133,22 @@ const GPUStatusView = ({nodename, logical_ids, start_time_in_s, end_time_in_s, r
       });
   };
 
-  const { data: gpu_data_timeseries_list } = useQuery<GPUDataSeries[]>({
+  const { data: gpu_data_timeseries_list, isLoading } = useQuery<GPUDataSeries[]>({
     queryKey: ["gpu_status", nodename, logical_ids, start_time_in_s, end_time_in_s, resolution_in_s],
     queryFn: fetchStatus,
-    initialData: [],
+    initialData: undefined,
     refetchInterval: refresh_interval_in_s, // refresh every minute
   });
 
+  if(gpu_data_timeseries_list == undefined)
+    return <BarLoader />
+
   if(gpu_data_timeseries_list.length == 0)
-    return <>No GPU data available</>
+    return <>
+            <h4>Node: {nodename}</h4>
+            No GPU data available
+           </>
+
   // Examples: https://recharts.org/en-US/examples/HighlightAndZoomLineChart
   return (
     <>

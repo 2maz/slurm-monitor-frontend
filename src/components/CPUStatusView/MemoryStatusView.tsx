@@ -4,6 +4,7 @@ import SlurmMonitorEndpoint from "../../services/slurm-monitor/endpoint";
 import { LineChart, Line, Tooltip, XAxis, YAxis, Legend, CartesianGrid } from 'recharts';
 import moment from "moment";
 import { useQuery } from "@tanstack/react-query";
+import { BarLoader } from 'react-spinners';
 
 interface MemoryStatus {
     percent: number;
@@ -70,9 +71,12 @@ const CPUStatusView = ({nodename, start_time_in_s, end_time_in_s, resolution_in_
   const { data: nodes_processes } = useQuery<NodesMemoryStatus>({
     queryKey: ["nodes", "memory_status", nodename, start_time_in_s, end_time_in_s, resolution_in_s],
     queryFn: fetchStatus,
-    initialData: initial_data,
+    initialData: undefined,
     refetchInterval: refresh_interval_in_s, // refresh every minute
   });
+
+  if(nodes_processes == undefined)
+    return <BarLoader />
 
   var elements = []
   if(nodes_processes) {

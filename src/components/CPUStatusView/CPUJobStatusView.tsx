@@ -3,6 +3,7 @@ import SlurmMonitorEndpoint from "../../services/slurm-monitor/endpoint";
 import { LineChart, Line, Tooltip, XAxis, YAxis, Legend, CartesianGrid } from 'recharts';
 import moment from "moment";
 import { useQuery } from "@tanstack/react-query";
+import { BarLoader } from "react-spinners";
 
 interface ProcessStatus {
     pid: number;
@@ -79,9 +80,12 @@ const CPUJobStatusView = ({job_id, start_time_in_s, end_time_in_s, resolution_in
   const { data: nodes_processes } = useQuery<NodesProcessesStats>({
     queryKey: ["nodes_processes", job_id, start_time_in_s, end_time_in_s, resolution_in_s],
     queryFn: fetchStatus,
-    initialData: initial_data,
+    initialData: undefined,
     refetchInterval: refresh_interval_in_s, // refresh every minute
   });
+
+  if(nodes_processes == undefined)
+    return <BarLoader />
 
   var elements = []
   if(nodes_processes) {

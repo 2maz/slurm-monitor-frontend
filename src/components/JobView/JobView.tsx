@@ -6,11 +6,12 @@ import { useQuery } from '@tanstack/react-query';
 import Job from '../JobsView/Job';
 import CPUJobStatusView from '../CPUStatusView';
 import moment from 'moment';
+import { BarLoader } from 'react-spinners';
 
 interface Props {
     job_id: number;
     job_data?: Job
-    refresh_interval_in_s: number;
+    refresh_interval_in_s?: number;
 }
 
 interface JobStatus {
@@ -52,8 +53,11 @@ const JobView = ({ job_id, job_data, refresh_interval_in_s = 1000*60 } : Props) 
     refetchInterval: refresh_interval_in_s, // refresh every minute
   });
 
-  if(!job_status)
-    return <div key={job_id}>Loading ...</div>
+  if(job_status == undefined)
+    return <>
+           <h3>Job Id: {job_id}</h3>
+           <BarLoader />
+           </>
 
   if(job_status.job_state === "PENDING")
     return <>

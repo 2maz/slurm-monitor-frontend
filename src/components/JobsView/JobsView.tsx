@@ -9,6 +9,7 @@ import Response from "../../services/slurm-monitor/response";
 import { StateSetters } from "../../services/StateSetters";
 import useAppState from "../../AppState";
 import { number } from "zod";
+import { Bar } from "recharts";
 
 const endpoint = new SlurmMonitorEndpoint("/jobs");
 interface JobsResponse extends Response {
@@ -61,11 +62,11 @@ const JobsView = ({ stateSetters } : Props) => {
   const { data } = useQuery({
     queryKey: ["jobs"],
     queryFn: fetchJobs,
-    initialData: [],
+    initialData: undefined,
     refetchInterval: refreshInterval,
   });
 
-  if (data?.length == 0)
+  if (data == undefined)
     return (
       <>
         <h1 className="mx-5 centered">Jobs</h1>
