@@ -153,7 +153,7 @@ const GPUStatusView = ({nodename, logical_ids, start_time_in_s, end_time_in_s, r
   return (
     <>
     <h4>Node: {nodename}</h4>
-    <div className="d-flex justify-content-start my-3">
+    <div className="d-flex flex-wrap justify-content-start my-3">
     { gpu_data_timeseries_list &&
         gpu_data_timeseries_list
           .map((series_data : GPUDataSeries) => (
