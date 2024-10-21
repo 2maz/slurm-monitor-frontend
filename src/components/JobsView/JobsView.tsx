@@ -1,20 +1,13 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 
 import Job from "./Job";
 import JobsTable from "./JobsTable";
 
-import SlurmMonitorEndpoint from "../../services/slurm-monitor/endpoint";
-import Response from "../../services/slurm-monitor/response";
 import { StateSetters } from "../../services/StateSetters";
 import useAppState from "../../AppState";
-import { number } from "zod";
-import { Bar } from "recharts";
+import useJobs, { endpoint } from "../../hooks/useJobs";
+import { DotLoader } from "react-spinners";
 
-const endpoint = new SlurmMonitorEndpoint("/jobs");
-interface JobsResponse extends Response {
-  jobs: Job[];
-}
 
 interface MlflowRun {
   run_uuid: string;
@@ -39,34 +32,13 @@ interface Props {
 }
 
 const JobsView = ({ stateSetters } : Props) => {
-  const [error, setError] = useState<Error>();
   const [refreshInterval, setRefreshInterval] = useState(10000);
   const [refreshTime, setRefreshTime] = useState<Date>(new Date());
 
+  const {data: jobs, error, isLoading } = useJobs(setRefreshTime, refreshInterval)
   const mlflowSlurmJobs = useAppState((state) => state.slurmRuns);
 
-  const fetchJobs = () => {
-    const { request, cancel } = endpoint.get();
-
-    return request
-      .then(({ data }) => {
-        setRefreshTime(new Date());
-        return data ? data.jobs : [];
-      })
-      .catch((error) => {
-        setError(error);
-        return [];
-      });
-  };
-
-  const { data } = useQuery({
-    queryKey: ["jobs"],
-    queryFn: fetchJobs,
-    initialData: undefined,
-    refetchInterval: refreshInterval,
-  });
-
-  if (data == undefined)
+  if(error)
     return (
       <>
         <h1 className="mx-5 centered">Jobs</h1>
@@ -79,7 +51,17 @@ const JobsView = ({ stateSetters } : Props) => {
       </>
     );
 
-  const prepared_data = data.map((job : Job) => ({
+  if(isLoading)
+    return (<div className="mx-5 flex flex-wrap justify-between">
+      <h1 className="centered">Jobs</h1>
+      <div className="d-flex justify-content-center align-self-center"><DotLoader/></div>
+    </div>
+    )
+
+  if(!jobs)
+    return "No Jobs data available"
+
+  const prepared_data = jobs.map((job : Job) => ({
     ...job,
     id: job.job_id,
     mlflow_ref: mlflowSlurmJobs.filter(r => Number(r.SLURM_JOB_ID) == job.job_id)[0]?.mlflow_run_uri

@@ -18,12 +18,6 @@ interface Props {
   stateSetters: StateSetters;
 }
 
-const getStringValues = (data: Node[], property_name: keyof Node): string[] => {
-  return Array.from([
-    ...new Set(data.map((node) => String(node[property_name]))),
-  ]).sort();
-};
-
 const NodesTable = ({ data, stateSetters }: Props) => {
   const columns = useMemo<MRT_ColumnDef<Node>[]>(
     () => [

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 
-import { Box, MantineProvider, Paper, createTheme } from "@mantine/core";
+import { Box, Group, MantineProvider, Paper, createTheme } from "@mantine/core";
 
 import { BottomNavigation, BottomNavigationAction } from "@mui/material";
 import SegmentIcon from "@mui/icons-material/Segment";
@@ -9,6 +9,7 @@ import AccountTreeIcon from "@mui/icons-material/AccountTree";
 import DirectionsRunsTwoToneIcon from "@mui/icons-material/DirectionsRunTwoTone";
 import SettingsIcon from '@mui/icons-material/Settings';
 import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
+import InfoIcon from '@mui/icons-material/Info';
 
 import {
   MRT_ColumnFiltersState,
@@ -33,6 +34,7 @@ import { useQuery } from "@tanstack/react-query";
 import Node from "./components/NodesView/Node";
 import { NodeDataInfo } from "./components/NodesView/NodesView";
 import SlurmMonitorEndpoint from "./services/slurm-monitor/endpoint";
+import useNodesInfo from "./hooks/useNodesInfos";
 
 const theme = createTheme({});
 
@@ -87,7 +89,7 @@ function App() {
   const [view, setView] = useState<string>(
     window.sessionStorage.getItem("view") || "jobs"
   );
-  const [error, setError] = useState<Error>();
+  const { data: nodes_info } = useNodesInfo()
 
   // State for column filters and visible columns for each view
   const [partitionsFilter, setPartitionsFilter] =
@@ -121,28 +123,6 @@ function App() {
     document.title = "ex3 - Status: " + view;
   });
 
-  const endpoint = new SlurmMonitorEndpoint("/nodes/info")
-
-  const fetchNodesInfo = async () => {
-    const { request, cancel } = endpoint.get();
-
-    return request
-      .then(({ data }) => {
-        return data ? data.nodes : [];
-      })
-      .catch((error) => {
-        setError(error);
-        cancel();
-        return [];
-      });
-  };
-
-  const { data: nodes_info } = useQuery({
-    queryKey: ["nodes_info"],
-    queryFn: fetchNodesInfo,
-    initialData: [],
-    refetchInterval: 1000*3600*24,
-  });
 
   // BEGIN: Ensure that state is stored in sessionStorage, so that is survives a refresh
   const nodesFilterState = makePersistent(

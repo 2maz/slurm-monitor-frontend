@@ -1,12 +1,9 @@
-import { useState } from 'react'
 import GPUStatusView from '../GPUStatusView'
-import SlurmMonitorEndpoint from '../../services/slurm-monitor/endpoint';
-import { useQuery } from '@tanstack/react-query';
-
 import Job from '../JobsView/Job';
 import CPUJobStatusView from '../CPUStatusView';
 import moment from 'moment';
 import { BarLoader } from 'react-spinners';
+import useJobStatus from '../../hooks/useJobStatus';
 
 interface Props {
     job_id: number;
@@ -14,50 +11,18 @@ interface Props {
     refresh_interval_in_s?: number;
 }
 
-interface JobStatus {
-    job_id: number;
-    batch_host: string;
-    gres_detail: number[];
-    start_time: number;
-    end_time: number;
-    job_state: string;
-}
-
-interface JobStatusResponse extends Response{
-  job_status: JobStatus
-}
-
 const JobView = ({ job_id, job_data, refresh_interval_in_s = 1000*60 } : Props) => {
-  const [error, setError] = useState<Error>();
+  const { data : job_status, error, isLoading } = useJobStatus(job_id, refresh_interval_in_s)
 
-  const endpoint = new SlurmMonitorEndpoint("/job/" + job_id);
-
-  const fetchStatus = async () => {
-    const { request, cancel } = endpoint.get<JobStatusResponse>();
-
-    return request
-      .then(({ data }) => {
-        return data ? data.job_status : undefined;
-      })
-      .catch((error) => {
-        setError(error);
-        cancel();
-        return undefined;
-      });
-  };
-
-  const { data: job_status } = useQuery({
-    queryKey: ["job_status", job_id],
-    queryFn: fetchStatus,
-    initialData: undefined,
-    refetchInterval: refresh_interval_in_s, // refresh every minute
-  });
-
-  if(job_status == undefined)
+  if(isLoading)
     return <>
            <h3>Job Id: {job_id}</h3>
            <BarLoader />
            </>
+
+  if(!job_status)
+    return "No JobStatus data available"
+
 
   if(job_status.job_state === "PENDING")
     return <>
@@ -98,10 +63,10 @@ const JobView = ({ job_id, job_data, refresh_interval_in_s = 1000*60 } : Props) 
           </>
       )
   elements.push(
-    <>
+    <div className="my-3">
       <h3>Job Details</h3>
       <pre>{job_data && JSON.stringify(job_data, null, 2)}</pre>
-    </>
+    </div>
   )
   return <div key="{{job_id}}" className="mx-3 my-3"><h2>Job Id: {job_id}</h2>{elements}</div>
 

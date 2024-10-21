@@ -1,116 +1,58 @@
-
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-
-import Node from "./Node";
 import NodesTable from "./NodesTable";
-
-
-import SlurmMonitorEndpoint from "../../services/slurm-monitor/endpoint";
-import Response from "../../services/slurm-monitor/response";
 import { StateSetters } from "../../services/StateSetters";
-import MetaData from "../ResponseMetaData";
+import useNodes, { endpoint_nodes } from "../../hooks/useNodes";
+import useNodesInfo from "../../hooks/useNodesInfos";
+import Node from "./Node";
 
-const endpoint_nodes = new SlurmMonitorEndpoint("/nodes");
-const endpoint_nodes_info = new SlurmMonitorEndpoint("/nodes/info");
+import { DotLoader } from 'react-spinners';
 
-interface NodesResponse extends Response {
-  nodes: Node[];
-}
-
-interface CPUInfo {
-  model_name: string;
-}
-
-interface GPUInfo {
-  name: string;
-  uuid: string;
-  local_id: number;
-  memory_total: number;
-}
-
-interface NodeDataInfo {
-  cpus: CPUInfo[]
-  gpus: GPUInfo[];
-  errors: string[]
-  meta: MetaData
-}
-
-interface NodeInfos {
-  [name: string]: NodeDataInfo;
-}
-
-interface NodeInfoResponse extends Response {
-  nodes: NodeInfos
-}
 
 interface Props {
   stateSetters: StateSetters;
 }
 
 const NodesView = ({stateSetters} : Props) => {
-  const [error, setError] = useState<Error>();
+  const { data : nodes, error : error_nodes, isLoading: nodes_isLoading } = useNodes();
+  const { data : nodes_info, error : error_nodes_info, isLoading : nodes_info_isLoading} = useNodesInfo();
 
-  const fetchNodes = async () => {
-    const { request, cancel } = endpoint_nodes.get();
+  if(nodes_isLoading || nodes_info_isLoading)
+    return (
+      <div className="mx-5 flex flex-wrap justify-between">
+        <h1 className="centered">Nodes</h1>
+        <div className="d-flex justify-content-center align-self-center"><DotLoader/></div>
+      </div>
+    )
 
-    return request
-      .then(({ data }) => {
-        return data ? data.nodes : [];
-      })
-      .catch((error) => {
-        setError(error);
-        cancel();
-        return [];
-      });
-  };
-
-  const fetchNodeInfos = async () => {
-    const { request, cancel } = endpoint_nodes_info.get<NodeInfoResponse>();
-
-    return request
-      .then(({ data }) => {
-        return data ? data.nodes : [];
-      })
-      .catch((error) => {
-        setError(error);
-        cancel();
-        return [];
-      });
-  };
-
-  const { data } = useQuery({
-    queryKey: ["nodes"],
-    queryFn: fetchNodes,
-    initialData: [],
-    refetchInterval: 1000*30, // refresh every 30 seconds
-  });
-
-  const { data : nodes_info } = useQuery({
-    queryKey: ["nodes", "info"],
-    queryFn: fetchNodeInfos,
-    initialData: {},
-    refetchInterval: 1000*3600*24, // refresh daily
-  });
-
-  if (data?.length == 0 && nodes_info?.length == 0)
+  if (error_nodes)
     return (
       <>
         <h1 className="mx-5 centered">Nodes</h1>
-        {error && (
+        {error_nodes && (
           <>
-          <p className="text-danger">No data available: {error.message}</p>
+          <p className="text-danger">No data available: {error_nodes.message}</p>
           {endpoint_nodes.selfSignedErrorMessage()}
           </>
         )}
       </>
     );
 
-  const prepared_data = data.map((node: Node) => ({
+  if(error_nodes_info)
+    return (
+      <>
+        <h1 className="mx-5 centered">Nodes</h1>
+        {error_nodes && (
+          <>
+          <p className="text-danger">No nodes info available: {error_nodes_info.message}</p>
+          </>
+        )}
+      </>
+    );
+
+  const prepared_data = nodes.map((node: Node) => ({
     ...node,
-    gpu_model: nodes_info[node.name]?.gpus?.[0].model,
-    gpu_memory: nodes_info[node.name]?.gpus?.[0].memory_total,
-    cpu_model: nodes_info[node.name]?.cpus.model,
+    gpu_model: nodes_info?.[node.name]?.gpus?.[0].model,
+    gpu_memory: nodes_info?.[node.name]?.gpus?.[0].memory_total,
+    cpu_model: nodes_info?.[node.name]?.cpus.model,
     id: node.name
   }));
 
@@ -124,5 +66,4 @@ const NodesView = ({stateSetters} : Props) => {
   );
 };
 
-export type { NodeDataInfo };
 export default NodesView;

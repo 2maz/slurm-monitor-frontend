@@ -1,46 +1,20 @@
-import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
-
-import SlurmMonitorEndpoint from "../../services/slurm-monitor/endpoint";
-import Response from "../../services/slurm-monitor/response";
 
 import Partition from "./Partition";
 import PartitionsTable from "./PartitionsTable";
-import { StateSetters } from "../../services/StateSetters";
 
-const endpoint = new SlurmMonitorEndpoint("/partitions");
-interface PartitionsResponse extends Response {
-  nodes: Partition[];
-}
+import { StateSetters } from "../../services/StateSetters";
+import usePartitions, { endpoint } from "../../hooks/usePartitions";
+import { DotLoader } from "react-spinners";
+
 
 interface Props {
   stateSetters: StateSetters;
 }
 
 const PartitionsView = ({ stateSetters }: Props) => {
-  const [error, setError] = useState<Error>();
+  const { data : partitions, error, isLoading } =  usePartitions()
 
-  const fetchPartitions = async () => {
-    const { request, cancel } = endpoint.get();
-
-    return request
-      .then(({ data }) => {
-        return data ? data.partitions : [];
-      })
-      .catch((error) => {
-        setError(error);
-        cancel();
-        return [];
-      });
-  };
-
-  const { data } = useQuery({
-    queryKey: ["partitions"],
-    queryFn: fetchPartitions,
-    initialData: [],
-  });
-
-  if (data?.length == 0)
+  if(error)
     return (
       <>
         <h1 className="mx-5 centered">Partitions</h1>
@@ -52,9 +26,19 @@ const PartitionsView = ({ stateSetters }: Props) => {
       </>
     );
 
-  const prepared_data = data.map((node: Partition) => ({
-    ...node,
-    id: node.name,
+  if(isLoading)
+    return (<div className="mx-5 flex flex-wrap justify-between">
+      <h1 className="centered">Partitions</h1>
+      <div className="d-flex justify-content-center align-self-center"><DotLoader/></div>
+      </div>
+    )
+
+  if(!partitions)
+    return "No Partition data available"
+
+  const prepared_data = partitions.map((partition: Partition) => ({
+    ...partition,
+    id: partition.name,
   }));
 
   return (
