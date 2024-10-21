@@ -20,6 +20,7 @@ export interface SlurmJob {
   command: string;
   comment: string;
   contiguous: boolean;
+  cpus: number;
 
   //core_spec:
   //thread_spec:

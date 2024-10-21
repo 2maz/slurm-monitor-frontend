@@ -9,15 +9,16 @@ interface JobsResponse extends Response {
 
 export const endpoint = new SlurmMonitorEndpoint("/jobs");
 
-const useJobs = (setRefreshTime:  React.Dispatch<React.SetStateAction<Date>>, refreshInterval: number) => {
+const useJobs = (refreshInterval: number) => {
 
   const fetchJobs = async () => {
-    const { request} = endpoint.get<JobsResponse>();
+    const { request } = endpoint.get<JobsResponse>();
 
-    const { data } = await request;
-      setRefreshTime(new Date());
-      return data ? data.jobs : [] as Job[];
-  };
+    return request
+      .then(({data}) => {
+        return data ? data.jobs : [] as Job[];
+      })
+  }
 
   return useQuery<Job[], Error>({
     queryKey: ["jobs"],

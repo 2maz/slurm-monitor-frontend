@@ -29,11 +29,7 @@ import "mantine-react-table/styles.css";
 import SettingsView from "./components/SettingsView";
 import useAppState from "./AppState";
 import MLFlowSlurmMapper, { MLFlowSlurmRunInfo } from "./services/slurm-monitor/mlflow";
-import { useQuery } from "@tanstack/react-query";
 
-import Node from "./components/NodesView/Node";
-import { NodeDataInfo } from "./components/NodesView/NodesView";
-import SlurmMonitorEndpoint from "./services/slurm-monitor/endpoint";
 import useNodesInfo from "./hooks/useNodesInfos";
 
 const theme = createTheme({});
@@ -241,7 +237,7 @@ function App() {
                 The associated GPU charts will be displayed there.
                 Alternatively, you can identify the GPU logical ids from the gres_detail property.
               </p>
-              {Object.keys(nodes_info).map((nodename) =>
+              {nodes_info && Object.keys(nodes_info).map((nodename) =>
                 nodes_info[nodename].gpus && (<>
                   <div key={nodename}>
                     <GPUStatusView nodename={nodename} />

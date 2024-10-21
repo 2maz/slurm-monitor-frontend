@@ -1,38 +1,9 @@
-import { useState } from "react";
-import SlurmMonitorEndpoint from "../../services/slurm-monitor/endpoint";
-import { LineChart, Line, Tooltip, XAxis, YAxis, Legend, CartesianGrid } from 'recharts';
+import { LineChart, Line, Tooltip, XAxis, YAxis, Legend, CartesianGrid, ReferenceLine } from 'recharts';
 import moment from "moment";
-import { useQuery } from "@tanstack/react-query";
 import { BarLoader } from "react-spinners";
 
-interface ProcessStatus {
-    pid: number;
-    job_id: number;
-    node: string;
-    cpu_percent: number;
-    memory_percent: number;
-    timestamp: string;
-
-}
-interface ProcessTimeseries {
-    [process_id: number]: ProcessStatus[];
-}
-
-interface ProcessesStats {
-    pids: number[];
-    active_pids: number[];
-    accumulated: ProcessStatus[];
-    timeseries: ProcessTimeseries;
-    timestamp: string;
-}
-
-interface NodesProcessesStats {
-  [nodename: string]: ProcessesStats
-}
-
-interface ProcessTimeseriesResponse extends Response {
-  nodes: NodesProcessesStats
-}
+import useJobStatus from "../../hooks/useJobStatus";
+import useNodesProcessesStats from "../../hooks/useNodesProcessesStats";
 
 interface Props {
   job_id: number;
@@ -43,109 +14,63 @@ interface Props {
 }
 
 const CPUJobStatusView = ({job_id, start_time_in_s, end_time_in_s, resolution_in_s, refresh_interval_in_s = 1000*60} : Props) => {
-  const [error, setError] = useState<Error>();
+  const { data: nodes_processes, error: nodes_processes_error, isLoading : nodes_processes_isLoading } = useNodesProcessesStats({
+      job_id: job_id,
+      start_time_in_s: start_time_in_s,
+      end_time_in_s: end_time_in_s,
+      resolution_in_s: resolution_in_s,
+    },
+    refresh_interval_in_s=refresh_interval_in_s
+  )
+  const { data: job_status, error : job_status_error, isLoading : job_status_isLoading } = useJobStatus(job_id, 3600) // no frequent refresh necessary, just getting cpu allocation
 
-  var query = "/jobs/"+ job_id + "/system_status";
-
-  var parameters = {}
-  if(start_time_in_s != undefined) {
-    parameters = { ...parameters, "start_time_in_s": start_time_in_s}
-  }
-  if(end_time_in_s != undefined) {
-    parameters = { ...parameters, "end_time_in_s": end_time_in_s }
-  }
-  if(resolution_in_s != undefined) {
-    parameters = { ...parameters, "resolution_in_s": resolution_in_s }
-  }
-
-  const endpoint = new SlurmMonitorEndpoint(query, parameters);
-
-  var initial_data : NodesProcessesStats = {}
-
-  const fetchStatus = async () => {
-    const { request, cancel } = endpoint.get<ProcessTimeseriesResponse>();
-
-    return request
-      .then<NodesProcessesStats>(({ data }) => {
-        return data ? data.nodes : initial_data
-      })
-      .catch((error) => {
-        setError(error);
-        cancel();
-        return initial_data
-      })
-  };
-
-
-  const { data: nodes_processes } = useQuery<NodesProcessesStats>({
-    queryKey: ["nodes_processes", job_id, start_time_in_s, end_time_in_s, resolution_in_s],
-    queryFn: fetchStatus,
-    initialData: undefined,
-    refetchInterval: refresh_interval_in_s, // refresh every minute
-  });
-
-  if(nodes_processes == undefined)
+  if(job_status_isLoading || nodes_processes_isLoading)
     return <BarLoader />
 
-  var elements = []
-  if(nodes_processes) {
-    Object.keys(nodes_processes).map((nodename: string) => (
-      elements.push(
-            <><h4>Node: {nodename} - active processes:  {nodes_processes[nodename].active_pids.length}</h4>
-            <div className="mx-5" key="{job_id}-accumulated" >
-              <LineChart width={300} height={250} data={nodes_processes[nodename].accumulated}>
-                <Line yAxisId="1" type="monotone" dataKey="cpu_percent" stroke="#8884d8"/>
-                <Line yAxisId="1" type="monotone" dataKey="memory_percent" stroke="#888400"/>
-                <CartesianGrid strokeDasharray="3 3"/>
-                <XAxis dataKey="timestamp" tickFormatter={timestamp => moment(timestamp).format("HH:mm")} />
-                <YAxis orientation="left" domain={[0, nodes_processes[nodename].active_pids.length*100]} yAxisId="1"
-                  label={{
-                    value: `percentage (%)`,
-                    style: { textAnchor: 'middle' },
-                    angle: -90,
-                    position: 'left',
-                    offset: 0,
-                  }}
-                />
-                <Tooltip></Tooltip>
-                <Legend></Legend>
-              </LineChart>
-            </div>
-            </>
-          )
-    ))
+  if(nodes_processes_error)
+    return "Failed to retrieve process data from nodes"
+
+  if(job_status_error)
+    return "Failed to retrieve status data for job {job_id}"
+
+  var elements : any[] = []
+
+  if(nodes_processes && job_status) {
+    Object.keys(nodes_processes).map((nodename: string, index: number) => {
+
+        const node_processes = nodes_processes[nodename]
+        const allocated_cpus = job_status.cpus;
+
+        const max_cpu_percent = node_processes.accumulated.reduce((acc, stats) => { return acc > stats.cpu_percent ? acc : stats.cpu_percent}, 0)
+        const upperLimit = Math.ceil(max_cpu_percent > allocated_cpus*100 ? max_cpu_percent + 50 : (allocated_cpus + 2)*100);
+
+        elements.push(
+              <div key={index}>
+                <h4>Node: {nodename} - active processes:  {node_processes.active_pids.length}</h4>
+                <div className="mx-5" key="{job_id}-accumulated" >
+                  <LineChart width={300} height={250} data={node_processes.accumulated}>
+                    <Line yAxisId="1" type="monotone" dataKey="cpu_percent" stroke="#8884d8"/>
+                    <Line yAxisId="1" type="monotone" dataKey="memory_percent" stroke="#888400"/>
+                    <ReferenceLine yAxisId="1" y={allocated_cpus*100} label={allocated_cpus + " cpu(s) allocated"} stroke="red" strokeDasharray="40 150"/>
+                    <CartesianGrid strokeDasharray="3 3"/>
+                    <XAxis dataKey="timestamp" tickFormatter={timestamp => moment(timestamp).format("HH:mm")} />
+                    <YAxis orientation="left" domain={[0, upperLimit]} yAxisId="1"
+                      label={{
+                        value: `percentage (%)`,
+                        style: { textAnchor: 'middle' },
+                        angle: -90,
+                        position: 'left',
+                        offset: 0,
+                      }}
+                    />
+                    <Tooltip></Tooltip>
+                    <Legend></Legend>
+                  </LineChart>
+                </div>
+              </div>
+            )
+    })
   }
-//  if(processes.timeseries) {
-//    elements.push(
-//    <div className="d-flex flex-wrap justify-content-start my-3">
-//       { Object.keys(processes.timeseries).
-//          map((process_id : string) => (
-//            <>
-//        <div className="mx-5" key={process_id} >
-//          <h5>node: {processes.timeseries[process_id][0]['node']} - pid: {process_id}</h5>
-//          <LineChart width={300} height={250} data={processes.timeseries[process_id]}>
-//            <Line yAxisId="1" type="monotone" dataKey="cpu_percent" stroke="#8884d8"/>
-//            <Line yAxisId="1" type="monotone" dataKey="memory_percent" stroke="#888400"/>
-//            <CartesianGrid strokeDasharray="3 3"/>
-//            <XAxis dataKey="timestamp" tickFormatter={timestamp => moment(timestamp).format("HH:mm")} />
-//            <YAxis orientation="left" domain={[0,100]} yAxisId="1"
-//              label={{
-//                value: `percentage (%)`,
-//                style: { textAnchor: 'middle' },
-//                angle: -90,
-//                position: 'left',
-//                offset: 0,
-//              }}
-//            />
-//            <Tooltip></Tooltip>
-//            <Legend></Legend>
-//          </LineChart>
-//        </div>
-//        </>
-//      ))
-//    }
-//    </div>)
-//  }
   return (<>{elements}</>)
 }
 

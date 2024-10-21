@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { ReactElement, useState } from "react";
 import SlurmMonitorEndpoint from "../../services/slurm-monitor/endpoint";
 import { LineChart, Line, Tooltip, XAxis, YAxis, Legend, CartesianGrid } from 'recharts';
 import moment from "moment";
@@ -84,7 +84,8 @@ const CPUStatusView = ({nodename, start_time_in_s, end_time_in_s, resolution_in_
   if(nodes_processes) {
     Object.keys(nodes_processes).map((process_id: string) => (
       elements.push(
-            <><h4>Node: {nodename}</h4>
+            <>
+            <h4>Node: {nodename}</h4>
             <div className="mx-5" key="{job_id}-accumulated" >
               <LineChart width={300} height={250} data={nodes_processes[process_id].data}>
                 <Line yAxisId="1" type="monotone" dataKey="cpu_percent" stroke="#8884d8"/>
@@ -107,37 +108,6 @@ const CPUStatusView = ({nodename, start_time_in_s, end_time_in_s, resolution_in_
           )
     ))
   }
-//  if(processes.timeseries) {
-//    elements.push(
-//    <div className="d-flex flex-wrap justify-content-start my-3">
-//       { Object.keys(processes.timeseries).
-//          map((process_id : string) => (
-//            <>
-//        <div className="mx-5" key={process_id} >
-//          <h5>node: {processes.timeseries[process_id][0]['node']} - pid: {process_id}</h5>
-//          <LineChart width={300} height={250} data={processes.timeseries[process_id]}>
-//            <Line yAxisId="1" type="monotone" dataKey="cpu_percent" stroke="#8884d8"/>
-//            <Line yAxisId="1" type="monotone" dataKey="memory_percent" stroke="#888400"/>
-//            <CartesianGrid strokeDasharray="3 3"/>
-//            <XAxis dataKey="timestamp" tickFormatter={timestamp => moment(timestamp).format("HH:mm")} />
-//            <YAxis orientation="left" domain={[0,100]} yAxisId="1"
-//              label={{
-//                value: `percentage (%)`,
-//                style: { textAnchor: 'middle' },
-//                angle: -90,
-//                position: 'left',
-//                offset: 0,
-//              }}
-//            />
-//            <Tooltip></Tooltip>
-//            <Legend></Legend>
-//          </LineChart>
-//        </div>
-//        </>
-//      ))
-//    }
-//    </div>)
-//  }
   return (<>{elements}</>)
 }
 

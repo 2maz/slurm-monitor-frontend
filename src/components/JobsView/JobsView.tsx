@@ -33,9 +33,8 @@ interface Props {
 
 const JobsView = ({ stateSetters } : Props) => {
   const [refreshInterval, setRefreshInterval] = useState(10000);
-  const [refreshTime, setRefreshTime] = useState<Date>(new Date());
 
-  const {data: jobs, error, isLoading } = useJobs(setRefreshTime, refreshInterval)
+  const {data: jobs, error, isLoading, dataUpdatedAt } = useJobs(refreshInterval)
   const mlflowSlurmJobs = useAppState((state) => state.slurmRuns);
 
   if(error)
@@ -82,7 +81,7 @@ const JobsView = ({ stateSetters } : Props) => {
           min="5"
         />
         <label className="mx-3">
-          Last refresh: {refreshTime.toUTCString()}
+          Last refresh: {new Date(dataUpdatedAt).toUTCString()}
         </label>
       </div>
       <>
