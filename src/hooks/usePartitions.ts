@@ -21,6 +21,7 @@ const usePartitions = () => {
   return useQuery<Partition[], Error>({
     queryKey: ["partitions"],
     queryFn: fetchPartitions,
+    staleTime: 3600*24*1000, // 1d
   });
 
 }

@@ -9,7 +9,7 @@ interface JobsResponse extends Response {
 
 export const endpoint = new SlurmMonitorEndpoint("/jobs");
 
-const useJobs = (refreshInterval: number) => {
+const useJobs = (refresh_interval_in_s: number) => {
 
   const fetchJobs = async () => {
     const { request } = endpoint.get<JobsResponse>();
@@ -23,7 +23,7 @@ const useJobs = (refreshInterval: number) => {
   return useQuery<Job[], Error>({
     queryKey: ["jobs"],
     queryFn: fetchJobs,
-    refetchInterval: refreshInterval,
+    refetchInterval: refresh_interval_in_s*1000,
   });
 }
 

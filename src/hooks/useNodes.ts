@@ -23,8 +23,7 @@ const useNodes = () => {
   return useQuery<Node[], Error>({
     queryKey: ["nodes"],
     queryFn: fetchNodes,
-    initialData: [],
-    refetchInterval: 1000*30, // refresh every 30 seconds
+    refetchInterval: 30*1000, // refresh every 30 seconds
   });
 }
 

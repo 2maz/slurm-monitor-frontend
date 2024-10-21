@@ -66,7 +66,7 @@ const useNodesProcessesStats = (query_parameters: QueryParameters, refresh_inter
     return useQuery<NodesProcessesStats, Error>({
         queryKey: ["nodes_processes", query_parameters],
         queryFn: fetchStatus,
-        refetchInterval: refresh_interval_in_s, // refresh every minute
+        refetchInterval: refresh_interval_in_s*1000, // refresh every minute
     });
 
 }

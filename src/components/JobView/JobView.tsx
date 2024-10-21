@@ -11,7 +11,7 @@ interface Props {
     refresh_interval_in_s?: number;
 }
 
-const JobView = ({ job_id, job_data, refresh_interval_in_s = 1000*60 } : Props) => {
+const JobView = ({ job_id, job_data, refresh_interval_in_s = 60 } : Props) => {
   const { data : job_status, error, isLoading } = useJobStatus(job_id, refresh_interval_in_s)
 
   if(isLoading)

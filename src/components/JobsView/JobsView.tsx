@@ -34,7 +34,7 @@ interface Props {
 const JobsView = ({ stateSetters } : Props) => {
   const [refreshInterval, setRefreshInterval] = useState(10000);
 
-  const {data: jobs, error, isLoading, dataUpdatedAt } = useJobs(refreshInterval)
+  const {data: jobs, error, isLoading, dataUpdatedAt } = useJobs(refreshInterval/1000.0)
   const mlflowSlurmJobs = useAppState((state) => state.slurmRuns);
 
   if(error)

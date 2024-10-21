@@ -32,7 +32,7 @@ const useJobStatus = (job_id: number, refresh_interval_in_s: number = 60) => {
   return useQuery<JobStatus, Error>({
     queryKey: ["job_status", job_id],
     queryFn: fetchStatus,
-    refetchInterval: refresh_interval_in_s, // default refresh every minute
+    refetchInterval: refresh_interval_in_s*1000, // default refresh every minute
   });
 }
 
