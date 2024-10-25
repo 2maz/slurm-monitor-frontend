@@ -99,7 +99,7 @@ interface Props {
   refresh_interval_in_s?: number;
 }
 
-const GPUStatusView = ({nodename, logical_ids, start_time_in_s, end_time_in_s, resolution_in_s, refresh_interval_in_s = 1000*60} : Props) => {
+const GPUStatusView = ({nodename, logical_ids, start_time_in_s, end_time_in_s, resolution_in_s, refresh_interval_in_s = 60} : Props) => {
   const [error, setError] = useState<Error>();
 
   var query = "/nodes/"+ nodename + "/gpu_status"
@@ -137,7 +137,7 @@ const GPUStatusView = ({nodename, logical_ids, start_time_in_s, end_time_in_s, r
     queryKey: ["gpu_status", nodename, logical_ids, start_time_in_s, end_time_in_s, resolution_in_s],
     queryFn: fetchStatus,
     initialData: undefined,
-    refetchInterval: refresh_interval_in_s, // refresh every minute
+    refetchInterval: refresh_interval_in_s*1000, // refresh every minute
   });
 
   if(gpu_data_timeseries_list == undefined)

@@ -13,7 +13,7 @@ interface Props {
 }
 
 const CPUStatusView = ({nodename, start_time_in_s, end_time_in_s, resolution_in_s, refresh_interval_in_s = 1000*60} : Props) => {
-    const {data: nodes_processes, error, isLoading } = useCPUStatus({
+    const {data: nodes_processes, error, isLoading, isSuccess } = useCPUStatus({
       nodename: nodename,
       start_time_in_s: start_time_in_s,
       end_time_in_s: end_time_in_s,
@@ -27,7 +27,7 @@ const CPUStatusView = ({nodename, start_time_in_s, end_time_in_s, resolution_in_
     return "Failed loading processes data for {nodename}"
 
   var elements : any[] = []
-  if(nodes_processes) {
+  if(isSuccess) {
     Object.keys(nodes_processes).map((process_id: string) => (
       elements.push(
             <>
