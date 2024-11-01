@@ -7,9 +7,10 @@ import { BottomNavigation, BottomNavigationAction } from "@mui/material";
 import SegmentIcon from "@mui/icons-material/Segment";
 import AccountTreeIcon from "@mui/icons-material/AccountTree";
 import DirectionsRunsTwoToneIcon from "@mui/icons-material/DirectionsRunTwoTone";
-import SettingsIcon from '@mui/icons-material/Settings';
-import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
-import InfoIcon from '@mui/icons-material/Info';
+import SettingsIcon from "@mui/icons-material/Settings";
+import MonitorHeartIcon from "@mui/icons-material/MonitorHeart";
+import InfoIcon from "@mui/icons-material/Info";
+import QueryStatsIcon from '@mui/icons-material/QueryStats';
 
 import {
   MRT_ColumnFiltersState,
@@ -28,9 +29,12 @@ import "@mantine/dates/styles.css";
 import "mantine-react-table/styles.css";
 import SettingsView from "./components/SettingsView";
 import useAppState from "./AppState";
-import MLFlowSlurmMapper, { MLFlowSlurmRunInfo } from "./services/slurm-monitor/mlflow";
+import MLFlowSlurmMapper, {
+  MLFlowSlurmRunInfo,
+} from "./services/slurm-monitor/mlflow";
 
 import useNodesInfo from "./hooks/useNodesInfos";
+import QueryView from "./components/QueryView";
 
 const theme = createTheme({});
 
@@ -53,7 +57,7 @@ type persistent_setter_t =
 /**
  * Create a persistance decorator for an existing value, setter pair
  * The state is made persistent under the given name.
- * 
+ *
  * @param value The state value
  * @param setter  The state setter
  * @param name The name of the value in the session storage
@@ -67,14 +71,13 @@ const makePersistent = (
   return [
     value,
     (updateFn: any) => {
-      if(typeof updateFn === 'function') {
+      if (typeof updateFn === "function") {
         const stateValue = updateFn(value);
         setter(stateValue);
         window.sessionStorage.setItem(name, JSON.stringify(stateValue));
       } else {
         setter(updateFn);
         window.sessionStorage.setItem(name, JSON.stringify(updateFn));
-
       }
     },
   ];
@@ -85,7 +88,7 @@ function App() {
   const [view, setView] = useState<string>(
     window.sessionStorage.getItem("view") || "jobs"
   );
-  const { data: nodes_info } = useNodesInfo()
+  const { data: nodes_info } = useNodesInfo();
 
   // State for column filters and visible columns for each view
   const [partitionsFilter, setPartitionsFilter] =
@@ -98,9 +101,9 @@ function App() {
   );
   const [nodesVisibility, setNodesVisibility] = useState<MRT_VisibilityState>(
     getFromStorage("nodesVisibility", {
-      "alloc_cpus": false,
-      "cores": false,
-      "alloc_memory": false, // only getting zeros here
+      alloc_cpus: false,
+      cores: false,
+      alloc_memory: false, // only getting zeros here
     })
   );
 
@@ -118,7 +121,6 @@ function App() {
   useEffect(() => {
     document.title = "ex3 - Status: " + view;
   });
-
 
   // BEGIN: Ensure that state is stored in sessionStorage, so that is survives a refresh
   const nodesFilterState = makePersistent(
@@ -163,11 +165,21 @@ function App() {
 
   return (
     <>
-      {mlflowUrls.map(url => 
-      <MLFlowSlurmMapper key={"slurm-mapper-"+url} url={url} updateFn={(runs : MLFlowSlurmRunInfo[]) => {
-        const newSlurmJobs : MLFlowSlurmRunInfo[] = slurmJobs.filter((info : MLFlowSlurmRunInfo) => !info.mlflow_run_uri?.startsWith(url)).concat(runs);
-        setSlurmJobs(newSlurmJobs);
-      }}/>)}
+      {mlflowUrls.map((url) => (
+        <MLFlowSlurmMapper
+          key={"slurm-mapper-" + url}
+          url={url}
+          updateFn={(runs: MLFlowSlurmRunInfo[]) => {
+            const newSlurmJobs: MLFlowSlurmRunInfo[] = slurmJobs
+              .filter(
+                (info: MLFlowSlurmRunInfo) =>
+                  !info.mlflow_run_uri?.startsWith(url)
+              )
+              .concat(runs);
+            setSlurmJobs(newSlurmJobs);
+          }}
+        />
+      ))}
 
       <LocalizationProvider dateAdapter={AdapterLuxon} adapterLocale="no">
         <MantineProvider theme={theme}>
@@ -199,6 +211,11 @@ function App() {
                   icon={<SettingsIcon />}
                   onClick={() => selectView("settings")}
                 />
+                <BottomNavigationAction
+                  label="Query"
+                  icon={<QueryStatsIcon />}
+                  onClick={() => selectView("query")}
+                />
               </BottomNavigation>
             </Paper>
             {view && view == "jobs" && (
@@ -227,29 +244,35 @@ function App() {
             )}
             {view && view == "gpu_status" && (
               <>
-              <h1>GPU Status: {currentTime}</h1>
-              <h3>Usage</h3>
-              <p>The following nodes statistics are updated every minute. If you cannot see data in the graph
-                the nodes is likely down. In this case check the 'nodes' view.
-              </p>
-              <p>
-                In order to identify the GPUs which your current job is using, you can double click on the job (in 'jobs' view).
-                The associated GPU charts will be displayed there.
-                Alternatively, you can identify the GPU logical ids from the gres_detail property.
-              </p>
-              {nodes_info && Object.keys(nodes_info).map((nodename) =>
-                nodes_info[nodename].gpus && (<>
-                  <div key={nodename}>
-                    <GPUStatusView nodename={nodename} />
-                  </div>
-                  </>
-                )
-              )}
+                <h1>GPU Status: {currentTime}</h1>
+                <h3>Usage</h3>
+                <p>
+                  The following nodes statistics are updated every minute. If
+                  you cannot see data in the graph the nodes is likely down. In
+                  this case check the 'nodes' view.
+                </p>
+                <p>
+                  In order to identify the GPUs which your current job is using,
+                  you can double click on the job (in 'jobs' view). The
+                  associated GPU charts will be displayed there. Alternatively,
+                  you can identify the GPU logical ids from the gres_detail
+                  property.
+                </p>
+                {nodes_info &&
+                  Object.keys(nodes_info).map(
+                    (nodename) =>
+                      nodes_info[nodename].gpus && (
+                        <>
+                          <div key={nodename}>
+                            <GPUStatusView nodename={nodename} />
+                          </div>
+                        </>
+                      )
+                  )}
               </>
             )}
-            {view && view == "settings" && (
-              <SettingsView />
-            )}
+            {view && view == "settings" && <SettingsView />}
+            {view && view == "query" && <QueryView />}
           </Box>
         </MantineProvider>
       </LocalizationProvider>

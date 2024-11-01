@@ -1,0 +1,44 @@
+import { useQuery } from "@tanstack/react-query";
+import SlurmMonitorEndpoint from "../services/slurm-monitor/endpoint";
+
+//interface UserJobStat {
+//    user_id: number;
+//    share_of_successful_jobs: number;
+//    number_of_jobs: number;
+//    avg_time: Date;
+//    min_time: Date;
+//    max_time: Date;
+//    avg_cpus: number;
+//    avg_node_count: number;
+//    avg_tasks: number;
+//}
+
+interface Row {
+    [column_name: string]: number
+}
+
+interface DataFrame extends Array<Row> {}
+
+interface DataFrameResponse extends DataFrame, Response {
+}
+
+const useDataFrameQuery = (query_name: string) => {
+  const endpoint_nodes = new SlurmMonitorEndpoint("/queries/" + query_name);
+
+  const fetchDataFrame = async () => {
+    const { request } = endpoint_nodes.get<DataFrameResponse>();
+
+    return request
+      .then<DataFrame>(({ data }) => {
+        return data ? data : [] as DataFrame;
+      })
+  };
+
+  return useQuery<DataFrame, Error>({
+    queryKey: ["queries", query_name],
+    queryFn: fetchDataFrame,
+    refetchInterval: 3600*1000, // refresh every hour
+  });
+}
+
+export default useDataFrameQuery
