@@ -26,17 +26,17 @@ const CPUStatusView = ({nodename, start_time_in_s, end_time_in_s, resolution_in_
   if(error)
     return "Failed loading processes data for {nodename}"
 
-  var elements : any[] = []
+  const elements : any[] = []
   if(isSuccess) {
     Object.keys(nodes_processes).map((process_id: string) => (
       elements.push(
-            <>
+            <div key={process_id + "cpu_status"}>
             <h4>Node: {nodename}</h4>
-            <div className="mx-5" key="{job_id}-accumulated" >
+            <div className="mx-5" key={nodename + "-" + process_id + "-accumulated"} >
               <LineChart width={300} height={250} data={nodes_processes[process_id].data}>
                 <Line yAxisId="1" type="monotone" dataKey="cpu_percent" stroke="#8884d8"/>
                 <CartesianGrid strokeDasharray="3 3"/>
-                <XAxis dataKey="timestamp" tickFormatter={timestamp => moment(timestamp).format("HH:mm")} />
+                <XAxis dataKey="timestamp" tickFormatter={timestamp => moment(timestamp as Date).format("HH:mm")} />
                 <YAxis orientation="left" domain={[0, 100]} yAxisId="1"
                   label={{
                     value: `percentage (%)`,
@@ -50,7 +50,7 @@ const CPUStatusView = ({nodename, start_time_in_s, end_time_in_s, resolution_in_
                 <Legend></Legend>
               </LineChart>
             </div>
-            </>
+            </div>
           )
     ))
   }
