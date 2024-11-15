@@ -3,7 +3,7 @@ import SlurmMonitorEndpoint from "../services/slurm-monitor/endpoint";
 import Job from "../components/JobsView/Job";
 
 
-interface JobsResponse extends Response {
+export interface JobsResponse extends Response {
   jobs: Job[];
 }
 

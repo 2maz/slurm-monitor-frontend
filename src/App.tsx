@@ -1,22 +1,26 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 
-import { Box, Group, MantineProvider, Paper, createTheme } from "@mantine/core";
+import { Box, MantineProvider, Paper, createTheme } from "@mantine/core";
 
-import { BottomNavigation, BottomNavigationAction } from "@mui/material";
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
+
+import { BottomNavigation, BottomNavigationAction, Button } from "@mui/material";
 import SegmentIcon from "@mui/icons-material/Segment";
 import AccountTreeIcon from "@mui/icons-material/AccountTree";
 import DirectionsRunsTwoToneIcon from "@mui/icons-material/DirectionsRunTwoTone";
 import SettingsIcon from "@mui/icons-material/Settings";
 import MonitorHeartIcon from "@mui/icons-material/MonitorHeart";
-import InfoIcon from "@mui/icons-material/Info";
+import AppsIcon from '@mui/icons-material/Apps';
 import QueryStatsIcon from '@mui/icons-material/QueryStats';
+import InventoryIcon from '@mui/icons-material/Inventory';
 
 import {
   MRT_ColumnFiltersState,
   MRT_VisibilityState,
 } from "material-react-table";
-import JobsView from "./components/JobsView";
+import JobsView, { CompletedJobsView } from "./components/JobsView";
 import PartitionsView from "./components/PartitionsView";
 import GPUStatusView from "./components/GPUStatusView";
 
@@ -44,7 +48,7 @@ const theme = createTheme({});
  * @param defaultValue Default value, in case the value does not exist in the session storage
  * @returns  Current value if it exists, otherwise the default value
  */
-const getFromStorage = (name: string, defaultValue: any = []) => {
+const getFromStorage = (name: string, defaultValue: unknown = []) => {
   const item = window.sessionStorage.getItem(name);
   return item !== null ? JSON.parse(item) : defaultValue;
 };
@@ -111,8 +115,18 @@ function App() {
     getFromStorage("jobsFilter", [])
   );
   const [jobsVisibility, setJobsVisibility] = useState<MRT_VisibilityState>(
-    getFromStorage("jobsVisibility", {})
+    getFromStorage<MRT_VisibilityState>("jobsVisibility", {})
   );
+
+  const [completedJobsFilter, setCompletedJobsFilter] = useState<MRT_ColumnFiltersState>(
+    getFromStorage("completedJobsFilter", [])
+  );
+  const [completedJobsVisibility, setCompletedJobsVisibility] = useState<MRT_VisibilityState>(
+    getFromStorage("completedJobsVisibility", {})
+  );
+
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const open = Boolean(anchorEl);
 
   const mlflowUrls = useAppState((state) => state.mlflowUrls);
   const slurmJobs = useAppState((state) => state.slurmRuns);
@@ -145,6 +159,17 @@ function App() {
     "jobsVisibility"
   );
 
+  const completedJobsFilterState = makePersistent(
+    completedJobsFilter,
+    setCompletedJobsFilter,
+    "completedJobsFilter"
+  );
+  const completedJobsVisibilityState = makePersistent(
+    completedJobsVisibility,
+    setCompletedJobsVisibility,
+    "completedJobsVisibility"
+  );
+
   const partitionsFilterState = makePersistent(
     partitionsFilter,
     setPartitionsFilter,
@@ -159,6 +184,13 @@ function App() {
   const selectView = (name: string) => {
     setView(name);
     window.sessionStorage.setItem("view", name);
+  };
+
+  const handleClick = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+  const handleClose = () => {
+    setAnchorEl(null);
   };
 
   const currentTime = new Date().toString();
@@ -206,17 +238,44 @@ function App() {
                   icon={<MonitorHeartIcon />}
                   onClick={() => selectView("gpu_status")}
                 />
-                <BottomNavigationAction
-                  label="Settings"
-                  icon={<SettingsIcon />}
-                  onClick={() => selectView("settings")}
-                />
-                <BottomNavigationAction
-                  label="Query"
-                  icon={<QueryStatsIcon />}
-                  onClick={() => selectView("query")}
-                />
+              <Button
+                id="extras-button"
+                aria-control={open ? 'extras-menu' : undefined}
+                aria-haspopup="true"
+                aria-expanded={open ? 'true' : undefined}
+                onClick={handleClick}
+              >
+                <AppsIcon />
+              </Button>
               </BottomNavigation>
+              <Menu
+                 id="extras-menu"
+                 open={open}
+                 anchorEl={anchorEl}
+                 onClose={handleClose}
+                 MenuListProps={{
+                  'aria-labelledby': 'menu-button'
+                 }}
+              >
+                <MenuItem onClick={() => {
+                  selectView("inspect-completed-jobs")
+                  handleClose()
+                }}>
+                  <InventoryIcon /><div className="mx-2">Inspect Completed Jobs</div>
+                </MenuItem>
+                <MenuItem onClick={() => {
+                  selectView("query")
+                  handleClose()
+                }}>
+                  <QueryStatsIcon /><div className="mx-2">Usage Stats</div>
+                </MenuItem>
+                <MenuItem onClick={() => {
+                    selectView("settings")
+                    handleClose()
+                }}>
+                 <SettingsIcon /><div className="mx-2">Settings</div>
+                </MenuItem>
+              </Menu>
             </Paper>
             {view && view == "jobs" && (
               <JobsView
@@ -273,6 +332,13 @@ function App() {
             )}
             {view && view == "settings" && <SettingsView />}
             {view && view == "query" && <QueryView />}
+            { view && view == "inspect-completed-jobs" && <CompletedJobsView
+                stateSetters={{
+                  columnFilters: completedJobsFilterState,
+                  columnVisibility: completedJobsVisibilityState,
+                }}
+              />
+            }
           </Box>
         </MantineProvider>
       </LocalizationProvider>

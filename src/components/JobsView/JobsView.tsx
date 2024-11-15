@@ -39,7 +39,7 @@ const JobsView = ({ stateSetters } : Props) => {
 
   if(error)
     return (
-      <>
+      <div id="jobs-view-error">
         <h1 className="mx-5 centered">Jobs</h1>
         {error && (
           <>
@@ -47,7 +47,7 @@ const JobsView = ({ stateSetters } : Props) => {
           {endpoint.selfSignedErrorMessage()}
           </>
         )}
-      </>
+      </div>
     );
 
   if(isLoading)

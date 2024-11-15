@@ -96,6 +96,18 @@ const JobsTable = ({ data, stateSetters }: Props) => {
         grow: true,
       },
       {
+        accessorKey: "end_time",
+        header: "End Time",
+        accessorFn: (row) => new Date(row.end_time * 1000),
+        filterVariant: "datetime-range",
+        Cell: ({ cell }) =>
+          `${cell.getValue<Date>().toLocaleDateString()} ${cell
+            .getValue<Date>()
+            .toLocaleTimeString()}`,
+        minSize: 50,
+        grow: true,
+      },
+      {
         accessorKey: "state_reason",
         header: "State Reason",
         filterVariant: "multi-select",
