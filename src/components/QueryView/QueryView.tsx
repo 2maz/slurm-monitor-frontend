@@ -1,10 +1,11 @@
 import useAvailableQueries from "../../hooks/useAvailableQueries";
 import { createListCollection } from "@chakra-ui/react";
+import { Tooltip } from '@mui/material';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 
 import {
   SelectContent,
   SelectItem,
-  SelectLabel,
   SelectRoot,
   SelectTrigger,
   SelectValueText,
@@ -43,9 +44,10 @@ const QueryView = () => {
           setQueryName(event.value);
         }}
       >
-        <SelectLabel>
-          <h2>Query</h2>
-        </SelectLabel>
+
+        <Tooltip title="This is an experimental view - Work in Progress">
+          <h2>Usage Statistics <WarningAmberIcon className="mx-2"/> </h2>
+        </Tooltip>
         <SelectTrigger>
           <SelectValueText placeholder="Select query" />
         </SelectTrigger>

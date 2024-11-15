@@ -3,6 +3,7 @@ import useDataFrameQuery from "../../hooks/useDataFrameQuery";
 import { BarLoader } from "react-spinners";
 
 import { createListCollection, HStack } from "@chakra-ui/react";
+import { scaleSymlog } from 'd3';
 
 import {
   SelectContent,
@@ -18,6 +19,8 @@ import {
   Line,
   LineChart,
   ResponsiveContainer,
+  Scatter,
+  ScatterChart,
   Tooltip,
   XAxis,
   YAxis,
@@ -31,9 +34,14 @@ const DataFrameView = ({ query_name }: Props) => {
   const [xColumn, setXColumn] = useState("");
   const [yColumn, setYColumn] = useState("");
 
+  const [xScale, setXScale] = useState("auto");
+  const [yScale, setYScale] = useState("auto");
+
   useEffect(() => {
     setXColumn("");
     setYColumn("");
+    setXScale("auto");
+    setYScale("auto");
   }, [query_name]);
 
   if (isLoading) {
@@ -53,6 +61,26 @@ const DataFrameView = ({ query_name }: Props) => {
   const columns = createListCollection({
     items: availableColumns,
   });
+  // 'auto' | 'linear' | 'pow' | 'sqrt' | 'log' | 'identity' | 'time' | 'band' | 'point' | 'ordinal' | 'quantile' | 'quantize' | 'utc' | 'sequential' | 'threshold' | Function
+  const scales = createListCollection({
+    items: [
+      { label: 'auto', value: 'auto'},
+      { label: 'sqrt', value: 'sqrt'},
+      { label: 'log', value: 'log'},
+      { label: 'linear', value: 'linear'},
+      { label: 'pow', value: 'pow'},
+      { label: 'identity', value: 'identity'},
+      { label: 'time', value: 'time'},
+      { label: 'band', value: 'band'},
+      { label: 'point', value: 'point'},
+      { label: 'quantile', value: 'quantile'},
+      { label: 'quantize', value: 'quantize'},
+      { label: 'utc', value: 'utc'},
+      { label: 'sequential', value: 'sequential'},
+      { label: 'threshold', value: 'threshold'},
+
+    ]
+  })
 
   const elements = [];
   elements.push(
@@ -101,6 +129,52 @@ const DataFrameView = ({ query_name }: Props) => {
           </SelectContent>
         </SelectRoot>
       </HStack>
+      <HStack>
+        <SelectRoot
+          collection={scales}
+          size="sm"
+          width="320px"
+          onValueChange={(event) => {
+            setXScale(event.value[0]);
+          }}
+          defaultValue={[xScale]}
+        >
+          <SelectLabel>Select x-Axis scale</SelectLabel>
+          <SelectTrigger>
+            <SelectValueText placeholder="Select scale" />
+          </SelectTrigger>
+          <SelectContent>
+            {scales.items.map((scale) => (
+              <SelectItem item={scale} key={scale.value}>
+                {scale.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </SelectRoot>
+
+        <SelectRoot
+          collection={scales}
+          size="sm"
+          width="320px"
+          onValueChange={(event) => {
+            setYScale(event.value[0]);
+          }}
+          defaultValue={[yScale]}
+        >
+          <SelectLabel>Select y-Axis scale</SelectLabel>
+          <SelectTrigger>
+            <SelectValueText placeholder="Select scale" />
+          </SelectTrigger>
+          <SelectContent>
+            {scales.items.map((scale) => (
+              <SelectItem item={scale} key={scale.value}>
+                {scale.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </SelectRoot>
+
+      </HStack>
     </div>
   );
 
@@ -124,9 +198,9 @@ const DataFrameView = ({ query_name }: Props) => {
           key={query_name + "-" + xColumn + "-" + yColumn}
           style={{ width: "100%", height: 300 }}
         >
-          <ResponsiveContainer>
+          <ResponsiveContainer className="my-5">
             <LineChart
-              margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+              margin={{ top: 15, right: 30, left: 20, bottom: 15 }}
               data={sortedData}
             >
               <Line
@@ -136,16 +210,78 @@ const DataFrameView = ({ query_name }: Props) => {
                 stroke="#8884d8"
               />
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey={xColumn} />
-              <YAxis orientation="left" yAxisId="1" />
+              <XAxis 
+                  scale={xScale === "log" ? scaleSymlog() : xScale}
+                  type={typeof data[0][xColumn] === "number" ? "number" : "category"}
+                  label={{
+                    value: xColumn,
+                    dy: 15
+                  }}
+                  ticks={["sqrt", "log"].includes(xScale) ? [10, 100, 1000, 10000] : undefined} // Fixed tick values}
+                  dataKey={xColumn}
+              />
+              <YAxis 
+                scale={yScale === "log" ? scaleSymlog() : yScale}
+                type="number"
+                label={{
+                  value: yColumn,
+                  style: { textAnchor: 'middle' },
+                  angle: -90,
+                  position: 'left',
+                  offset: 0,
+                }}
+                ticks={["sqrt", "log"].includes(yScale) ? [10, 100, 1000, 10000] : undefined} // Fixed tick values}
+                orientation="left"
+                yAxisId="1"
+              />
               <Tooltip></Tooltip>
-              <Legend></Legend>
             </LineChart>
+          </ResponsiveContainer>
+          <ResponsiveContainer className="my-5">
+            <ScatterChart
+              margin={{ top: 15, right: 30, left: 20, bottom: 15 }}
+            >
+              <Scatter
+                name="data"
+                data={sortedData}
+                fill="#8884d8"
+                fillOpacity={0.6}
+              />
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis
+                scale={xScale}
+                type="number"
+                label={{
+                  value: xColumn,
+                  style: { textAnchor: 'middle' },
+                  angle: 0,
+                  dy: 15
+                }}
+                ticks={["sqrt", "log"].includes(xScale) ? [10, 100, 1000, 10000] : undefined} // Fixed tick values}
+                dataKey={xColumn}
+                //domain={[0,100]}
+              />
+              <YAxis
+                scale={yScale}
+                type="number"
+                label={{
+                  value: yColumn,
+                  style: { textAnchor: 'middle' },
+                  angle: -90,
+                  position: 'left',
+                  offset: 0,
+                }}
+                //ticks={["sqrt", "log"].includes(yScale) ? [10, 100, 1000, 10000] : undefined} // Fixed tick values}
+                dataKey={yColumn}
+              />
+              <Tooltip></Tooltip>
+            </ScatterChart>
           </ResponsiveContainer>
         </div>
       </div>
     );
   }
+
 
   return <div className="my-5">{elements}</div>;
 };
