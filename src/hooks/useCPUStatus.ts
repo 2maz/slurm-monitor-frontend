@@ -27,7 +27,7 @@ export interface QueryParameters {
 }
 
 export const buildParameters = (query_parameters: QueryParameters) => {
-  var parameters = {};
+  let parameters = {};
   if (query_parameters.start_time_in_s != undefined) {
     parameters = {
       ...parameters,
@@ -54,7 +54,7 @@ const useCPUStatus = (
   query_parameters: QueryParameters,
   refresh_interval_in_s: number = 60
 ) => {
-  var query = "/nodes/" + query_parameters.nodename + "/cpu_status";
+  const query = "/nodes/" + query_parameters.nodename + "/cpu_status";
   const endpoint = new SlurmMonitorEndpoint(query, buildParameters(query_parameters));
   const fetchStatus = async () => {
     const { request } = endpoint.get<NodesCPUStatusTimeseriesResponse>();

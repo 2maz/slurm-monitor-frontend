@@ -15,7 +15,7 @@ interface GPUStatus {
 
     // datetime string needs to be formatted
     timestamp: string,
-};
+}
 
 export interface GPUDataSeries {
     label: string;
@@ -92,7 +92,7 @@ const useGPUStatus = (
     refresh_interval_in_s: number = 60
 ) => {
 
-  var query = "/nodes/"+ query_parameters.nodename + "/gpu_status"
+  const query = "/nodes/"+ query_parameters.nodename + "/gpu_status"
   
   let parameters = buildParameters(query_parameters)
   if(query_parameters.logical_ids != undefined) {
