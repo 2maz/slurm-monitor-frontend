@@ -6,7 +6,7 @@ import { Box, MantineProvider, Paper, createTheme } from "@mantine/core";
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 
-import { BottomNavigation, BottomNavigationAction, Button } from "@mui/material";
+import { BottomNavigation, BottomNavigationAction } from "@mui/material";
 import SegmentIcon from "@mui/icons-material/Segment";
 import AccountTreeIcon from "@mui/icons-material/AccountTree";
 import DirectionsRunsTwoToneIcon from "@mui/icons-material/DirectionsRunTwoTone";
@@ -238,15 +238,14 @@ function App() {
                   icon={<MonitorHeartIcon />}
                   onClick={() => selectView("gpu_status")}
                 />
-              <Button
-                id="extras-button"
-                aria-control={open ? 'extras-menu' : undefined}
-                aria-haspopup="true"
-                aria-expanded={open ? 'true' : undefined}
-                onClick={handleClick}
-              >
-                <AppsIcon />
-              </Button>
+                <BottomNavigationAction
+                  label=""
+                  id="extras-button"
+                  aria-haspopup="true"
+                  aria-expanded={open ? 'true' : undefined}
+                  icon={<AppsIcon />}
+                  onClick={handleClick}
+                />
               </BottomNavigation>
               <Menu
                  id="extras-menu"
