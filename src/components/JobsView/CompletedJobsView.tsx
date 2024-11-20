@@ -1,20 +1,22 @@
 import { FormEvent, useState } from "react";
+import { DotLoader } from "react-spinners";
+import dayjs from 'dayjs';
+import moment from "moment";
+import { Input, HStack, Button } from "@chakra-ui/react";
+import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
+import { Tooltip } from '@mui/material';
+import HelpIcon from '@mui/icons-material/Help';
+import { convertFieldResponseIntoMuiTextFieldProps } from "@mui/x-date-pickers/internals";
 
 import Job, { JobsResponse } from "./Job";
 import JobsTable from "./JobsTable";
 
 import { StateSetters } from "../../services/StateSetters";
 import useAppState from "../../AppState";
-import { DotLoader } from "react-spinners";
 import SlurmMonitorEndpoint from "../../services/slurm-monitor/endpoint";
 import useCompletedJobs, { Constraints } from "../../hooks/useCompletedJobs";
-import { Input, HStack, Button } from "@chakra-ui/react";
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import moment from "moment";
 
-import { Tooltip } from '@mui/material';
-import HelpIcon from '@mui/icons-material/Help';
-import { convertFieldResponseIntoMuiTextFieldProps } from "@mui/x-date-pickers/internals";
+import { DateTime } from 'luxon';
 
 interface MlflowRun {
   run_uuid: string;
@@ -72,23 +74,24 @@ const CompletedJobsTableView = ({ stateSetters, constraints } : ConstraintsProps
     ...job,
     id: job.job_id,
     mlflow_ref: mlflowSlurmJobs.filter(r => Number(r.SLURM_JOB_ID) == job.job_id)[0]?.mlflow_run_uri,
-    start_time: moment(job.start_time).unix(),
-    submit_time: moment(job.submit_time).unix(),
-    end_time: moment(job.end_time).unix()
+    start_time: moment.utc(job.start_time).unix(),
+    submit_time: moment.utc(job.submit_time).unix(),
+    end_time: moment.utc(job.end_time).unix()
   }));
 
   return (
-    <JobsTable data={prepared_data} stateSetters={stateSetters} />
+    <JobsTable data={prepared_data} stateSetters={stateSetters} sorting={{id: 'start_time', desc: true}}/>
   );
 };
 
 const CompletedJobsView = ( { stateSetters } : Props) => {
-  const [constraints, setConstraints] = useState({})
+  const [constraints, setConstraints] = useState({ start_after_in_s: moment().unix() - 2*3600*24})
 
   const getDateConstraint = (elements: HTMLFormControlsCollection, element_name: string, constraints: Constraints) => {
     const input = elements.namedItem(element_name) as Element
-    if(input?.value !== '')
-        return { ...constraints, [element_name]: moment(input?.value, "DD.MM.YYYY").unix()}
+    if(input?.value !== '') {
+        return { ...constraints, [element_name]: moment(input?.value, "DD.MM.YYYY hh:mm").unix()}
+    }
     return constraints
   }
 
@@ -150,14 +153,18 @@ const CompletedJobsView = ( { stateSetters } : Props) => {
           <Input name="user" placeholder="username"></Input>
         </HStack>
         <HStack>
-          <Input width="15%" defaultValue={300} type="number" name="min_duration" placeholder="min duration in seconds"/>
-          <Input width="15%" type="number" name="max_duration" placeholder="max duration in seconds"/>
-          <DatePicker name="start_before_in_s" label="start before" />
-          <DatePicker name="start_after_in_s" label="start after" />
-          <DatePicker name="end_before_in_s" label="end before" />
-          <DatePicker name="end_after_in_s" label="end after" />
-          <DatePicker name="submit_before_in_s" label="submit before" />
-          <DatePicker name="submit_after_in_s" label="submit after" />
+          <Tooltip title="minimum job duration in seconds">
+            <Input width="15%" defaultValue={300} type="number" name="min_duration" placeholder="min duration in seconds"/>
+          </Tooltip>
+          <Tooltip title="maximum job duration in seconds">
+            <Input width="15%" type="number" name="max_duration" placeholder="max duration in seconds"/>
+          </Tooltip>
+          <DateTimePicker name="start_before_in_s" label="start before" />
+          <DateTimePicker name="start_after_in_s" label="start after" defaultValue={DateTime.local().minus({days: 2})}/>
+          <DateTimePicker name="end_before_in_s" label="end before" />
+          <DateTimePicker name="end_after_in_s" label="end after" />
+          <DateTimePicker name="submit_before_in_s" label="submit before" />
+          <DateTimePicker name="submit_after_in_s" label="submit after" />
         </HStack>
         <Input className='my-5 btn btn-secondary' type="submit"/>
       </form>

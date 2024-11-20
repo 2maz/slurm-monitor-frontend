@@ -14,6 +14,7 @@ import JobView from "../JobView";
 interface Props {
   data: Job[];
   stateSetters: StateSetters
+  sorting?: {id: string, desc: boolean}
 }
 
 const getStringValues = (data: Job[], property_name: keyof Job): string[] => {
@@ -22,7 +23,7 @@ const getStringValues = (data: Job[], property_name: keyof Job): string[] => {
   ]).sort();
 };
 
-const JobsTable = ({ data, stateSetters }: Props) => {
+const JobsTable = ({ data, stateSetters, sorting }: Props) => {
   const columns = useMemo<MRT_ColumnDef<Job>[]>(
     () => [
       {
@@ -163,6 +164,7 @@ const JobsTable = ({ data, stateSetters }: Props) => {
     initialState: {
       density: "compact",
       showColumnFilters: hasEnabledFilters(),
+      sorting: sorting ? [sorting] : []
     },
     // disable when memo feature is used
     enableDensityToggle: true,
