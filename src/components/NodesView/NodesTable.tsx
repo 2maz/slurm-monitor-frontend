@@ -66,6 +66,10 @@ const NodesTable = ({ data, stateSetters }: Props) => {
       {
         accessorKey: "gpu_memory",
         header: "GPU Memory (MB)",
+        Cell: ({ row, cell }) => {
+          const value = cell.getValue<number>()
+          return value ? Number(value / 1024**2) : value
+        }
       },
       {
         accessorKey: "gres_used",
