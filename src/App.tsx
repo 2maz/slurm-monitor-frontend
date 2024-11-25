@@ -15,6 +15,7 @@ import MonitorHeartIcon from "@mui/icons-material/MonitorHeart";
 import AppsIcon from '@mui/icons-material/Apps';
 import QueryStatsIcon from '@mui/icons-material/QueryStats';
 import InventoryIcon from '@mui/icons-material/Inventory';
+import AvTimerIcon from '@mui/icons-material/AvTimer';
 
 import {
   MRT_ColumnFiltersState,
@@ -39,6 +40,7 @@ import MLFlowSlurmMapper, {
 
 import useNodesInfo from "./hooks/useNodesInfos";
 import QueryView from "./components/QueryView";
+import BenchmarksView from "./components/BenchmarksView";
 
 const theme = createTheme({});
 
@@ -269,6 +271,12 @@ function App() {
                   <QueryStatsIcon /><div className="mx-2">Usage Stats</div>
                 </MenuItem>
                 <MenuItem onClick={() => {
+                    selectView("benchmarks")
+                    handleClose()
+                }}>
+                 <AvTimerIcon /><div className="mx-2">Benchmarks</div>
+                </MenuItem>
+                <MenuItem onClick={() => {
                     selectView("settings")
                     handleClose()
                 }}>
@@ -338,6 +346,7 @@ function App() {
                 }}
               />
             }
+            {view && view == "benchmarks" && <BenchmarksView />}
           </Box>
         </MantineProvider>
       </LocalizationProvider>
