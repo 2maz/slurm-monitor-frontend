@@ -80,8 +80,11 @@ const JobsView = ({ stateSetters } : Props) => {
           }}
           min="5"
         />
-        <label className="mx-3">
-          Last refresh: {new Date(dataUpdatedAt).toUTCString()}
+        <label className="mx-2">
+          Last refresh: {new Date(dataUpdatedAt).toLocaleString()}
+        </label>
+        <label className="mx-5">
+          Timezone: {Intl.DateTimeFormat().resolvedOptions().timeZone}
         </label>
       </div>
       <>

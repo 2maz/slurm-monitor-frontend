@@ -139,6 +139,7 @@ const CompletedJobsView = ( { stateSetters } : Props) => {
         <HelpIcon/>
       </Tooltip>
       </h2>
+      <div>Filter options are referring to the local timezone: {Intl.DateTimeFormat().resolvedOptions().timeZone} </div>
       <form onSubmit={handleSubmit}>
         <HStack className="my-3">
           <Input 
