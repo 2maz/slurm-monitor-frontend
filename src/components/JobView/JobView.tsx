@@ -30,7 +30,7 @@ const JobView = ({ job_id, job_data, refresh_interval_in_s = 60 } : Props) => {
           <pre>{job_data && JSON.stringify(job_data, null, 2)}</pre>
           </>
 
-  let elements = []
+  let elements : JSX.Element[] = []
   if(job_status.gres_detail && job_status.gres_detail.length > 0)
   {
       elements = [...elements,
