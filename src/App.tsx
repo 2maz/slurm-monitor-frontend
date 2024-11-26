@@ -42,6 +42,8 @@ import useNodesInfo from "./hooks/useNodesInfos";
 import QueryView from "./components/QueryView";
 import BenchmarksView from "./components/BenchmarksView";
 
+import GithubLogo from "./assets/github-mark.png"
+
 const theme = createTheme({});
 
 /**
@@ -281,6 +283,12 @@ function App() {
                     handleClose()
                 }}>
                  <SettingsIcon /><div className="mx-2">Settings</div>
+                </MenuItem>
+                <MenuItem onClick={() => {
+                    window.open("https://github.com/2maz/slurm-monitor-frontend", "_blank")
+                    handleClose()
+                }}>
+                  <img src={GithubLogo} width="24px" alt="github-logo"/><div className="mx-2">Repository</div>
                 </MenuItem>
               </Menu>
             </Paper>
