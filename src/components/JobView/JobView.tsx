@@ -41,8 +41,8 @@ const JobView = ({ job_id, job_data, refresh_interval_in_s = 60 } : Props) => {
             && <GPUStatusView
                 nodename={job_status.batch_host}
                 logical_ids={job_status.gres_detail}
-                start_time_in_s={moment(job_status.start_time).unix()}
-                end_time_in_s={job_status.job_state == "COMPLETED" ? moment(job_status.end_time).unix() : undefined}
+                start_time_in_s={typeof(job_status.start_time) === "number" ? job_status.start_time : moment.utc(job_status.start_time).valueOf() / 1000.0}
+                end_time_in_s={job_status.job_state == "COMPLETED" ? (typeof(job_status.end_time) === "number" ? job_status.end_time : moment.utc(job_status.end_time).valueOf() / 1000.0) : undefined}
                 refresh_interval_in_s={refresh_interval_in_s}
           />}
           </div>
