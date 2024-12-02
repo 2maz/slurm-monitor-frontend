@@ -1,10 +1,11 @@
 import NodesTable from "./NodesTable";
 import { StateSetters } from "../../services/StateSetters";
-import useNodes, { endpoint_nodes } from "../../hooks/useNodes";
+import useNodes from "../../hooks/useNodes";
 import useNodesInfo from "../../hooks/useNodesInfos";
 import Node from "./Node";
 
 import { DotLoader } from 'react-spinners';
+import CertificateError from "../ErrorReporting";
 
 
 interface Props {
@@ -30,7 +31,7 @@ const NodesView = ({stateSetters} : Props) => {
         {error_nodes && (
           <>
           <p className="text-danger">No data available: {error_nodes.message}</p>
-          {endpoint_nodes.selfSignedErrorMessage()}
+          <CertificateError />
           </>
         )}
       </>

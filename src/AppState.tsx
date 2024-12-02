@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 
 import { MLFlowSlurmRunInfo } from "./services/slurm-monitor/mlflow";
+import { DEFAULT_BACKEND_URL } from "./services/slurm-monitor/client";
 
 export interface AppState {
     slurmRuns: MLFlowSlurmRunInfo[];
@@ -9,7 +10,10 @@ export interface AppState {
 
     mlflowUrls: string[];
     updateMlflowUrls: (x: string[]) => void;
-};
+
+    backendUrl: string;
+    updateBackendUrl: (x: string) => void;
+}
 
 const useAppState = create<AppState>()(
   persist(
@@ -19,7 +23,11 @@ const useAppState = create<AppState>()(
         set({ slurmRuns: newSlurmRuns }),
 
       mlflowUrls: [],
-      updateMlflowUrls: (newUrls: string[]) => set({mlflowUrls: newUrls})
+      updateMlflowUrls: (newUrls: string[]) => set({mlflowUrls: newUrls}),
+
+      backendUrl: DEFAULT_BACKEND_URL,
+      updateBackendUrl: (newUrl: string) => set({backendUrl: newUrl}),
+
     }),
     {
       name: "slurm-runs",

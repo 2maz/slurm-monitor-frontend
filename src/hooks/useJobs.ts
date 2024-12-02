@@ -1,15 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
-import SlurmMonitorEndpoint from "../services/slurm-monitor/endpoint";
 import Job from "../components/JobsView/Job";
+import useMonitorEndpoint from "./useMonitorEndpoint";
 
 
 export interface JobsResponse extends Response {
   jobs: Job[];
 }
 
-export const endpoint = new SlurmMonitorEndpoint("/jobs");
-
 const useJobs = (refresh_interval_in_s: number) => {
+  const { endpoint } = useMonitorEndpoint("/jobs");
+
 
   const fetchJobs = async () => {
     const { request } = endpoint.get<JobsResponse>();

@@ -5,8 +5,9 @@ import JobsTable from "./JobsTable";
 
 import { StateSetters } from "../../services/StateSetters";
 import useAppState from "../../AppState";
-import useJobs, { endpoint } from "../../hooks/useJobs";
+import useJobs from "../../hooks/useJobs";
 import { DotLoader } from "react-spinners";
+import CertificateError from "../ErrorReporting";
 
 
 interface MlflowRun {
@@ -44,7 +45,7 @@ const JobsView = ({ stateSetters } : Props) => {
         {error && (
           <>
           <p className="text-danger">No data available: {error.message}</p>
-          {endpoint.selfSignedErrorMessage()}
+          <CertificateError />
           </>
         )}
       </div>

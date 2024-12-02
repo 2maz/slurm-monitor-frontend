@@ -1,10 +1,6 @@
-import { useState } from "react";
-import SlurmMonitorEndpoint from "../services/slurm-monitor/endpoint";
 import { useQuery } from "@tanstack/react-query";
 import MetaData from "../components/ResponseMetaData";
-import Node from "../components/NodesView/Node";
-
-const endpoint_nodes_info = new SlurmMonitorEndpoint("/nodes/info");
+import useMonitorEndpoint from "./useMonitorEndpoint";
 
 interface CPUInfo {
   model: string;
@@ -35,6 +31,8 @@ interface NodeInfoResponse extends Response {
 }
 
 const useNodesInfo = () => {
+  const { endpoint : endpoint_nodes_info } = useMonitorEndpoint("/nodes/info");
+
   const fetchNodeInfos = async () => {
     const { request } = endpoint_nodes_info.get<NodeInfoResponse>();
 

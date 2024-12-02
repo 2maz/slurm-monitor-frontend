@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import SlurmMonitorEndpoint from "../services/slurm-monitor/endpoint";
+import useMonitorEndpoint from "./useMonitorEndpoint";
 
 //interface UserJobStat {
 //    user_id: number;
@@ -23,7 +23,7 @@ interface DataFrameResponse extends DataFrame, Response {
 }
 
 const useDataFrameQuery = (query_name: string) => {
-  const endpoint_nodes = new SlurmMonitorEndpoint("/queries/" + query_name);
+  const { endpoint : endpoint_nodes } = useMonitorEndpoint("/queries/" + query_name);
 
   const fetchDataFrame = async () => {
     const { request } = endpoint_nodes.get<DataFrameResponse>();

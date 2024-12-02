@@ -3,8 +3,9 @@ import Partition from "./Partition";
 import PartitionsTable from "./PartitionsTable";
 
 import { StateSetters } from "../../services/StateSetters";
-import usePartitions, { endpoint } from "../../hooks/usePartitions";
+import usePartitions from "../../hooks/usePartitions";
 import { DotLoader } from "react-spinners";
+import CertificateError from "../ErrorReporting";
 
 
 interface Props {
@@ -20,7 +21,7 @@ const PartitionsView = ({ stateSetters }: Props) => {
         <h1 className="mx-5 centered">Partitions</h1>
         {error && (<>
           <p className="text-danger">No data available: {error.message}</p>
-          {endpoint.selfSignedErrorMessage()}
+          {<CertificateError />}
           </>
         )}
       </>

@@ -13,10 +13,10 @@ import JobsTable from "./JobsTable";
 
 import { StateSetters } from "../../services/StateSetters";
 import useAppState from "../../AppState";
-import SlurmMonitorEndpoint from "../../services/slurm-monitor/endpoint";
 import useCompletedJobs, { Constraints } from "../../hooks/useCompletedJobs";
 
 import { DateTime } from 'luxon';
+import CertificateError from "../ErrorReporting";
 
 interface MlflowRun {
   run_uuid: string;
@@ -55,7 +55,7 @@ const CompletedJobsTableView = ({ stateSetters, constraints } : ConstraintsProps
         {error && (
           <>
           <p className="text-danger">No data available: {error.message}</p>
-          {(new SlurmMonitorEndpoint("/query")).selfSignedErrorMessage()}
+          {<CertificateError />}
           </>
         )}
       </>

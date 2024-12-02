@@ -1,12 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
-import SlurmMonitorEndpoint from "../services/slurm-monitor/endpoint";
+import useMonitorEndpoint from "./useMonitorEndpoint";
 
 interface QueriesResponse extends Response {
     queries: string[]
 }
 
 const useAvailableQueries = () => {
-  const endpoint_nodes = new SlurmMonitorEndpoint("/queries");
+  const { endpoint: endpoint_nodes } = useMonitorEndpoint("/queries")
 
   const fetchQueries = async () => {
     const { request } = endpoint_nodes.get<QueriesResponse>();

@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import SlurmMonitorEndpoint from "../services/slurm-monitor/endpoint";
-
+import useMonitorEndpoint from "./useMonitorEndpoint";
 
 interface ProcessStatus {
     pid: number;
@@ -39,9 +38,9 @@ interface QueryParameters {
 }
 
 const useNodesProcessesStats = (query_parameters: QueryParameters, refresh_interval_in_s: number) => {
-    var query = "/jobs/"+ query_parameters.job_id + "/system_status";
+    const query = "/jobs/"+ query_parameters.job_id + "/system_status";
 
-    var parameters = {}
+    let parameters = {}
     if(query_parameters.start_time_in_s != undefined) {
         parameters = { ...parameters, "start_time_in_s": query_parameters.start_time_in_s}
     }
@@ -52,7 +51,7 @@ const useNodesProcessesStats = (query_parameters: QueryParameters, refresh_inter
         parameters = { ...parameters, "resolution_in_s": query_parameters.resolution_in_s }
     }
 
-    const endpoint = new SlurmMonitorEndpoint(query, parameters);
+    const { endpoint } = useMonitorEndpoint(query, parameters);
 
     const fetchStatus = async () => {
         const { request } = endpoint.get<ProcessTimeseriesResponse>();

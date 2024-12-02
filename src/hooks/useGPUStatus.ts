@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import SlurmMonitorEndpoint from "../services/slurm-monitor/endpoint";
 import { buildParameters, QueryParameters } from "./useCPUStatus";
+import useMonitorEndpoint from "./useMonitorEndpoint";
 
 interface GPUStatus {
     name: string;
@@ -91,7 +91,6 @@ const useGPUStatus = (
     query_parameters: GPUStatusQueryParameters,
     refresh_interval_in_s: number = 60
 ) => {
-
   const query = "/nodes/"+ query_parameters.nodename + "/gpu_status"
   
   let parameters = buildParameters(query_parameters)
@@ -99,7 +98,7 @@ const useGPUStatus = (
     parameters = { ...parameters, "local_indices": query_parameters.logical_ids.join(",") }
   }
 
-  const endpoint = new SlurmMonitorEndpoint(query, parameters);
+  const { endpoint } = useMonitorEndpoint(query, parameters);
 
   const fetchStatus = async () => {
     const { request } = endpoint.get<GPUDataSeriesResponse>();

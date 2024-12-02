@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import SlurmMonitorEndpoint from "../services/slurm-monitor/endpoint";
+import useMonitorEndpoint from "./useMonitorEndpoint";
 
 interface CPUStatus {
   cpu_percent: number;
@@ -54,8 +54,10 @@ const useCPUStatus = (
   query_parameters: QueryParameters,
   refresh_interval_in_s: number = 60
 ) => {
-  const query = "/nodes/" + query_parameters.nodename + "/cpu_status";
-  const endpoint = new SlurmMonitorEndpoint(query, buildParameters(query_parameters));
+  const { endpoint } = useMonitorEndpoint(
+        "/nodes/" + query_parameters.nodename + "/cpu_status",
+        buildParameters(query_parameters))
+
   const fetchStatus = async () => {
     const { request } = endpoint.get<NodesCPUStatusTimeseriesResponse>();
 

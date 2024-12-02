@@ -1,7 +1,6 @@
-import { useState } from "react";
 import { buildParameters, QueryParameters } from "./useCPUStatus";
-import SlurmMonitorEndpoint from "../services/slurm-monitor/endpoint";
 import { useQuery } from "@tanstack/react-query";
+import useMonitorEndpoint from "./useMonitorEndpoint";
 
 interface MemoryStatus {
     percent: number;
@@ -27,8 +26,8 @@ const useNodesMemoryStatus = (
     refresh_interval_in_s: number = 60
 ) => {
 
-  var query = "/nodes/"+ query_parameters.nodename + "/memory_status";
-  const endpoint = new SlurmMonitorEndpoint(query, buildParameters(query_parameters));
+  const query = "/nodes/"+ query_parameters.nodename + "/memory_status";
+  const { endpoint } = useMonitorEndpoint(query, buildParameters(query_parameters));
 
   const fetchStatus = async () => {
     const { request } = endpoint.get<NodesMemoryStatusTimeseriesResponse>();

@@ -1,14 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
-import SlurmMonitorEndpoint from "../services/slurm-monitor/endpoint";
 import Partition from "../components/PartitionsView/Partition";
-
-export const endpoint = new SlurmMonitorEndpoint("/partitions");
+import useMonitorEndpoint from "./useMonitorEndpoint";
 
 interface PartitionsResponse extends Response {
   partitions: Partition[];
 }
 
 const usePartitions = () => {
+  const { endpoint } = useMonitorEndpoint("/partitions");
+
   const fetchPartitions = async () => {
     const { request } = endpoint.get<PartitionsResponse>();
 

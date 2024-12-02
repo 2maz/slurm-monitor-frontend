@@ -24,6 +24,7 @@ import axios from "axios";
 import { useQuery } from "@tanstack/react-query";
 
 import useAppState from '../../AppState';
+import { Variant } from "@mui/material/styles/createTypography";
 
 const MLFLOW_VALIDATION_SUFFIX = "/api/2.0/mlflow/experiments/search?max_results=1"
 
@@ -31,11 +32,16 @@ const schema = z.object({
   url: z.string().min(5).url(),
 });
 
+const schemaBackend = z.object({
+  url: z.string().min(5).url()
+})
+
 type FormData = z.infer<typeof schema>;
+type BackendFormData = z.infer<typeof schemaBackend>
 
 interface ValidatedLinkProps {
   href: string;
-  variant: any;
+  variant: Variant | undefined;
   children: string;
   validate?: string;
 }
@@ -97,6 +103,9 @@ const SettingsView = () => {
   const urls = useAppState((state) => state.mlflowUrls);
   const setUrls = useAppState((state) => state.updateMlflowUrls);
 
+  const backendUrl = useAppState((state) => state.backendUrl);
+  const setBackendUrl = useAppState((state) => state.updateBackendUrl)
+
   const {
     register,
     handleSubmit,
@@ -106,9 +115,18 @@ const SettingsView = () => {
     resolver: zodResolver(schema),
   });
 
+  const {
+    register : registerBackend,
+    handleSubmit: handleSubmitBackend,
+    reset: resetBackend,
+    formState: { errors: errorsBackend, isValid: isValidBackend },
+  } = useForm<BackendFormData>({
+    resolver: zodResolver(schemaBackend),
+  });
+
 
   const onSubmit = (data: FieldValues) => {
-    const newUrls = [...urls, data.url];
+    const newUrls = [...urls, data.url as string];
     setUrls(newUrls);
     reset();
   };
@@ -119,6 +137,20 @@ const SettingsView = () => {
     const newUrls = urls.filter((u: string) => u !== url);
     setUrls(newUrls);
   };
+
+
+  const onSubmitBackend = (data: FieldValues) => {
+    const newUrl = data.url as string;
+    setBackendUrl(newUrl);
+    resetBackend();
+  };
+
+  const handleRemoveBackendUrl = (url: string) => {
+    if (backendUrl !== url) return;
+
+    setBackendUrl(url);
+  };
+
 
   const handleTabChange = (event: React.SyntheticEvent, newTabValue: string) => {
     setTabValue(newTabValue);
@@ -132,6 +164,7 @@ const SettingsView = () => {
       <TabContext value={tabValue}>
         <TabList onChange={handleTabChange} aria-label="Tabs">
           <Tab label="MLFlow" value="1" />
+          <Tab label="Backend" value="2" />
         </TabList>
         <TabPanel value="1">
           <div className="mx-3">
@@ -180,6 +213,46 @@ const SettingsView = () => {
                     </ListItem>
                   </div>
                 ))}
+            </List>
+          </div>
+        </TabPanel>
+        <TabPanel value="2">
+          <div className="mx-3">
+            <form onSubmit={handleSubmitBackend(onSubmitBackend)}>
+              <FormGroup row>
+                <TextField
+                  error={Boolean(errorsBackend.url)}
+                  {...registerBackend("url")}
+                  id="url"
+                  variant="outlined"
+                  label="Url"
+                  helperText={errorsBackend.url?.message}
+                />
+                <Button
+                  variant="contained"
+                  endIcon={<SaveIcon />}
+                  type="submit"
+                  disableElevation
+                  disabled={!isValidBackend}
+                >
+                  Save
+                </Button>
+              </FormGroup>
+            </form>
+            <Divider className="my-5" />
+            <Typography sx={{ mt: 4, mb: 2 }} variant="h6" component="div">
+              Current Backend URL
+            </Typography>
+            <List dense={true}>
+              {backendUrl &&
+                  <div key={backendUrl}>
+                    <ListItem>
+                      <ValidatedLink key={"validate-"+backendUrl} href={backendUrl + "/api/v1/docs"} validate={backendUrl + "/api/v1/docs"} variant="h6">
+                        {backendUrl}
+                      </ValidatedLink>
+                    </ListItem>
+                  </div>
+              }
             </List>
           </div>
         </TabPanel>
