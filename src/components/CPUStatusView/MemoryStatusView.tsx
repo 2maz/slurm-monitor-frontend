@@ -28,11 +28,11 @@ const MemoryStatusView = ({nodename, start_time_in_s, end_time_in_s, resolution_
   if(error)
     return "Failed to load memory data for "
 
-  var elements : any = []
+  const elements : JSX.Element[] = []
   if(isSuccess) {
     Object.keys(nodes_memory).map((process_id: string) => (
       elements.push(
-            <><h4>Node: {nodename}</h4>
+            <div key="memory-{process_id}"><h4>Node: {nodename}</h4>
             <div className="mx-5" key="{process_id}-accumulated" >
               <LineChart width={300} height={250} data={nodes_memory[process_id].data}>
                 <Line yAxisId="1" type="monotone" dataKey="percent" stroke="#8884d8"/>
@@ -51,7 +51,7 @@ const MemoryStatusView = ({nodename, start_time_in_s, end_time_in_s, resolution_
                 <Legend></Legend>
               </LineChart>
             </div>
-            </>
+            </div>
           )
     ))
   }

@@ -160,12 +160,12 @@ const CompletedJobsView = ( { stateSetters } : Props) => {
           <Tooltip title="maximum job duration in seconds">
             <Input width="15%" type="number" name="max_duration" placeholder="max duration in seconds"/>
           </Tooltip>
-          <DateTimePicker name="start_before_in_s" label="start before" />
-          <DateTimePicker name="start_after_in_s" label="start after" defaultValue={DateTime.local().minus({days: 2})}/>
-          <DateTimePicker name="end_before_in_s" label="end before" />
-          <DateTimePicker name="end_after_in_s" label="end after" />
-          <DateTimePicker name="submit_before_in_s" label="submit before" />
-          <DateTimePicker name="submit_after_in_s" label="submit after" />
+            <DateTimePicker name="start_before_in_s" label="start before" />
+            <DateTimePicker name="start_after_in_s" label="start after" defaultValue={DateTime.local().minus({days: 2})}/>
+            <DateTimePicker name="end_before_in_s" label="end before" />
+            <DateTimePicker name="end_after_in_s" label="end after" />
+            <DateTimePicker name="submit_before_in_s" label="submit before" />
+            <DateTimePicker name="submit_after_in_s" label="submit after" />
         </HStack>
         <Input className='my-5 btn btn-secondary' type="submit"/>
       </form>
