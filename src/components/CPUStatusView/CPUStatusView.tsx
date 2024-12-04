@@ -26,7 +26,7 @@ const CPUStatusView = ({nodename, start_time_in_s, end_time_in_s, resolution_in_
   if(error)
     return "Failed loading processes data for {nodename}"
 
-  const elements : any[] = []
+  const elements : JSX.Element[] = []
   if(isSuccess) {
     Object.keys(nodes_processes).map((process_id: string) => (
       elements.push(

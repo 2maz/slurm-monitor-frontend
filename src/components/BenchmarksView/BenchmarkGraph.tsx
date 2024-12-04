@@ -23,37 +23,43 @@ const get_relative_data = (data : DataDictionary[], baseline: string) => {
 
 interface Props {
   data: DataDictionary[]
+  reference_system: string
+  comparison: "absolute" | "relative"
 }
 
-const BenchmarkGraph = ({ data } : Props) => {
-  const colorScale = scaleOrdinal(schemeCategory10); // Using D3's Category10 color scale
-  const relative_data = get_relative_data(data, baseline)
-  if(!relative_data) {
-    return <div>No benchmark data available</div>
-  } else {
-    const benchmark_names : string[] = Object.keys(relative_data[0]).filter((value) => value != 'name')
-    return (<>
-        <div className="d-flex flex-wrap justify-content-start my-3">
-            <div className="mx-5" key="benchmark">
-            <ResponsiveContainer minWidth="1500px" minHeight="500px" width="100%" height="100%">
-                <BarChart
-                    layout="vertical"
-                    data={relative_data}
-                    >
-                    <CartesianGrid strokeDasharray="3 3"/>
-                    <XAxis type="number" ticks={[0,1,2,3,4,5]}/>
-                    <YAxis width={500} dataKey="name" type="category" />
+export const BenchmarkGraph = ({ data, reference_system, comparison } : Props) => {
 
-                    {benchmark_names.map((key, index) => <Bar dataKey={key} barSize={10} fill={colorScale(index.toString())} /> )}
-                
-                    <Tooltip />
-                    <Legend />
-                </BarChart>
-            </ResponsiveContainer>
-            </div>
-            </div>
-        </>)
+  const colorScale = scaleOrdinal(schemeCategory10); // Using D3's Category10 color scale
+  let prepared_data : DataDictionary[] | undefined = data
+  if(comparison == "relative") {
+    prepared_data = get_relative_data(data, reference_system)
+    if(!prepared_data) {
+      return <div>No benchmark data available</div>
+    }
   }
+
+  const benchmark_names : string[] = Object.keys(prepared_data[0]).filter((value) => value != 'name')
+  return (<>
+      <div className="d-flex flex-wrap justify-content-start my-3">
+          <div className="mx-5" key="benchmark">
+          <ResponsiveContainer minWidth="1500px" minHeight="500px" width="100%" height="100%">
+              <BarChart
+                  layout="vertical"
+                  data={prepared_data}
+                  >
+                  <CartesianGrid strokeDasharray="3 3"/>
+                  <XAxis type="number" ticks={[0,1,2,3,4,5]}/>
+                  <YAxis width={500} dataKey="name" type="category" />
+
+                  {benchmark_names.map((key, index) => <Bar dataKey={key} barSize={10} fill={colorScale(index.toString())} /> )}
+              
+                  <Tooltip />
+                  <Legend />
+              </BarChart>
+          </ResponsiveContainer>
+          </div>
+          </div>
+      </>)
 }
 
 export default BenchmarkGraph;
