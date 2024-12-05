@@ -3,13 +3,16 @@ import BenchmarkGraph from './BenchmarkGraph';
 import useBenchmarkData from '../../hooks/useBenchmarkData';
 
 import { SelectContent, SelectItem, SelectLabel, SelectRoot, SelectTrigger, SelectValueText } from '../ui/select';
+import { Field } from '../ui/field';
 import { useState } from 'react';
-import { createListCollection, HStack } from '@chakra-ui/react';
+import { createListCollection, HStack, Input } from '@chakra-ui/react';
 
 interface LabelValuePair {
   label: string
   value: string | number
 }
+
+const escape_reg_exp = (x: string) => x.replace(/[.*+?^=!:${}\(\)|\[\]\/\\]/g, '\\$&')
 
 
 const BenchmarksView = () => {
@@ -17,10 +20,11 @@ const BenchmarksView = () => {
 
   const [selectedPrecision, setSelectedPrecision] = useState<string[]>(["fp16"]);
   const [selectedMetric, setSelectedMetric] = useState<string[]>(["throughput"]);
-  const [selectedNumberOfGPUs, setSelectedNumberOfGPUS] = useState<string[]>(["1"]);
-  const [selectedReferenceSystem, setSelectedReferenceSystem] = useState<string[]>(["Tesla-V100"])
+  const [selectedNumberOfGPUs, setSelectedNumberOfGPUS] = useState<number[]>([1]);
+  const [selectedReferenceSystem, setSelectedReferenceSystem] = useState<string[]>([])
   const [selectedTests, setSelectedTests] = useState<string[]>([])
   const [comparisonType, setComparisonType] = useState<string[]>(["relative"])
+  const [textFilter, setTextFilter] = useState<string>('')
 
   if(error) {
     return "Error retrieving benchmark data: {error}"
@@ -57,39 +61,44 @@ const BenchmarksView = () => {
   })
 
   const node_labels = data.reduce((labels,x) => labels.add(x.node), new Set<string>())
-  const filtered_data : DataDictionary[] = []
+  let entries = {} as {[id:string] : DataDictionary }
   Array.from(node_labels).forEach((node) => {
-    let entry = {} as DataDictionary
     Array.from(task_name_labels).forEach((task_name) => {
       if(selectedTests.length == 0 || selectedTests.includes(task_name)) {
-        const result = data.filter((x) => (x.node == node && x.task_name === task_name && x.precision === selectedPrecision[0] && x.metric_name == selectedMetric[0] && x.number_of_gpus.toString() == selectedNumberOfGPUs[0]))
-        if(result.length > 0) {
-          const metric_value = result[0].metric_value
-          entry = { ...entry, [task_name]: metric_value, name: result[0].system }
-        }
+        const result = data.filter((x) => (x.node == node && x.task_name === task_name && 
+            (selectedPrecision.length == 0 || selectedPrecision.includes(x.precision)) && 
+            (selectedMetric.length == 0 || selectedMetric.includes(x.metric_name)) &&
+            (selectedNumberOfGPUs.length == 0 || selectedNumberOfGPUs.includes(x.number_of_gpus)) ))
+
+        result.forEach((x) => {
+          const metric_value = x.metric_value
+          const label = x.system + " (" + x.precision +")"
+          entries = { ...entries, [label] : { ...entries[label], [task_name]: metric_value, name: x.system, label: label }}
+        })
       }
     })
-    if(Object.keys(entry).length >= 2) {
-      filtered_data.push(entry)
-    }
   })
 
-  const system_labels = filtered_data.reduce((labels,x) => labels.add(x.name.split(/_[0-9]x/)[1]), new Set<string>())
+  const filtered_data = Object.values(entries).reduce((cur, value) => {
+      if(Object.keys(value).length >= 2) {
+        cur.push(value)
+      }
+      return cur
+  }, [] as DataDictionary[]);
+
+  const system_labels = filtered_data.reduce((labels,x) => labels.add(x.label), new Set<string>())
   const systems = createListCollection({
       items: Array.from(system_labels).sort().map((x) => ({ label : x, value: x } as LabelValuePair))
   })
 
-
-  let reference_system = undefined;
-  if(filtered_data.length != 0) {
-    reference_system = filtered_data.filter((x) => x.name.includes(selectedReferenceSystem[0]))[0].name
-    console.log(reference_system)
+  if(selectedReferenceSystem.length == 0) {
+    setSelectedReferenceSystem([Array.from(system_labels)[0]])
   }
 
   return (<>
     <h1>Benchmarks</h1>
-    <h2 className='m-2'>Lambdal {comparisonType[0] == "relative" && " (Relative comparison against reference: "+ reference_system +")"}</h2>
-    <HStack className='m-5'>
+    <h2 className='m-2'>Lambdal {comparisonType[0] == "relative" && " (Relative comparison against reference: "+ selectedReferenceSystem[0] +")"}</h2>
+    <HStack className='mx-5'>
       <SelectRoot
         collection={metrics} size="sm" width="220px"
         value={selectedMetric}
@@ -108,12 +117,13 @@ const BenchmarksView = () => {
         </SelectContent>
       </SelectRoot>
       <SelectRoot
-        collection={precision} size="sm" width="120px"
+        multiple
+        collection={precision} size="sm" width="250px"
         value={selectedPrecision}
         onValueChange={(e) => setSelectedPrecision(e.value)}
       >
         <SelectLabel>Precision:</SelectLabel>
-        <SelectTrigger>
+        <SelectTrigger clearable>
           <SelectValueText placeholder="Select precision" />
         </SelectTrigger>
         <SelectContent>
@@ -125,13 +135,14 @@ const BenchmarksView = () => {
         </SelectContent>
       </SelectRoot>
       <SelectRoot
-        collection={number_of_gpus} size="sm" width="120px"
+        multiple
+        collection={number_of_gpus} size="sm" width="250px"
         value={selectedNumberOfGPUs}
         onValueChange={(e) => setSelectedNumberOfGPUS(e.value)}
       >
         <SelectLabel>GPU Count:</SelectLabel>
-        <SelectTrigger>
-          <SelectValueText placeholder="Select number of GPUs" />
+        <SelectTrigger clearable>
+          <SelectValueText placeholder="Select #" />
         </SelectTrigger>
         <SelectContent>
           {number_of_gpus.items.map((x) => (
@@ -192,7 +203,16 @@ const BenchmarksView = () => {
       </SelectRoot>
 
     </HStack>
-    { reference_system && <BenchmarkGraph data={filtered_data} reference_system={reference_system} comparison={comparisonType[0] as "relative" | "absolute"} /> }
+    <HStack className='mx-5 my-1'>
+          <Field maxWidth="400px" label="System Filter" helperText="Use this text filter to narrow number of systems">
+          <Input name="user" placeholder="Set filter pattern"
+            onChange={(e) => setTextFilter(escape_reg_exp(e.target.value))}
+          ></Input>
+          </Field>
+    </HStack>
+    <div className="my-3">
+    <BenchmarkGraph data={filtered_data} label_filter={textFilter} reference_system={selectedReferenceSystem[0]} comparison={comparisonType[0] as "relative" | "absolute"} /> 
+    </div>
     </>)
 }
 

@@ -1,5 +1,6 @@
 export interface DataDictionary {
   name: string;
+  label: string
   [key: string]: number | string
 }
 
