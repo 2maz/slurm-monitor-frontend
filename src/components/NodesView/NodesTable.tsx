@@ -12,6 +12,7 @@ import GPUStatusView from "../GPUStatusView";
 import CPUJobStatusView from "../CPUStatusView";
 import CPUStatusView from "../CPUStatusView/CPUStatusView";
 import MemoryStatusView from "../CPUStatusView/MemoryStatusView";
+import NodeTopology from "./NodeTopology";
 
 interface Props {
   data: Node[];
@@ -266,25 +267,29 @@ const NodesTable = ({ data, stateSetters }: Props) => {
           setBackdropToggle(!backdropToggle);
         }}
       >
-        <div className="h-75 bg-white text-muted rounded overflow-auto">
+        <div className="h-75 bg-white text-muted rounded overflow-auto"
+        style={{maxWidth: '90%'}}>
           {data
             .filter((d) => d.name === backdropId)
             .map((d) => {
               return (
                 <div key={d.name + "-stats"}>
-                  <div key={d.name + "-cpu"} className="mx-3 my-3">
-                  <h2>CPU Status (accumulated)</h2>
-                  <CPUStatusView nodename={d.name}/>
-                  </div>
-                  <div key={d.name + "-memory"} className="mx-3 my-3">
-                  <h2>Memory Status</h2>
-                  <MemoryStatusView nodename={d.name}/>
-                  </div>
-                  <div key={d.name + "-gpu"} className="mx-3 my-3">
-                  <h2>GPU Status</h2>
-                    <GPUStatusView nodename={d.name}/>
-                  </div>
-                  <pre>{JSON.stringify(d, null, 2)}</pre>
+                 <div key={d.name + "-cpu"} className="mx-3 my-3">
+                 <h2>CPU Status (accumulated)</h2>
+                 <CPUStatusView nodename={d.name}/>
+                 </div>
+                 <div key={d.name + "-memory"} className="mx-3 my-3">
+                 <h2>Memory Status</h2>
+                 <MemoryStatusView nodename={d.name}/>
+                 </div>
+                 <div key={d.name + "-gpu"} className="mx-3 my-3">
+                 <h2>GPU Status</h2>
+                   <GPUStatusView nodename={d.name}/>
+                 </div>
+                 <h2>SLURM Node Info</h2>
+                 <pre>{JSON.stringify(d, null, 2)}</pre>
+                 <h2 title="lstopo-based topology information">Topology</h2>
+                 <NodeTopology nodename={d.name} output_format="svg" />
               </div>
               );
             })}
