@@ -18,7 +18,6 @@ const useNodesTopology = (node: string, output_format: string) => {
     queryFn: fetchNodesTopology,
     retry: 3,
     retryDelay: 1000*3,
-    staleTime: 24*3600*60, // refresh once per day
   });
 }
 
