@@ -59,6 +59,7 @@ const JobView = ({ job_id, job_data, refresh_interval_in_s = 60 } : Props) => {
           <h3>CPU Usage</h3>
           <CPUJobStatusView job_id={job_id}
                          start_time_in_s={moment.utc(job_status.start_time).unix()}
+                         end_time_in_s={job_status.job_state == "COMPLETED" ? (typeof(job_status.end_time) === "number" ? job_status.end_time : moment.utc(job_status.end_time).valueOf() / 1000.0) : undefined}
                          refresh_interval_in_s={refresh_interval_in_s}
           />
           </div>
