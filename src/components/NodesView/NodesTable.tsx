@@ -9,7 +9,6 @@ import { Backdrop } from "@mui/material";
 import { useMemo, useState } from "react";
 import { StateSetters } from "../../services/StateSetters";
 import GPUStatusView from "../GPUStatusView";
-import CPUJobStatusView from "../CPUStatusView";
 import CPUStatusView from "../CPUStatusView/CPUStatusView";
 import MemoryStatusView from "../CPUStatusView/MemoryStatusView";
 import NodeTopology from "./NodeTopology";
@@ -19,6 +18,18 @@ interface Props {
   stateSetters: StateSetters;
 }
 
+const getMaxGPUMemory = (data: Node[]) =>  {
+    const maxValue = data.reduce((prev, current) => {
+            if(!prev.gpu_memory)
+              return current
+
+            if (!current.gpu_memory)
+              return prev
+
+            return prev.gpu_memory > current.gpu_memory ? prev : current}
+          ).gpu_memory
+    return maxValue ? Math.ceil(maxValue / 1024**3) : 0
+}
 const NodesTable = ({ data, stateSetters }: Props) => {
   const columns = useMemo<MRT_ColumnDef<Node>[]>(
     () => [
@@ -47,9 +58,32 @@ const NodesTable = ({ data, stateSetters }: Props) => {
       { accessorKey: "cores", header: "Cores" },
       {
         accessorKey: "free_memory",
-        header: "Free Memory (MB)",
+        accessorFn: (originalRow) => { return originalRow.free_memory ? originalRow.free_memory / 1024.0 : 0 },
+        header: "Free Memory (GB)",
+        filterVariant: 'range-slider',
+        filterFn: 'betweenInclusive',
+        muiFilterSliderProps: {
+          valueLabelFormat: (value ) => "" + value + " GB",
+          min: 0,
+          max: Math.ceil(data.reduce((prev, current) => { return prev.free_memory > current.free_memory ? prev : current}).free_memory / 1024),
+          size: 'small',
+        },
+        Cell: ({row}) => {
+          return Math.ceil(row.original.free_memory / 1024)
+        }
       },
-      { accessorKey: "cpus", header: "CPUs", },
+      {
+        accessorKey: "cpus",
+        accessorFn: (originalRow) => { return Number(originalRow.cpus) },
+        filterVariant: 'range-slider',
+        filterFn: 'betweenInclusive',
+        muiFilterSliderProps: {
+          min: 1,
+          max: data.reduce((prev, current) => { return prev.cpus > current.cpus ? prev : current}).cpus,
+          size: 'small',
+        },
+        header: "CPUs",
+      },
       { accessorKey: "cpu_model", header: "CPU Model", },
       {
         accessorKey: "gres",
@@ -66,10 +100,18 @@ const NodesTable = ({ data, stateSetters }: Props) => {
       },
       {
         accessorKey: "gpu_memory",
+        accessorFn: (originalRow) => { return originalRow.gpu_memory ? originalRow.gpu_memory / 1024**3 : 0 },
         header: "GPU Memory (MB)",
-        Cell: ({ row, cell }) => {
-          const value = cell.getValue<number>()
-          return value ? Number(value / 1024**2) : value
+        filterVariant: 'range-slider',
+        filterFn: 'betweenInclusive',
+        muiFilterSliderProps: {
+          valueLabelFormat: (value ) => "" + value + " GB",
+          min: 0,
+          max: getMaxGPUMemory(data),
+          size: 'small',
+        },
+        Cell: ({ row }) => {
+          return row.original.gpu_memory ? row.original.gpu_memory / 1024**2 : 0
         }
       },
       {
@@ -129,7 +171,7 @@ const NodesTable = ({ data, stateSetters }: Props) => {
         filterSelectOptions: [
           ...new Set(data.map((node: Node) => node.state)),
         ].sort(),
-        Cell: ({ row, cell }) => {
+        Cell: ({ cell }) => {
           if(cell.getValue() == "down")
             return (
             <div className="text-danger">
@@ -157,8 +199,18 @@ const NodesTable = ({ data, stateSetters }: Props) => {
       //{ accessorKey: "tres_weighted: number;
       //{ accessorKey: "slurmd_version: string;
       { accessorKey: "alloc_memory", header: "Allocated Memory" },
-      { accessorKey: "alloc_cpus",
+      {
+        accessorKey: "alloc_cpus",
+        accessorFn: (originalRow) => { return Number(originalRow.alloc_cpus) },
         header: "CPUs (allocated)",
+        filterVariant: 'range-slider',
+        filterFn: 'betweenInclusive',
+        muiFilterSliderProps: {
+          marks: true,
+          min: 1,
+          max: data.reduce((prev, current) => { return prev.alloc_cpus > current.alloc_cpus ?  prev : current}).alloc_cpus,
+          size: 'small'
+        },
         Cell: ({ row }) => {
           const textColor = row.original.cpus == row.original.alloc_cpus ? "text-danger" : "text-normal"
           return <div className={textColor}>
@@ -166,7 +218,19 @@ const NodesTable = ({ data, stateSetters }: Props) => {
             </div>
         },
       },
-      { accessorKey: "idle_cpus", header: "Idle CPUs",
+      {
+        accessorKey: "idle_cpus",
+        // for sorting and filtering
+        accessorFn: (originalRow) => { return Number(originalRow.idle_cpus) },
+        header: "Idle CPUs",
+        filterVariant: 'range-slider',
+        filterFn: 'betweenInclusive',
+        muiFilterSliderProps: {
+          min: 0,
+          max: data.reduce((prev, current) => { return prev.idle_cpus > current.idle_cpus ? prev : current}).idle_cpus,
+          size: 'small'
+        },
+        // for display
         Cell: ({ row }) => {
           const textColor = 0 == row.original.idle_cpus ? "text-danger" : "text-normal"
           const titleText = 0 == row.original.idle_cpus ? "Currently no remaining cpus" : row.original.idle_cpus + " available CPUs"
@@ -188,7 +252,7 @@ const NodesTable = ({ data, stateSetters }: Props) => {
   const hasEnabledFilters = () => {
     return (
       columnFilters.filter(
-        (filter: { id: string; value: any }) => !filter.id.endsWith("time")
+        (filter: { id: string; value: unknown }) => !filter.id.endsWith("time")
       ).length > 0
     );
   };
