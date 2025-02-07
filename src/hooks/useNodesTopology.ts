@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import useMonitorEndpoint from "./useMonitorEndpoint";
+import { AxiosError } from "axios";
 
 const useNodesTopology = (node: string, output_format: string) => {
   const { endpoint } = useMonitorEndpoint("/nodes/" + node + "/topology?output_format="+output_format);
@@ -13,10 +14,10 @@ const useNodesTopology = (node: string, output_format: string) => {
       })
   };
 
-  return useQuery<string, Error>({
+  return useQuery<string, AxiosError>({
     queryKey: ["nodes", node, "topology"],
     queryFn: fetchNodesTopology,
-    retry: 3,
+    retry: 1,
     retryDelay: 1000*3,
   });
 }

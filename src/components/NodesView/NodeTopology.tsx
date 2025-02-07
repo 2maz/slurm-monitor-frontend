@@ -14,10 +14,11 @@ const NodeTopologyPNG = ({nodename} : Props) => {
 }
 
 const NodeTopologySVG = ({nodename} : Props) => {
-  const { data, isError, isLoading } = useNodesTopology(nodename, "svg") ;
+  const { data, isError, error, isLoading } = useNodesTopology(nodename, "svg") ;
 
   if(isError) {
-    return "Error retrieving topology"
+    const details = error.response as { data: { detail: string }}
+    return "Could not retrieve topology -- " + details.data.detail
   }
 
   if(isLoading || !data) {
