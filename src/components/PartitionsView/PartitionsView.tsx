@@ -10,9 +10,10 @@ import CertificateError from "../ErrorReporting";
 
 interface Props {
   stateSetters: StateSetters;
+  maxHeightInViewportPercent?: number
 }
 
-const PartitionsView = ({ stateSetters }: Props) => {
+const PartitionsView = ({ stateSetters, maxHeightInViewportPercent }: Props) => {
   const { data : partitions, error, isLoading } =  usePartitions()
 
   if(error)
@@ -49,6 +50,7 @@ const PartitionsView = ({ stateSetters }: Props) => {
         <PartitionsTable
           data={prepared_data}
           stateSetters={stateSetters}
+          maxHeightInViewportPercent={maxHeightInViewportPercent}
         />
       </>
     </div>

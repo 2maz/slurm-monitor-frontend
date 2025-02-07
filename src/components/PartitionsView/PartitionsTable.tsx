@@ -13,6 +13,7 @@ import { StateSetters } from "../../services/StateSetters";
 interface Props {
   data: Partition[];
   stateSetters: StateSetters;
+  maxHeightInViewportPercent?: number
 }
 
 interface PartitionsResponse {
@@ -21,7 +22,7 @@ interface PartitionsResponse {
   partitions: Partition[];
 }
 
-const PartitionsTable = ({ data, stateSetters }: Props) => {
+const PartitionsTable = ({ data, stateSetters, maxHeightInViewportPercent }: Props) => {
   const columns = useMemo<MRT_ColumnDef<Partition>[]>(
     () => [
       {
@@ -75,6 +76,11 @@ const PartitionsTable = ({ data, stateSetters }: Props) => {
     },
     // disable when memo feature is used
     enableDensityToggle: true,
+    muiTableContainerProps: () => ({
+      sx: {
+        maxHeight: maxHeightInViewportPercent ? "" + maxHeightInViewportPercent + "vh" : "100vh"
+      }
+    }),
     muiTableBodyRowProps: ({ row }) => ({
       onDoubleClick: (event) => {
         setBackdropToggle(true);

@@ -16,6 +16,7 @@ import NodeTopology from "./NodeTopology";
 interface Props {
   data: Node[];
   stateSetters: StateSetters;
+  maxHeightInViewportPercent?: number
 }
 
 const getMaxGPUMemory = (data: Node[]) =>  {
@@ -30,7 +31,7 @@ const getMaxGPUMemory = (data: Node[]) =>  {
           ).gpu_memory
     return maxValue ? Math.ceil(maxValue / 1024**3) : 0
 }
-const NodesTable = ({ data, stateSetters }: Props) => {
+const NodesTable = ({ data, stateSetters, maxHeightInViewportPercent }: Props) => {
   const columns = useMemo<MRT_ColumnDef<Node>[]>(
     () => [
       {
@@ -294,6 +295,11 @@ const NodesTable = ({ data, stateSetters }: Props) => {
     },
     // disable when memo feature is used
     enableDensityToggle: true,
+    muiTableContainerProps: () => ({
+      sx: {
+        maxHeight: maxHeightInViewportPercent ? "" + maxHeightInViewportPercent + "vh" : "100vh"
+      }
+    }),
     muiTableBodyRowProps: ({ row }) => ({
       onDoubleClick: (event) => {
         setBackdropToggle(true);

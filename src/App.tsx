@@ -298,6 +298,7 @@ function App() {
                   columnFilters: jobsFilterState,
                   columnVisibility: jobsVisibilityState,
                 }}
+                maxHeightInViewportPercent={70}
               />
             )}
             {view && view == "nodes" && (
@@ -306,6 +307,7 @@ function App() {
                   columnFilters: nodesFilterState,
                   columnVisibility: nodesVisibilityState,
                 }}
+                maxHeightInViewportPercent={75}
               />
             )}
             {view && view == "partitions" && (
@@ -314,6 +316,7 @@ function App() {
                   columnFilters: partitionsFilterState,
                   columnVisibility: partitionsVisibilityState,
                 }}
+                maxHeightInViewportPercent={75}
               />
             )}
             {view && view == "gpu_status" && (

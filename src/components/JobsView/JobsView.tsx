@@ -30,9 +30,10 @@ interface MlflowRunsResponse {
 
 interface Props {
   stateSetters: StateSetters;
+  maxHeightInViewportPercent?: number
 }
 
-const JobsView = ({ stateSetters } : Props) => {
+const JobsView = ({ stateSetters, maxHeightInViewportPercent } : Props) => {
   const [refreshInterval, setRefreshInterval] = useState(10000);
 
   const {data: jobs, error, isLoading, dataUpdatedAt } = useJobs(refreshInterval/1000.0)
@@ -89,7 +90,7 @@ const JobsView = ({ stateSetters } : Props) => {
         </label>
       </div>
       <>
-        <JobsTable data={prepared_data} stateSetters={stateSetters} />
+        <JobsTable data={prepared_data} stateSetters={stateSetters} maxHeightInViewportPercent={maxHeightInViewportPercent}/>
       </>
     </div>
   );

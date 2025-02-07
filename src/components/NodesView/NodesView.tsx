@@ -10,13 +10,14 @@ import CertificateError from "../ErrorReporting";
 
 interface Props {
   stateSetters: StateSetters;
+  maxHeightInViewportPercent?: number
 }
 
-const NodesView = ({stateSetters} : Props) => {
+const NodesView = ({stateSetters, maxHeightInViewportPercent} : Props) => {
   const { data : nodes, error : error_nodes, isLoading: nodes_isLoading } = useNodes();
   const { data : nodes_info, error : error_nodes_info, isLoading : nodes_info_isLoading} = useNodesInfo();
 
-  if(nodes_isLoading || nodes_info_isLoading)
+  if(!nodes || nodes_isLoading || nodes_info_isLoading)
     return (
       <div className="mx-5 flex flex-wrap justify-between">
         <h1 className="centered">Nodes</h1>
@@ -60,9 +61,7 @@ const NodesView = ({stateSetters} : Props) => {
   return (
     <div className="mx-5 flex flex-wrap justify-between">
       <h1 className="centered">Nodes</h1>
-      <>
-        <NodesTable data={prepared_data} stateSetters={stateSetters} />
-      </>
+      <NodesTable data={prepared_data} stateSetters={stateSetters} maxHeightInViewportPercent={maxHeightInViewportPercent}/>
     </div>
   );
 };

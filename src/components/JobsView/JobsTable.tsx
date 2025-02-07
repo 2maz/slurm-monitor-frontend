@@ -15,6 +15,7 @@ interface Props {
   data: Job[];
   stateSetters: StateSetters
   sorting?: {id: string, desc: boolean}
+  maxHeightInViewportPercent?: number
 }
 
 const getStringValues = (data: Job[], property_name: keyof Job): string[] => {
@@ -23,7 +24,7 @@ const getStringValues = (data: Job[], property_name: keyof Job): string[] => {
   ]).sort();
 };
 
-const JobsTable = ({ data, stateSetters, sorting }: Props) => {
+const JobsTable = ({ data, stateSetters, sorting, maxHeightInViewportPercent }: Props) => {
   const columns = useMemo<MRT_ColumnDef<Job>[]>(
     () => [
       {
@@ -168,6 +169,11 @@ const JobsTable = ({ data, stateSetters, sorting }: Props) => {
     },
     // disable when memo feature is used
     enableDensityToggle: true,
+    muiTableContainerProps: () => ({
+      sx: {
+        maxHeight: maxHeightInViewportPercent ? "" + maxHeightInViewportPercent + "vh" : "100vh"
+      }
+    }),
     muiTableBodyRowProps: ({ row }) => ({
       onDoubleClick: (event) => {
         setBackdropToggle(true);
