@@ -1,14 +1,12 @@
 import { FormEvent, useState } from "react";
 import { DotLoader } from "react-spinners";
-import dayjs from 'dayjs';
 import moment from "moment";
-import { Input, HStack, Button } from "@chakra-ui/react";
+import { Input, HStack } from "@chakra-ui/react";
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { Tooltip } from '@mui/material';
 import HelpIcon from '@mui/icons-material/Help';
-import { convertFieldResponseIntoMuiTextFieldProps } from "@mui/x-date-pickers/internals";
 
-import Job, { JobsResponse } from "./Job";
+import Job from "./Job";
 import JobsTable from "./JobsTable";
 
 import { StateSetters } from "../../services/StateSetters";
@@ -17,24 +15,6 @@ import useCompletedJobs, { Constraints } from "../../hooks/useCompletedJobs";
 
 import { DateTime } from 'luxon';
 import CertificateError from "../ErrorReporting";
-
-interface MlflowRun {
-  run_uuid: string;
-  experiment_id: string;
-  run_name: string;
-  user_id: string;
-  status: string;
-  start_time: number;
-  artifact_uri: string;
-  lifecycle_stage: number;
-  run_id: string;
-  ref_url: string;
-  slurm_job_id: number;
-}
-
-interface MlflowRunsResponse {
-  runs: MlflowRun[];
-}
 
 interface Props {
   stateSetters: StateSetters;
@@ -45,7 +25,7 @@ interface ConstraintsProps extends Props {
 }
 
 const CompletedJobsTableView = ({ stateSetters, constraints } : ConstraintsProps) => {
-  const { data: jobs, error, isLoading, dataUpdatedAt } = useCompletedJobs(constraints)
+  const { data: jobs, error, isLoading } = useCompletedJobs(constraints)
 
   const mlflowSlurmJobs = useAppState((state) => state.slurmRuns);
 
@@ -80,15 +60,15 @@ const CompletedJobsTableView = ({ stateSetters, constraints } : ConstraintsProps
   }));
 
   return (
-    <JobsTable data={prepared_data} stateSetters={stateSetters} sorting={{id: 'start_time', desc: true}}/>
+    <JobsTable data={prepared_data} stateSetters={stateSetters} sorting={{id: 'start_time', desc: true}} rowActions={true}/>
   );
 };
 
 const CompletedJobsView = ( { stateSetters } : Props) => {
-  const [constraints, setConstraints] = useState({ start_after_in_s: moment().unix() - 2*3600*24})
+  const [constraints, setConstraints] = useState<Constraints>({ start_after_in_s: moment().unix() - 2*3600*24})
 
   const getDateConstraint = (elements: HTMLFormControlsCollection, element_name: string, constraints: Constraints) => {
-    const input = elements.namedItem(element_name) as Element
+    const input = elements.namedItem(element_name) as HTMLInputElement
     if(input?.value !== '') {
         return { ...constraints, [element_name]: moment(input?.value, "DD.MM.YYYY hh:mm").unix()}
     }
@@ -101,26 +81,26 @@ const CompletedJobsView = ( { stateSetters } : Props) => {
 
     let query_params = {} as Constraints
 
-    const jobIdInput = target.elements.namedItem("job_id")
+    const jobIdInput = target.elements.namedItem("job_id") as HTMLInputElement
     if(jobIdInput?.value !== '' && jobIdInput?.value !== undefined) {
-        query_params = { ...query_params, job_id: jobIdInput?.value }
+        query_params = { ...query_params, job_id: Number(jobIdInput.value) }
     }
 
-    const userIdInput = target.elements.namedItem("user_id")
+    const userIdInput = target.elements.namedItem("user_id") as HTMLInputElement
     if(userIdInput?.value !== '')
-        query_params = { ...query_params, user_id: userIdInput?.value! }
+        query_params = { ...query_params, user_id: Number(userIdInput.value) }
 
-    const userNameInput = target.elements.namedItem("user")
+    const userNameInput = target.elements.namedItem("user") as HTMLInputElement
     if(userNameInput?.value !== '')
         query_params = { ...query_params, user: userNameInput?.value }
 
-    const minDurationInput = target.elements.namedItem("min_duration")
+    const minDurationInput = target.elements.namedItem("min_duration") as HTMLInputElement
     if(minDurationInput?.value !== '')
-        query_params = { ...query_params, min_duration_in_s: minDurationInput?.value }
+        query_params = { ...query_params, min_duration_in_s: Number(minDurationInput.value) }
 
-    const maxDurationInput = target.elements.namedItem("max_duration")
+    const maxDurationInput = target.elements.namedItem("max_duration") as HTMLInputElement
     if(maxDurationInput?.value !== '')
-        query_params = { ...query_params, max_duration_in_s: maxDurationInput?.value }
+        query_params = { ...query_params, max_duration_in_s: Number(maxDurationInput.value) }
 
     query_params = getDateConstraint(target.elements, "start_before_in_s", query_params)
     query_params = getDateConstraint(target.elements, "end_before_in_s", query_params)

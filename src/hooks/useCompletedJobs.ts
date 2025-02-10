@@ -17,8 +17,8 @@ export interface Constraints {
   submit_after_in_s?: number
   end_before_in_s?: number
   end_after_in_s?: number
-  min_duration?: number
-  max_duration?: number
+  min_duration_in_s?: number
+  max_duration_in_s?: number
   limit?: number
 }
 

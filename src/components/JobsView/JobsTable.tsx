@@ -6,16 +6,18 @@ import {
 import { useMemo, useState } from "react";
 import Job from "./Job";
 import ArrowOutwordIcon from "@mui/icons-material/ArrowOutward";
-import { Backdrop, Button } from "@mui/material";
+import { Backdrop, Button, Link, MenuItem } from "@mui/material";
 
 import { StateSetters } from "../../services/StateSetters";
 import JobView from "../JobView";
+import { MONITOR_BASE_URL } from "../../services/slurm-monitor/client";
 
 interface Props {
   data: Job[];
   stateSetters: StateSetters
   sorting?: {id: string, desc: boolean}
   maxHeightInViewportPercent?: number
+  rowActions?: boolean
 }
 
 const getStringValues = (data: Job[], property_name: keyof Job): string[] => {
@@ -24,7 +26,7 @@ const getStringValues = (data: Job[], property_name: keyof Job): string[] => {
   ]).sort();
 };
 
-const JobsTable = ({ data, stateSetters, sorting, maxHeightInViewportPercent }: Props) => {
+const JobsTable = ({ data, stateSetters, sorting, maxHeightInViewportPercent, rowActions }: Props) => {
   const columns = useMemo<MRT_ColumnDef<Job>[]>(
     () => [
       {
@@ -36,6 +38,10 @@ const JobsTable = ({ data, stateSetters, sorting, maxHeightInViewportPercent }: 
         accessorKey: "job_id",
         header: "Job ID",
         grow: false,
+
+        Cell: ({row}) => {
+          return row.original.job_id
+        }
       },
       { accessorKey: "user_name", header: "Username", grow: false },
       {
@@ -156,6 +162,14 @@ const JobsTable = ({ data, stateSetters, sorting, maxHeightInViewportPercent }: 
     data: data, //must be memoized or stable (useState, useMemo, defined outside of this component, etc.)
     //layoutMode: "grid-no-grow",
     //enableColumnResizing: true,
+    enableRowActions: rowActions,
+    renderRowActionMenuItems: ({ row, closeMenu }) => {
+      const download_url = MONITOR_BASE_URL + "jobs/"+ row.original.job_id + "/export"
+      return [
+      <MenuItem key="download" onClick={() => { closeMenu(); alert("Download for job " + row.original.job_id + " started.\nYour browser will notify once the download has been completed") } }>
+        <Link underline='none' download href={download_url}>Download job data</Link>
+      </MenuItem>,
+    ]},
     enableGrouping: true,
     enableStickyHeader: true,
     //enableStickyFooter: true
