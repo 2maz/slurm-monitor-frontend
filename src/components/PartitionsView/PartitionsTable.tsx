@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import "./PartitionList.module.css";
-import MetaData from "../ResponseMetaData";
 import Partition from "./Partition";
 import {
   MRT_ColumnDef,
@@ -16,12 +15,6 @@ interface Props {
   maxHeightInViewportPercent?: number
 }
 
-interface PartitionsResponse {
-  meta: MetaData;
-  errors: string[];
-  partitions: Partition[];
-}
-
 const PartitionsTable = ({ data, stateSetters, maxHeightInViewportPercent }: Props) => {
   const columns = useMemo<MRT_ColumnDef<Partition>[]>(
     () => [
@@ -33,8 +26,28 @@ const PartitionsTable = ({ data, stateSetters, maxHeightInViewportPercent }: Pro
         accessorKey: "nodes",
         header: "Nodes",
       },
-      { accessorKey: "total_cpus", header: "Total CPUs" },
-      { accessorKey: "total_nodes", header: "Total Nodes" },
+      {
+        accessorKey: "total_cpus",
+        filterVariant: "range-slider",
+        filterFn: "betweenInclusive",
+        muiFilterSliderProps: {
+          min: 1,
+          max: data.reduce((prev, current) => { return prev.total_cpus > current.total_cpus ? prev : current}).total_cpus,
+          size: 'small',
+        },
+        header: "Total CPUs"
+      },
+      {
+        accessorKey: "total_nodes",
+        header: "Total Nodes" ,
+        filterVariant: "range-slider",
+        filterFn: "betweenInclusive",
+        muiFilterSliderProps: {
+          min: 1,
+          max: data.reduce((prev, current) => { return prev.total_nodes > current.total_nodes ? prev : current}).total_nodes,
+          size: 'small',
+        },
+      },
       { accessorKey: "flags", header: "Flags" },
       { accessorKey: "maximum_cpus_per_job", header: "Max CPU/Jobs" },
       { accessorKey: "maximum_nodes_per_job", header: "Max Nodes/Jobs" },
@@ -54,7 +67,7 @@ const PartitionsTable = ({ data, stateSetters, maxHeightInViewportPercent }: Pro
   const hasEnabledFilters = () => {
     return (
       columnFilters.filter(
-        (filter: { id: string; value: any }) => !filter.id.endsWith("time")
+        (filter: { id: string; value: unknown }) => !filter.id.endsWith("time")
       ).length > 0
     );
   };
@@ -82,7 +95,7 @@ const PartitionsTable = ({ data, stateSetters, maxHeightInViewportPercent }: Pro
       }
     }),
     muiTableBodyRowProps: ({ row }) => ({
-      onDoubleClick: (event) => {
+      onDoubleClick: (/*event*/) => {
         setBackdropToggle(true);
         setBackdropId(row.getValue<string>("name"));
       },
@@ -96,7 +109,7 @@ const PartitionsTable = ({ data, stateSetters, maxHeightInViewportPercent }: Pro
       columnFilters,
       columnVisibility,
     },
-    renderTopToolbarCustomActions: ({ table }) => (
+    renderTopToolbarCustomActions: (/*{ table }*/) => (
       <div className="d-flex">
         <Button onClick={resetState}>Reset Filters</Button>
       </div>
