@@ -27,7 +27,7 @@ const BenchmarksView = () => {
   const [textFilter, setTextFilter] = useState<string>('')
 
   if(error) {
-    return "Error retrieving benchmark data: {error}"
+    return "Error retrieving benchmark data: " + error.message
   }
 
   if(isLoading) {
@@ -137,8 +137,8 @@ const BenchmarksView = () => {
       <SelectRoot
         multiple
         collection={number_of_gpus} size="sm" width="250px"
-        value={selectedNumberOfGPUs}
-        onValueChange={(e) => setSelectedNumberOfGPUS(e.value)}
+        value={selectedNumberOfGPUs as unknown as string[]} // as ... to silence warnings
+        onValueChange={(e) => setSelectedNumberOfGPUS(e.value as unknown as number[])}
       >
         <SelectLabel>GPU Count:</SelectLabel>
         <SelectTrigger clearable>
