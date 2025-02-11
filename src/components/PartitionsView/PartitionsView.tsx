@@ -3,9 +3,9 @@ import Partition from "./Partition";
 import PartitionsTable from "./PartitionsTable";
 
 import { StateSetters } from "../../services/StateSetters";
-import usePartitions from "../../hooks/usePartitions";
 import { DotLoader } from "react-spinners";
 import CertificateError from "../ErrorReporting";
+import usePartitionsQueue from "../../hooks/usePartitionsQueue";
 
 
 interface Props {
@@ -14,29 +14,33 @@ interface Props {
 }
 
 const PartitionsView = ({ stateSetters, maxHeightInViewportPercent }: Props) => {
-  const { data : partitions, error, isLoading } =  usePartitions()
+  const { partitions, isLoading, error } = usePartitionsQueue()
 
-  if(error)
+  if(error.jobs) {
     return (
       <>
         <h1 className="mx-5 centered">Partitions</h1>
-        {error && (<>
-          <p className="text-danger">No data available: {error.message}</p>
+          <p className="text-danger">No data available: {error.jobs.message}</p>
           {<CertificateError />}
-          </>
-        )}
       </>
     );
+  }
 
-  if(isLoading)
+  if(error.partitions) {
+    return (
+      <>
+        <h1 className="mx-5 centered">Partitions</h1>
+        <p className="text-danger">No data available: {error.partitions?.message}</p>
+      </>
+    )
+  }
+
+  if(isLoading || !partitions)
     return (<div className="mx-5 flex flex-wrap justify-between">
       <h1 className="centered">Partitions</h1>
       <div className="d-flex justify-content-center align-self-center"><DotLoader/></div>
       </div>
     )
-
-  if(!partitions)
-    return "No Partition data available"
 
   const prepared_data = partitions.map((partition: Partition) => ({
     ...partition,

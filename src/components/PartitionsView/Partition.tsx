@@ -1,3 +1,5 @@
+import Job from "../JobsView/Job";
+
 interface Partition {
   flags: string[];
   preemption_mode: string[];
@@ -27,6 +29,11 @@ interface Partition {
   total_cpus: number;
   total_nodes: number;
   tres: string;
+
+  pending_jobs?: Job[]
+  running_jobs?: Job[]
+  pending_max_submit_time?: number | undefined
+  running_latest_wait_time?: number | undefined
 }
 
 export default Partition;

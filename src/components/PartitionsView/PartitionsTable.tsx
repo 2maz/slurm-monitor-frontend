@@ -48,6 +48,53 @@ const PartitionsTable = ({ data, stateSetters, maxHeightInViewportPercent }: Pro
           size: 'small',
         },
       },
+      {
+        accessorKey: "pending_jobs",
+        header: "Pending Jobs",
+        filterVariant: "range-slider",
+        filterFn: "betweenInclusive",
+        muiFilterSliderProps: {
+          min: 1,
+          max: data.reduce((prev, current) => { return prev.pending_jobs!.length > current.pending_jobs!.length ? prev : current}).pending_jobs!.length,
+          size: 'small',
+        },
+        Cell: ({row}) => { return row.original.pending_jobs!.length }
+      },
+      {
+        accessorKey: "running_jobs",
+        header: "Running Jobs",
+        filterVariant: "range-slider",
+        filterFn: "betweenInclusive",
+        muiFilterSliderProps: {
+          min: 1,
+          max: data.reduce((prev, current) => { return prev.running_jobs!.length > current.running_jobs!.length ? prev : current}).running_jobs!.length,
+          size: 'small',
+        },
+        Cell: ({row}) => { return row.original.running_jobs!.length }
+      },
+      {
+        accessorKey: "pending_max_submit_time",
+        header: "Max wait in pending",
+        Cell: ({row}) => {
+          if(row.original.pending_max_submit_time) {
+              const delta_seconds = (Date.now()/1000.0 - row.original.pending_max_submit_time);
+              return "" + Math.ceil(delta_seconds / 60) + " min"
+          } else {
+            return ''
+          }
+        }
+      },
+      {
+        accessorKey: "running_latest_wait_time",
+        header: "Latest job wait",
+        Cell: ({row}) => {
+          if(row.original.running_latest_wait_time) {
+              return "" + Math.ceil(row.original.running_latest_wait_time / 60) + " min"
+          } else {
+            return ''
+          }
+        }
+      },
       { accessorKey: "flags", header: "Flags" },
       { accessorKey: "maximum_cpus_per_job", header: "Max CPU/Jobs" },
       { accessorKey: "maximum_nodes_per_job", header: "Max Nodes/Jobs" },
