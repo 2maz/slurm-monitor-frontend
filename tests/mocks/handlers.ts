@@ -1,5 +1,4 @@
 import { http, HttpResponse} from 'msw';
-import { nodes } from './data';
 
 import { MONITOR_BASE_URL } from '../../src/services/slurm-monitor/client';
 import { create_node_status_response } from './db';

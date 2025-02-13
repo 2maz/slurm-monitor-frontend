@@ -189,7 +189,7 @@ const JobsTable = ({ data, stateSetters, sorting, maxHeightInViewportPercent, ro
       }
     }),
     muiTableBodyRowProps: ({ row }) => ({
-      onDoubleClick: (event) => {
+      onDoubleClick: (/*event*/) => {
         setBackdropToggle(true);
         setBackdropId(row.getValue<number>("job_id"));
       },
@@ -203,7 +203,7 @@ const JobsTable = ({ data, stateSetters, sorting, maxHeightInViewportPercent, ro
       columnFilters: columnFilters,
       columnVisibility: columnVisibility
     },
-    renderTopToolbarCustomActions: ({ table }) => (
+    renderTopToolbarCustomActions: (/*{ table }*/) => (
       <div className="d-flex">
         <Button onClick={resetState}>Reset Filters</Button>
       </div>

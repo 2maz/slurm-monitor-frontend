@@ -145,14 +145,13 @@ const SettingsView = () => {
     resetBackend();
   };
 
-  const handleRemoveBackendUrl = (url: string) => {
-    if (backendUrl !== url) return;
+  //const handleRemoveBackendUrl = (url: string) => {
+  //  if (backendUrl !== url) return;
+  // setBackendUrl(url);
+  //};
 
-    setBackendUrl(url);
-  };
 
-
-  const handleTabChange = (event: React.SyntheticEvent, newTabValue: string) => {
+  const handleTabChange = (_event: React.SyntheticEvent, newTabValue: string) => {
     setTabValue(newTabValue);
   };
 

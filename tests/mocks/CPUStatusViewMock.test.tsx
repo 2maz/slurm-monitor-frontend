@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, /*screen*/} from '@testing-library/react'
 import CPUStatusView from '../../src/components/CPUStatusView/CPUStatusView';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 

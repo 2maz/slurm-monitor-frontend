@@ -10,24 +10,6 @@ import { DotLoader } from "react-spinners";
 import CertificateError from "../ErrorReporting";
 
 
-interface MlflowRun {
-  run_uuid: string;
-  experiment_id: string;
-  run_name: string;
-  user_id: string;
-  status: string;
-  start_time: number;
-  artifact_uri: string;
-  lifecycle_stage: number;
-  run_id: string;
-  ref_url: string;
-  slurm_job_id: number;
-}
-
-interface MlflowRunsResponse {
-  runs: MlflowRun[];
-}
-
 interface Props {
   stateSetters: StateSetters;
   maxHeightInViewportPercent?: number

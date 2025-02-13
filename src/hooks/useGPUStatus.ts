@@ -26,7 +26,7 @@ interface GPUDataSeriesResponse extends Response {
   gpu_status: GPUDataSeries[];
 }
 
-const dummy_data : GPUDataSeries[] = [
+export const dummy_gpu_data_series : GPUDataSeries[] = [
     {
         label: "g001-gpu-0",
         data: [

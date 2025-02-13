@@ -301,7 +301,7 @@ const NodesTable = ({ data, stateSetters, maxHeightInViewportPercent }: Props) =
       }
     }),
     muiTableBodyRowProps: ({ row }) => ({
-      onDoubleClick: (event) => {
+      onDoubleClick: (/*event*/) => {
         setBackdropToggle(true);
         setBackdropId(row.getValue<string>("name"));
       },
@@ -315,7 +315,7 @@ const NodesTable = ({ data, stateSetters, maxHeightInViewportPercent }: Props) =
       columnFilters,
       columnVisibility,
     },
-    renderTopToolbarCustomActions: ({ table }) => (
+    renderTopToolbarCustomActions: (/*{ table }*/) => (
       <div className="d-flex">
         <Button onClick={resetState}>Reset Filters</Button>
       </div>

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import axios, { AxiosInstance, AxiosResponse } from "axios";
+import axios, { AxiosResponse } from "axios";
 
 interface Experiment {
   experiment_id: string;
@@ -21,7 +21,7 @@ interface MLFlowRunInfo {
     start_time: number;
     status: string;
     user_id: string;
-};
+}
 
 interface MLFlowRunData {
     params?: {key: string, value: string}[];
@@ -39,7 +39,7 @@ export interface MLFlowSlurmRunInfo extends MLFlowRunInfo {
     SLURM_JOB_UID?: string
     SLURM_JOB_USER?: string
     mlflow_run_uri?: string;
-};
+}
 
 interface MLFlowRun {
     info: MLFlowRunInfo;
@@ -62,13 +62,13 @@ const MLFlowSlurmMapper = ({ url, updateFn }: Props) => {
       })
       .then((response: AxiosResponse) => {
         if (response.status == 200) {
-          const array = response.data["experiments"];
-          return array;
+          return response.data["experiments"];
         } else {
           return [];
         }
       })
       .catch((reason) => {
+        console.log("Experiment retrieval failed: ", reason)
         controller.abort();
         return [];
       });
@@ -111,7 +111,7 @@ const MLFlowSlurmMapper = ({ url, updateFn }: Props) => {
         }
         return [];
       })
-      .catch((reason) => {
+      .catch(() => {
         controller.abort();
         return [];
       });

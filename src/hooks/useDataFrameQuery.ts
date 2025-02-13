@@ -14,7 +14,7 @@ import useMonitorEndpoint from "./useMonitorEndpoint";
 //}
 
 interface Row {
-    [column_name: string]: number
+    [column_name: string]: number | string
 }
 
 interface DataFrame extends Array<Row> {}

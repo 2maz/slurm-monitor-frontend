@@ -1,6 +1,5 @@
 import { QueryCache, QueryClient } from '@tanstack/react-query';
 import { notifications } from '@mantine/notifications';
-import { createElement } from 'react';
 
 export type SimpleQueryOptions = {
     // By default, 5xx errors trigger the error boundary (see below), while 4xx and others
@@ -18,7 +17,7 @@ export const queryClient = new QueryClient({
         },
     },
     queryCache: new QueryCache({
-        onError: (error, _query) => {
+        onError: (error, /*query*/) => {
             console.error(error);
             /* Possible to:
             // only show error toasts if we already have data in the cache

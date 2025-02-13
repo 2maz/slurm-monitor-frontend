@@ -3,7 +3,7 @@ import useDataFrameQuery from "../../hooks/useDataFrameQuery";
 import { BarLoader } from "react-spinners";
 
 import { createListCollection, HStack } from "@chakra-ui/react";
-import { scaleSymlog } from 'd3';
+import { scaleSymlog } from 'd3-scale';
 
 import {
   SelectContent,
@@ -15,7 +15,6 @@ import {
 } from "../ui/select";
 import {
   CartesianGrid,
-  Legend,
   Line,
   LineChart,
   ResponsiveContainer,
@@ -25,6 +24,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { ScaleType } from "recharts/types/util/types";
 
 interface Props {
   query_name: string;
@@ -34,8 +34,8 @@ const DataFrameView = ({ query_name }: Props) => {
   const [xColumn, setXColumn] = useState("");
   const [yColumn, setYColumn] = useState("");
 
-  const [xScale, setXScale] = useState("auto");
-  const [yScale, setYScale] = useState("auto");
+  const [xScale, setXScale] = useState<ScaleType>("auto");
+  const [yScale, setYScale] = useState<ScaleType>("auto");
 
   useEffect(() => {
     setXColumn("");
@@ -135,7 +135,7 @@ const DataFrameView = ({ query_name }: Props) => {
           size="sm"
           width="320px"
           onValueChange={(event) => {
-            setXScale(event.value[0]);
+            setXScale(event.value[0] as ScaleType);
           }}
           defaultValue={[xScale]}
         >
@@ -157,7 +157,7 @@ const DataFrameView = ({ query_name }: Props) => {
           size="sm"
           width="320px"
           onValueChange={(event) => {
-            setYScale(event.value[0]);
+            setYScale(event.value[0] as ScaleType);
           }}
           defaultValue={[yScale]}
         >
@@ -179,17 +179,20 @@ const DataFrameView = ({ query_name }: Props) => {
   );
 
   if (xColumn != "" && yColumn != "" && data) {
-    let sortedData = undefined;
-    if (data[0][xColumn] === undefined) {
+    if(!Object.getOwnPropertyNames(data[0]).includes(xColumn)) {
+      console.log("Column: ", xColumn, " does not exist")
       return;
     }
-
-    sortedData = data.sort((a, b) => {
-      if (typeof a[xColumn] === "number") {
+    if(!Object.getOwnPropertyNames(data[0]).includes(yColumn)) {
+      console.log("Column: ", yColumn, " does not exist")
+      return;
+    }
+    const sortedData = data.sort((a, b) => {
+      if (typeof a[xColumn] === "number" && typeof b[xColumn] === "number") {
         return a[xColumn] - b[xColumn];
       }
       return a[xColumn].toString().localeCompare(b[xColumn].toString());
-    });
+    })
 
     elements.push(
       <div className="d-flex flex-wrap justify-content-start my-3">
@@ -211,7 +214,7 @@ const DataFrameView = ({ query_name }: Props) => {
               />
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis 
-                  scale={xScale === "log" ? scaleSymlog() : xScale}
+                  scale={xScale === "log" ? scaleSymlog : xScale}
                   type={typeof data[0][xColumn] === "number" ? "number" : "category"}
                   label={{
                     value: xColumn,
@@ -221,7 +224,7 @@ const DataFrameView = ({ query_name }: Props) => {
                   dataKey={xColumn}
               />
               <YAxis 
-                scale={yScale === "log" ? scaleSymlog() : yScale}
+                scale={yScale === "log" ? scaleSymlog : yScale}
                 type="number"
                 label={{
                   value: yColumn,

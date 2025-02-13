@@ -34,7 +34,8 @@ const BenchmarksView = () => {
     return "Loading"
   }
 
-  if(!data) {
+
+  if(!data || data.length == 0) {
     return "No data available"
   }
 

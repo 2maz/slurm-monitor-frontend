@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/unbound-method */
-import { factory, primaryKey } from '@mswjs/data';
+//import { factory, primaryKey } from '@mswjs/data';
 import { faker } from '@faker-js/faker'
 
 //    {
@@ -66,7 +66,7 @@ import { faker } from '@faker-js/faker'
 //           {
 
 const create_cpu_status_timeseries = (nodename: string, start_time: Date, resolution_in_s: number, number_of_samples: number) => {
-    Array.from(Array(number_of_samples), (item, index) => {
+    Array.from(Array(number_of_samples), (_item, index) => {
         return {
             node: nodename,
             local_id: faker.number.int({min: 0, max: 128}),

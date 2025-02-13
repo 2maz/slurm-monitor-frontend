@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import "./App.css";
 
 import { Box, MantineProvider, Paper, createTheme } from "@mantine/core";
@@ -52,15 +52,12 @@ const theme = createTheme({});
  * @param defaultValue Default value, in case the value does not exist in the session storage
  * @returns  Current value if it exists, otherwise the default value
  */
-const getFromStorage = (name: string, defaultValue: unknown = []) => {
+const getFromStorage = <T,>(name: string, defaultValue: unknown = []) => {
   const item = window.sessionStorage.getItem(name);
-  return item !== null ? JSON.parse(item) : defaultValue;
+  return (item !== null ? JSON.parse(item) : defaultValue) as T;
 };
 
-type persistent_value_t = MRT_ColumnFiltersState | MRT_VisibilityState;
-type persistent_setter_t =
-  | React.Dispatch<React.SetStateAction<MRT_VisibilityState>>
-  | React.Dispatch<React.SetStateAction<MRT_ColumnFiltersState>>;
+type Serializable = MRT_ColumnFiltersState | MRT_VisibilityState
 
 /**
  * Create a persistance decorator for an existing value, setter pair
@@ -71,25 +68,23 @@ type persistent_setter_t =
  * @param name The name of the value in the session storage
  * @returns The decorated state (to be used similar to useState return value)
  */
-const makePersistent = (
-  value: persistent_value_t,
-  setter: persistent_setter_t,
+const makePersistent = <T extends Serializable>(
+  value: T,
+  setter: Dispatch<SetStateAction<T>>,
   name: string
-) => {
-  return [
-    value,
-    (updateFn: any) => {
+) : [T, Dispatch<SetStateAction<T>>] => {
+    const stateSetter : Dispatch<SetStateAction<T>> = (updateFn) => {
       if (typeof updateFn === "function") {
-        const stateValue = updateFn(value);
+        const stateValue = updateFn(value)
         setter(stateValue);
         window.sessionStorage.setItem(name, JSON.stringify(stateValue));
       } else {
         setter(updateFn);
         window.sessionStorage.setItem(name, JSON.stringify(updateFn));
       }
-    },
-  ];
-};
+  }
+  return [value, stateSetter]
+}
 
 function App() {
   /// State that remembers the currently selected view (one of partitions, nodes, jobs)
