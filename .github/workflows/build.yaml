@@ -1,0 +1,29 @@
+name: build
+on:
+  push:
+    paths-ignore:
+      - '**/*.md'
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        package: ["slurm-monitor-frontend"]
+        node-version: [22]
+      fail-fast: false
+    runs-on:  ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Build package
+        run: |
+          npm i
+          npm run build
+
