@@ -22,7 +22,7 @@
     "@mantine/core": "^7.8.1",
     "@mantine/modals": "^7.8.1",
     "@mantine/notifications": "^7.8.1",
-    "@mui/icons-material": "^5.15.16",
+    "@mui/icons-material": "^6.4.6",
     "@mui/lab": "^5.0.0-alpha.170",
     "@mui/material": "^6.4.6",
     "@mui/x-data-grid": "^7.3.2",
