@@ -17,8 +17,16 @@ updates:
     schedule:
       interval: "weekly"
     labels:
-      - "npm dependencies"
+      - "deps:npm"
     commit-message:
       prefix: "npm: "
+    groups:
+      production-dependencies:
+        dependency-type: "production"
+      development-dependencies:
+        dependency-type: "development"
+      update-types:
+        - "minor"
+        - "patch"
     assignees:
       - "2maz"
