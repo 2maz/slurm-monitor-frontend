@@ -3,7 +3,6 @@ import { useState } from "react";
 import Job from "./Job";
 import JobsTable from "./JobsTable";
 
-import { StateSetters } from "../../services/StateSetters";
 import useAppState from "../../AppState";
 import useJobs from "../../hooks/useJobs";
 import { DotLoader } from "react-spinners";
@@ -11,11 +10,10 @@ import CertificateError from "../ErrorReporting";
 
 
 interface Props {
-  stateSetters: StateSetters;
   maxHeightInViewportPercent?: number
 }
 
-const JobsView = ({ stateSetters, maxHeightInViewportPercent } : Props) => {
+const JobsView = ({ maxHeightInViewportPercent } : Props) => {
   const [refreshInterval, setRefreshInterval] = useState(10000);
 
   const {data: jobs, error, isLoading, dataUpdatedAt } = useJobs(refreshInterval/1000.0)
@@ -72,7 +70,7 @@ const JobsView = ({ stateSetters, maxHeightInViewportPercent } : Props) => {
         </label>
       </div>
       <>
-        <JobsTable data={prepared_data} stateSetters={stateSetters} maxHeightInViewportPercent={maxHeightInViewportPercent}/>
+        <JobsTable data={prepared_data} maxHeightInViewportPercent={maxHeightInViewportPercent}/>
       </>
     </div>
   );

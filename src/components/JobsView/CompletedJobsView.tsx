@@ -9,22 +9,17 @@ import HelpIcon from '@mui/icons-material/Help';
 import Job from "./Job";
 import JobsTable from "./JobsTable";
 
-import { StateSetters } from "../../services/StateSetters";
 import useAppState from "../../AppState";
 import useCompletedJobs, { Constraints } from "../../hooks/useCompletedJobs";
 
 import { DateTime } from 'luxon';
 import CertificateError from "../ErrorReporting";
 
-interface Props {
-  stateSetters: StateSetters;
-}
-
-interface ConstraintsProps extends Props {
+interface ConstraintsProps {
   constraints: Constraints;
 }
 
-const CompletedJobsTableView = ({ stateSetters, constraints } : ConstraintsProps) => {
+const CompletedJobsTableView = ({ constraints } : ConstraintsProps) => {
   const { data: jobs, error, isLoading } = useCompletedJobs(constraints)
 
   const mlflowSlurmJobs = useAppState((state) => state.slurmRuns);
@@ -60,11 +55,11 @@ const CompletedJobsTableView = ({ stateSetters, constraints } : ConstraintsProps
   }));
 
   return (
-    <JobsTable data={prepared_data} stateSetters={stateSetters} sorting={{id: 'start_time', desc: true}} rowActions={true}/>
+    <JobsTable data={prepared_data} sorting={{id: 'start_time', desc: true}} rowActions={true}/>
   );
 };
 
-const CompletedJobsView = ( { stateSetters } : Props) => {
+const CompletedJobsView = () => {
   const [constraints, setConstraints] = useState<Constraints>({ start_after_in_s: moment().unix() - 2*3600*24})
 
   const getDateConstraint = (elements: HTMLFormControlsCollection, element_name: string, constraints: Constraints) => {
@@ -149,7 +144,7 @@ const CompletedJobsView = ( { stateSetters } : Props) => {
         </HStack>
         <Input className='my-5 btn btn-secondary' type="submit"/>
       </form>
-      <CompletedJobsTableView constraints={constraints} stateSetters={stateSetters} />
+      <CompletedJobsTableView constraints={constraints} />
       </div>
   )
 }

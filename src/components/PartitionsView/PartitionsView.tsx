@@ -2,18 +2,16 @@
 import Partition from "./Partition";
 import PartitionsTable from "./PartitionsTable";
 
-import { StateSetters } from "../../services/StateSetters";
 import { DotLoader } from "react-spinners";
 import CertificateError from "../ErrorReporting";
 import usePartitionsQueue from "../../hooks/usePartitionsQueue";
 
 
 interface Props {
-  stateSetters: StateSetters;
   maxHeightInViewportPercent?: number
 }
 
-const PartitionsView = ({ stateSetters, maxHeightInViewportPercent }: Props) => {
+const PartitionsView = ({ maxHeightInViewportPercent }: Props) => {
   const { partitions, isLoading, error } = usePartitionsQueue()
 
   if(error.jobs) {
@@ -53,7 +51,6 @@ const PartitionsView = ({ stateSetters, maxHeightInViewportPercent }: Props) => 
       <>
         <PartitionsTable
           data={prepared_data}
-          stateSetters={stateSetters}
           maxHeightInViewportPercent={maxHeightInViewportPercent}
         />
       </>

@@ -1,5 +1,6 @@
 import {
   MRT_ColumnDef,
+  MRT_ColumnFiltersState,
   MaterialReactTable,
   useMaterialReactTable,
 } from "material-react-table";
@@ -8,13 +9,12 @@ import Job from "./Job";
 import ArrowOutwordIcon from "@mui/icons-material/ArrowOutward";
 import { Backdrop, Button, Link, MenuItem } from "@mui/material";
 
-import { StateSetters } from "../../services/StateSetters";
 import JobView from "../JobView";
 import { MONITOR_BASE_URL } from "../../services/slurm-monitor/client";
+import { useJobsStore } from "../../stores";
 
 interface Props {
   data: Job[];
-  stateSetters: StateSetters
   sorting?: {id: string, desc: boolean}
   maxHeightInViewportPercent?: number
   rowActions?: boolean
@@ -26,7 +26,9 @@ const getStringValues = (data: Job[], property_name: keyof Job): string[] => {
   ]).sort();
 };
 
-const JobsTable = ({ data, stateSetters, sorting, maxHeightInViewportPercent, rowActions }: Props) => {
+const JobsTable = ({ data, sorting, maxHeightInViewportPercent, rowActions }: Props) => {
+  const { columnFilters, setColumnFilters, visibility, setVisibility } = useJobsStore()
+
   const columns = useMemo<MRT_ColumnDef<Job>[]>(
     () => [
       {
@@ -146,13 +148,10 @@ const JobsTable = ({ data, stateSetters, sorting, maxHeightInViewportPercent, ro
   const [backdropToggle, setBackdropToggle] = useState(false);
   const [backdropId, setBackdropId] = useState(-1);
 
-  const [columnFilters, setColumnFilters] = stateSetters.columnFilters;
-  const [columnVisibility, setColumnVisibility] = stateSetters.columnVisibility;
-
   const hasEnabledFilters = () => {
     return (
-      stateSetters.columnFilters[0].filter(
-        (filter: { id: string; value: any }) => !filter.id.endsWith("time")
+      columnFilters.filter(
+        (filter: { id: string; value: unknown }) => !filter.id.endsWith("time")
       ).length > 0
     );
   };
@@ -198,10 +197,10 @@ const JobsTable = ({ data, stateSetters, sorting, maxHeightInViewportPercent, ro
       },
     }),
     onColumnFiltersChange: setColumnFilters,
-    onColumnVisibilityChange: setColumnVisibility,
+    onColumnVisibilityChange: setVisibility,
     state: {
       columnFilters: columnFilters,
-      columnVisibility: columnVisibility
+      columnVisibility: visibility
     },
     renderTopToolbarCustomActions: (/*{ table }*/) => (
       <div className="d-flex">
@@ -211,7 +210,7 @@ const JobsTable = ({ data, stateSetters, sorting, maxHeightInViewportPercent, ro
   });
 
   const resetState = () => {
-    setColumnFilters([]);
+    setColumnFilters([] as MRT_ColumnFiltersState);
   };
 
   return (

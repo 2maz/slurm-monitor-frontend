@@ -1,5 +1,4 @@
 import NodesTable from "./NodesTable";
-import { StateSetters } from "../../services/StateSetters";
 import useNodes from "../../hooks/useNodes";
 import useNodesInfo from "../../hooks/useNodesInfos";
 import Node from "./Node";
@@ -9,11 +8,9 @@ import CertificateError from "../ErrorReporting";
 
 
 interface Props {
-  stateSetters: StateSetters;
   maxHeightInViewportPercent?: number
 }
-
-const NodesView = ({stateSetters, maxHeightInViewportPercent} : Props) => {
+const NodesView = ({maxHeightInViewportPercent} : Props) => {
   const { data : nodes, error : error_nodes, isLoading: nodes_isLoading } = useNodes();
   const { data : nodes_info, error : error_nodes_info, isLoading : nodes_info_isLoading} = useNodesInfo();
 
@@ -61,7 +58,7 @@ const NodesView = ({stateSetters, maxHeightInViewportPercent} : Props) => {
   return (
     <div className="mx-5 flex flex-wrap justify-between">
       <h1 className="centered">Nodes</h1>
-      <NodesTable data={prepared_data} stateSetters={stateSetters} maxHeightInViewportPercent={maxHeightInViewportPercent}/>
+      <NodesTable data={prepared_data} maxHeightInViewportPercent={maxHeightInViewportPercent}/>
     </div>
   );
 };

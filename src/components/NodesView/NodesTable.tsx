@@ -7,15 +7,14 @@ import {
 import Button from "@mui/material/Button";
 import { Backdrop } from "@mui/material";
 import { useMemo, useState } from "react";
-import { StateSetters } from "../../services/StateSetters";
 import GPUStatusView from "../GPUStatusView";
 import CPUStatusView from "../CPUStatusView/CPUStatusView";
 import MemoryStatusView from "../CPUStatusView/MemoryStatusView";
 import NodeTopology from "./NodeTopology";
+import { useNodesStore } from "../../stores";
 
 interface Props {
   data: Node[];
-  stateSetters: StateSetters;
   maxHeightInViewportPercent?: number
 }
 
@@ -31,7 +30,8 @@ const getMaxGPUMemory = (data: Node[]) =>  {
           ).gpu_memory
     return maxValue ? Math.ceil(maxValue / 1024**3) : 0
 }
-const NodesTable = ({ data, stateSetters, maxHeightInViewportPercent }: Props) => {
+const NodesTable = ({ data, maxHeightInViewportPercent }: Props) => {
+  const { columnFilters, setColumnFilters, visibility, setVisibility } = useNodesStore();
   const columns = useMemo<MRT_ColumnDef<Node>[]>(
     () => [
       {
@@ -247,9 +247,6 @@ const NodesTable = ({ data, stateSetters, maxHeightInViewportPercent }: Props) =
   const [backdropToggle, setBackdropToggle] = useState(false);
   const [backdropId, setBackdropId] = useState("");
 
-  const [columnFilters, setColumnFilters] = stateSetters.columnFilters;
-  const [columnVisibility, setColumnVisibility] = stateSetters.columnVisibility;
-
   const hasEnabledFilters = () => {
     return (
       columnFilters.filter(
@@ -310,10 +307,10 @@ const NodesTable = ({ data, stateSetters, maxHeightInViewportPercent }: Props) =
       },
     }),
     onColumnFiltersChange: setColumnFilters,
-    onColumnVisibilityChange: setColumnVisibility,
+    onColumnVisibilityChange: setVisibility,
     state: {
-      columnFilters,
-      columnVisibility,
+      columnFilters: columnFilters,
+      columnVisibility: visibility,
     },
     renderTopToolbarCustomActions: (/*{ table }*/) => (
       <div className="d-flex">

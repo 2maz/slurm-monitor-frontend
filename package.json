@@ -1,7 +1,7 @@
 {
   "name": "slurm-frontend",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -57,7 +57,7 @@
     "recharts": "^2.13.0-alpha.5",
     "snippet": "^0.1.0",
     "zod": "^3.23.8",
-    "zustand": "^4.5.2"
+    "zustand": "^4.5.6"
   },
   "devDependencies": {
     "@faker-js/faker": "^9.1.0",
@@ -78,6 +78,7 @@
     "faker": "^6.6.6",
     "jsdom": "^25.0.1",
     "msw": "^2.5.2",
+    "simple-zustand-devtools": "^1.1.0",
     "typescript": "^5.2.2",
     "vite": "^5.2.0",
     "vitest": "^2.1.4"

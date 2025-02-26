@@ -7,15 +7,15 @@ import {
   useMaterialReactTable,
 } from "material-react-table";
 import { Backdrop, Button } from "@mui/material";
-import { StateSetters } from "../../services/StateSetters";
+import { usePartitionsStore } from "../../stores";
 
 interface Props {
   data: Partition[];
-  stateSetters: StateSetters;
   maxHeightInViewportPercent?: number
 }
 
-const PartitionsTable = ({ data, stateSetters, maxHeightInViewportPercent }: Props) => {
+const PartitionsTable = ({ data, maxHeightInViewportPercent }: Props) => {
+  const { columnFilters, setColumnFilters, visibility, setVisibility } = usePartitionsStore()
   const columns = useMemo<MRT_ColumnDef<Partition>[]>(
     () => [
       {
@@ -108,9 +108,6 @@ const PartitionsTable = ({ data, stateSetters, maxHeightInViewportPercent }: Pro
   const [backdropToggle, setBackdropToggle] = useState(false);
   const [backdropId, setBackdropId] = useState("");
 
-  const [columnFilters, setColumnFilters] = stateSetters.columnFilters;
-  const [columnVisibility, setColumnVisibility] = stateSetters.columnVisibility;
-
   const hasEnabledFilters = () => {
     return (
       columnFilters.filter(
@@ -151,10 +148,10 @@ const PartitionsTable = ({ data, stateSetters, maxHeightInViewportPercent }: Pro
       },
     }),
     onColumnFiltersChange: setColumnFilters,
-    onColumnVisibilityChange: setColumnVisibility,
+    onColumnVisibilityChange: setVisibility,
     state: {
-      columnFilters,
-      columnVisibility,
+      columnFilters: columnFilters,
+      columnVisibility: visibility,
     },
     renderTopToolbarCustomActions: (/*{ table }*/) => (
       <div className="d-flex">
