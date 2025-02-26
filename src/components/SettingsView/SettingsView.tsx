@@ -15,6 +15,8 @@ import { FieldValues, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import DeleteIcon from "@mui/icons-material/Delete";
 import SaveIcon from "@mui/icons-material/Save";
+import StarBorderIcon from '@mui/icons-material/StarBorder';
+import StarIcon from '@mui/icons-material/Star';
 import Tab from "@mui/material/Tab";
 import TabContext from "@mui/lab/TabContext";
 import TabList from "@mui/lab/TabList";
@@ -22,6 +24,7 @@ import TabPanel from "@mui/lab/TabPanel";
 import { Divider } from "@mantine/core";
 import axios from "axios";
 import { useQuery } from "@tanstack/react-query";
+
 
 import useAppState from '../../AppState';
 import { Variant } from "@mui/material/styles/createTypography";
@@ -33,6 +36,7 @@ const schema = z.object({
 });
 
 const schemaBackend = z.object({
+  backend_id: z.string().min(3),
   url: z.string().min(5).url()
 })
 
@@ -42,7 +46,7 @@ type BackendFormData = z.infer<typeof schemaBackend>
 interface ValidatedLinkProps {
   href: string;
   variant: Variant | undefined;
-  children: string;
+  children: string | string[];
   validate?: string;
 }
 
@@ -103,8 +107,7 @@ const SettingsView = () => {
   const urls = useAppState((state) => state.mlflowUrls);
   const setUrls = useAppState((state) => state.updateMlflowUrls);
 
-  const backendUrl = useAppState((state) => state.backendUrl);
-  const setBackendUrl = useAppState((state) => state.updateBackendUrl)
+  const appState = useAppState();
 
   const {
     register,
@@ -140,8 +143,19 @@ const SettingsView = () => {
 
 
   const onSubmitBackend = (data: FieldValues) => {
+    const backend_id = data.backend_id as string;
     const newUrl = data.url as string;
-    setBackendUrl(newUrl);
+    appState.addBackendUrl(backend_id, newUrl);
+    resetBackend();
+  };
+
+  const onRemoveBackend = (backend_id: string) => {
+    appState.removeBackendUrl(backend_id);
+    resetBackend();
+  };
+
+  const onSelectBackend = (backend_id: string) => {
+    appState.selectBackend(backend_id);
     resetBackend();
   };
 
@@ -220,6 +234,14 @@ const SettingsView = () => {
             <form onSubmit={handleSubmitBackend(onSubmitBackend)}>
               <FormGroup row>
                 <TextField
+                  error={Boolean(errorsBackend.backend_id)}
+                  {...registerBackend("backend_id")}
+                  id="backend_i"
+                  variant="outlined"
+                  label="Backend Id"
+                  helperText={errorsBackend.backend_id?.message}
+                />
+                <TextField
                   error={Boolean(errorsBackend.url)}
                   {...registerBackend("url")}
                   id="url"
@@ -240,18 +262,41 @@ const SettingsView = () => {
             </form>
             <Divider className="my-5" />
             <Typography sx={{ mt: 4, mb: 2 }} variant="h6" component="div">
-              Current Backend URL
+              Current Backends / REST Endpoints
             </Typography>
             <List dense={true}>
-              {backendUrl &&
-                  <div key={backendUrl}>
+              <div key="backend-urls">
+              {appState.backendUrls &&
+                  Object.keys(appState.backendUrls).map(key => {
+                    const backendUrl = appState.backendUrls[key];
+                    return (
                     <ListItem>
+                      <Button
+                          endIcon={<DeleteIcon />}
+                          onClick={() => onRemoveBackend(key)}
+                          type="button"
+                          disableElevation
+                      />
+                      {appState.currentBackend === key ? 
+                        <Button 
+                          endIcon={<StarIcon style={{color: "orange" }}/>}
+                          type="button"
+                          disableElevation
+                        /> :
+                        <Button 
+                          endIcon={<StarBorderIcon style={{ color: 'gray' }} />}
+                          onClick={() => onSelectBackend(key)}
+                          type="button"
+                          disableElevation
+                        />
+                      }
                       <ValidatedLink key={"validate-"+backendUrl} href={backendUrl + "/api/v1/docs"} validate={backendUrl + "/api/v1/docs"} variant="h6">
-                        {backendUrl}
+                        {key}: {backendUrl}
                       </ValidatedLink>
                     </ListItem>
-                  </div>
-              }
+                  )}
+              )}
+              </div>
             </List>
           </div>
         </TabPanel>

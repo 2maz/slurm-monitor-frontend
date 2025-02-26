@@ -10,8 +10,9 @@ import ArrowOutwordIcon from "@mui/icons-material/ArrowOutward";
 import { Backdrop, Button, Link, MenuItem } from "@mui/material";
 
 import JobView from "../JobView";
-import { MONITOR_BASE_URL } from "../../services/slurm-monitor/client";
+import { MONITOR_API_PREFIX } from "../../services/slurm-monitor/backend.config";
 import { useJobsStore } from "../../stores";
+import useAppState from "../../AppState";
 
 interface Props {
   data: Job[];
@@ -147,6 +148,7 @@ const JobsTable = ({ data, sorting, maxHeightInViewportPercent, rowActions }: Pr
 
   const [backdropToggle, setBackdropToggle] = useState(false);
   const [backdropId, setBackdropId] = useState(-1);
+  const backendUrl = useAppState().currentBackendUrl()
 
   const hasEnabledFilters = () => {
     return (
@@ -163,7 +165,7 @@ const JobsTable = ({ data, sorting, maxHeightInViewportPercent, rowActions }: Pr
     //enableColumnResizing: true,
     enableRowActions: rowActions,
     renderRowActionMenuItems: ({ row, closeMenu }) => {
-      const download_url = MONITOR_BASE_URL + "jobs/"+ row.original.job_id + "/export"
+      const download_url = backendUrl + MONITOR_API_PREFIX + "jobs/"+ row.original.job_id + "/export"
       return [
       <MenuItem key="download" onClick={() => { closeMenu(); alert("Download for job " + row.original.job_id + " started.\nYour browser will notify once the download has been completed") } }>
         <Link underline='none' download href={download_url}>Download job data</Link>

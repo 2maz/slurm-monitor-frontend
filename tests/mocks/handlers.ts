@@ -1,6 +1,6 @@
 import { http, HttpResponse} from 'msw';
 
-import { MONITOR_BASE_URL } from '../../src/services/slurm-monitor/client';
+import { MONITOR_BASE_URL } from '../../src/services/slurm-monitor/backend.config';
 import { create_node_status_response } from './db';
 
 export const handlers = [
