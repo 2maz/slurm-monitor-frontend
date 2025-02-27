@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 
-import { Box, MantineProvider, Paper, createTheme } from "@mantine/core";
-
+import { createTheme } from '@mui/material/styles'
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 
-import { BottomNavigation, BottomNavigationAction } from "@mui/material";
+import { BottomNavigation, BottomNavigationAction, Box, Paper, ThemeProvider } from "@mui/material";
 import SegmentIcon from "@mui/icons-material/Segment";
 import AccountTreeIcon from "@mui/icons-material/AccountTree";
 import DirectionsRunsTwoToneIcon from "@mui/icons-material/DirectionsRunTwoTone";
@@ -25,9 +24,6 @@ import { LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterLuxon } from "@mui/x-date-pickers/AdapterLuxon";
 import NodesView from "./components/NodesView";
 
-import "@mantine/core/styles.css";
-import "@mantine/dates/styles.css";
-import "mantine-react-table/styles.css";
 import SettingsView from "./components/SettingsView";
 import useAppState from "./AppState";
 import MLFlowSlurmMapper, {
@@ -93,9 +89,9 @@ function App() {
       ))}
 
       <LocalizationProvider dateAdapter={AdapterLuxon} adapterLocale="no">
-        <MantineProvider theme={theme}>
-          <Box>
-            <Paper>
+        <ThemeProvider theme={theme}>
+          <Box sx={{ border: '0px'}}>
+            <Paper elevation={0}>
               <BottomNavigation showLabels value={view}>
                 <BottomNavigationAction
                   label="Partitions"
@@ -211,7 +207,7 @@ function App() {
             }
             {view && view == "benchmarks" && <BenchmarksView />}
           </Box>
-        </MantineProvider>
+        </ThemeProvider>
       </LocalizationProvider>
     </>
   );

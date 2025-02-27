@@ -1,3 +1,5 @@
+import ArrowOutwordIcon from "@mui/icons-material/ArrowOutward";
+import { Backdrop, Button, Link, MenuItem } from "@mui/material";
 import {
   MRT_ColumnDef,
   MRT_ColumnFiltersState,
@@ -6,13 +8,11 @@ import {
 } from "material-react-table";
 import { useMemo, useState } from "react";
 import Job from "./Job";
-import ArrowOutwordIcon from "@mui/icons-material/ArrowOutward";
-import { Backdrop, Button, Link, MenuItem } from "@mui/material";
 
-import JobView from "../JobView";
+import useAppState from "../../AppState";
 import { MONITOR_API_PREFIX } from "../../services/slurm-monitor/backend.config";
 import { useJobsStore } from "../../stores";
-import useAppState from "../../AppState";
+import JobView from "../JobView";
 
 interface Props {
   data: Job[];
@@ -66,7 +66,7 @@ const JobsTable = ({ data, sorting, maxHeightInViewportPercent, rowActions }: Pr
         header: "Job State",
         grow: false,
         //enableColumnFilterModes: true,
-        // https://www.mantine-react-table.com/docs/guides/column-filtering#pre-built-mrt-filter-functions
+        // https://www.material-react-table.com/docs/guides/column-filtering#pre-built-mrt-filter-functions
         filterVariant: "multi-select",
         filterSelectOptions: ["RUNNING", "CANCELLED", "PENDING", "COMPLETED"],
         Cell: ({ cell }) => {
