@@ -59,7 +59,7 @@
   "devDependencies": {
     "@faker-js/faker": "^9.5.1",
     "@mswjs/data": "^0.16.2",
-    "@stylistic/eslint-plugin-jsx": "^2.9.0",
+    "@stylistic/eslint-plugin-jsx": "^4.2.0",
     "@testing-library/jest-dom": "^6.6.2",
     "@testing-library/react": "^16.2.0",
     "@testing-library/user-event": "^14.6.1",
