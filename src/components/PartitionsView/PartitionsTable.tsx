@@ -14,6 +14,21 @@ interface Props {
   maxHeightInViewportPercent?: number
 }
 
+const ensure_value = (value: number | undefined) => {
+  if(value) {
+    return value
+  }
+  return 0
+}
+
+const delta_seconds_to_now = (timestamp: number | undefined) => {
+  if(timestamp) {
+      const delta_seconds = (Date.now()/1000.0 - timestamp);
+      return delta_seconds / 60
+  }
+  return 0
+}
+
 const PartitionsTable = ({ data, maxHeightInViewportPercent }: Props) => {
   const { columnFilters, setColumnFilters, visibility, setVisibility } = usePartitionsStore()
   const columns = useMemo<MRT_ColumnDef<Partition>[]>(
@@ -50,6 +65,7 @@ const PartitionsTable = ({ data, maxHeightInViewportPercent }: Props) => {
       },
       {
         accessorKey: "pending_jobs",
+        accessorFn: (originalRow) => { return originalRow.pending_jobs ? originalRow.pending_jobs.length : 0 },
         header: "Pending Jobs",
         filterVariant: "range-slider",
         filterFn: "betweenInclusive",
@@ -62,11 +78,12 @@ const PartitionsTable = ({ data, maxHeightInViewportPercent }: Props) => {
       },
       {
         accessorKey: "running_jobs",
+        accessorFn: (originalRow) => { return originalRow.running_jobs ? originalRow.running_jobs.length : 0 },
         header: "Running Jobs",
         filterVariant: "range-slider",
         filterFn: "betweenInclusive",
         muiFilterSliderProps: {
-          min: 1,
+          min: 0,
           max: data.reduce((prev, current) => { return prev.running_jobs!.length > current.running_jobs!.length ? prev : current}).running_jobs!.length,
           size: 'small',
         },
@@ -74,10 +91,31 @@ const PartitionsTable = ({ data, maxHeightInViewportPercent }: Props) => {
       },
       {
         accessorKey: "pending_max_submit_time",
+        accessorFn: (originalRow) => {
+          return delta_seconds_to_now(originalRow.pending_max_submit_time) / 60 // in minutes
+        },
         header: "Max wait in pending",
+        filterVariant: "range-slider",
+        filterFn: "betweenInclusive",
+        muiFilterSliderProps: {
+          min: 0,
+          max: Math.ceil(delta_seconds_to_now(data.reduce(
+                (prev, current) => {
+                  if(prev.pending_max_submit_time && current.pending_max_submit_time) {
+                    return prev.pending_max_submit_time < current.pending_max_submit_time ? prev : current
+                  } else if(prev.pending_max_submit_time) {
+                    return prev
+                  } else {
+                    return current
+                  }
+                }
+                ).pending_max_submit_time) / 60) // in minutes
+          ,
+          size: 'small',
+        },
         Cell: ({row}) => {
           if(row.original.pending_max_submit_time) {
-              const delta_seconds = (Date.now()/1000.0 - row.original.pending_max_submit_time);
+              const delta_seconds = delta_seconds_to_now(row.original.pending_max_submit_time);
               return "" + Math.ceil(delta_seconds / 60) + " min"
           } else {
             return ''
@@ -86,7 +124,29 @@ const PartitionsTable = ({ data, maxHeightInViewportPercent }: Props) => {
       },
       {
         accessorKey: "running_latest_wait_time",
+        accessorFn: (originalRow) => {
+          return originalRow.running_latest_wait_time ? originalRow.running_latest_wait_time / 60 : 0 // in minutes
+        },
         header: "Latest job wait",
+        filterVariant: "range-slider",
+        filterFn: "betweenInclusive",
+        muiFilterSliderProps: {
+          min: 0,
+          max: Math.ceil(ensure_value(
+                data.reduce(
+                    (prev, current) => {
+                      if(prev.running_latest_wait_time && current.running_latest_wait_time) {
+                        return prev.running_latest_wait_time < current.running_latest_wait_time ? current : prev
+                      } else if(prev.running_latest_wait_time) {
+                        return prev
+                      } else {
+                        return current
+                      }
+                    }).running_latest_wait_time) / 60 // in minutes
+              )
+          ,
+          size: 'small',
+        },
         Cell: ({row}) => {
           if(row.original.running_latest_wait_time) {
               return "" + Math.ceil(row.original.running_latest_wait_time / 60) + " min"
