@@ -1,7 +1,8 @@
 import { LineChart, Line, Tooltip, XAxis, YAxis, Legend, CartesianGrid } from 'recharts';
-import moment from "moment";
 import { BarLoader } from 'react-spinners';
 import useNodesMemoryStatus from "../../hooks/useNodesMemoryStatus";
+import { DateTime } from 'luxon';
+import { JSX } from 'react';
 
 
 interface Props {
@@ -37,7 +38,8 @@ const MemoryStatusView = ({nodename, start_time_in_s, end_time_in_s, resolution_
               <LineChart width={300} height={250} data={nodes_memory[process_id].data}>
                 <Line yAxisId="1" type="monotone" dataKey="percent" stroke="#8884d8"/>
                 <CartesianGrid strokeDasharray="3 3"/>
-                <XAxis dataKey="timestamp" tickFormatter={timestamp => moment(timestamp).format("HH:mm")} />
+                # timeformat here: 2025-03-18T08:00:00.123456
+                <XAxis dataKey="timestamp" tickFormatter={timestamp => DateTime.fromISO(timestamp as string).toFormat("HH:mm")} />
                 <YAxis orientation="left" domain={[0, 100]} yAxisId="1"
                   label={{
                     value: `percentage (%)`,

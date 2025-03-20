@@ -1,7 +1,7 @@
 import { LineChart, Line, Tooltip, XAxis, YAxis, Legend, CartesianGrid } from 'recharts';
 import { BarLoader } from 'react-spinners';
-import moment from "moment";
 import useGPUStatus, { GPUDataSeries } from "../../hooks/useGPUStatus";
+import { DateTime } from 'luxon';
 
 
 //https://srl-login3.ex3.simula.no:12001/api/v1/monitor/gpustatus?node=g001
@@ -54,7 +54,8 @@ const GPUStatusView = ({nodename, logical_ids, start_time_in_s, end_time_in_s, r
               <Line yAxisId="2" type="monotone" dataKey="power_draw" stroke="#ff8400"/>
               <Line yAxisId="2" type="monotone" dataKey="temperature_gpu" stroke="#008400"/>
               <CartesianGrid strokeDasharray="3 3"/>
-              <XAxis dataKey="timestamp" tickFormatter={timestamp => moment(timestamp).format("HH:mm")} />
+              # timeformat here: 2025-03-18T08:00:00.123456
+              <XAxis dataKey="timestamp" tickFormatter={timestamp => DateTime.fromISO(timestamp as string).toFormat("HH:mm")} />
               <YAxis orientation="left" domain={[0,100]} yAxisId="1"
                 label={{
                   value: `percentage (%) / °C`,

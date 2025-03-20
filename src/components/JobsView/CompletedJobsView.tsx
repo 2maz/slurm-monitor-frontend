@@ -1,6 +1,5 @@
 import { FormEvent, useState } from "react";
 import { DotLoader } from "react-spinners";
-import moment from "moment";
 import { Input, HStack } from "@chakra-ui/react";
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { Tooltip } from '@mui/material';
@@ -49,9 +48,9 @@ const CompletedJobsTableView = ({ constraints } : ConstraintsProps) => {
     ...job,
     id: job.job_id,
     mlflow_ref: mlflowSlurmJobs.filter(r => Number(r.SLURM_JOB_ID) == job.job_id)[0]?.mlflow_run_uri,
-    start_time: moment.utc(job.start_time).unix(),
-    submit_time: moment.utc(job.submit_time).unix(),
-    end_time: moment.utc(job.end_time).unix()
+    start_time: DateTime.fromISO(job.start_time as unknown as string).toSeconds(),
+    submit_time: DateTime.fromISO(job.submit_time as unknown as string).toSeconds(),
+    end_time: DateTime.fromISO(job.end_time as unknown as string).toSeconds(),
   }));
 
   return (
@@ -60,12 +59,12 @@ const CompletedJobsTableView = ({ constraints } : ConstraintsProps) => {
 };
 
 const CompletedJobsView = () => {
-  const [constraints, setConstraints] = useState<Constraints>({ start_after_in_s: moment().unix() - 2*3600*24})
+  const [constraints, setConstraints] = useState<Constraints>({ start_after_in_s: DateTime.now().toSeconds() - 2*3600*24})
 
   const getDateConstraint = (elements: HTMLFormControlsCollection, element_name: string, constraints: Constraints) => {
     const input = elements.namedItem(element_name) as HTMLInputElement
     if(input?.value !== '') {
-        return { ...constraints, [element_name]: moment(input?.value, "DD.MM.YYYY hh:mm").unix()}
+      return { ...constraints, [element_name]: DateTime.fromFormat(input?.value, "dd.MM.yyyy HH:mm").toSeconds()}
     }
     return constraints
   }
