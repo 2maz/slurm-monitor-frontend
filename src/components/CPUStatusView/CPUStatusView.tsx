@@ -32,7 +32,7 @@ const CPUStatusView = ({nodename, start_time_in_s, end_time_in_s, resolution_in_
   if(error)
     return "Failed loading processes data for {nodename}"
 
-  const cpuCount = nodes_info ? nodes_info[nodename].cpus.count : 1
+  const cpuCount = nodes_info && nodes_info[nodename] ? nodes_info[nodename].cpus.count : 1
 
   const elements : JSX.Element[] = []
   if(isSuccess) {
