@@ -53,7 +53,7 @@ const CPUJobStatusView = ({job_id, start_time_in_s, end_time_in_s, resolution_in
                     <Line yAxisId="1" type="monotone" dataKey="memory_percent" stroke="#888400"/>
                     <ReferenceLine yAxisId="1" y={allocated_cpus*100} label={allocated_cpus + " cpu(s) allocated"} stroke="red" strokeDasharray="40 150"/>
                     <CartesianGrid strokeDasharray="3 3"/>
-                    <XAxis dataKey="timestamp" tickFormatter={timestamp => DateTime.fromMillis(timestamp as number).toFormat("HH:mm")} />
+                    <XAxis dataKey="timestamp" tickFormatter={timestamp => DateTime.fromISO(timestamp as unknown as string).toFormat("HH:mm")} />
                     <YAxis orientation="left" domain={[0, upperLimit]} yAxisId="1"
                       label={{
                         value: `percentage (%)`,
