@@ -36,6 +36,7 @@ const schema = z.object({
 
 const schemaBackend = z.object({
   backend_id: z.string().min(3),
+  cluster_id: z.string().min(3),
   url: z.string().min(5).url()
 })
 
@@ -143,13 +144,15 @@ const SettingsView = () => {
 
   const onSubmitBackend = (data: FieldValues) => {
     const backend_id = data.backend_id as string;
+    const cluster_id = data.cluster_id as string;
     const newUrl = data.url as string;
-    appState.addBackendUrl(backend_id, newUrl);
+
+    appState.addBackendSpec(backend_id, { url: newUrl, cluster_id: cluster_id});
     resetBackend();
   };
 
   const onRemoveBackend = (backend_id: string) => {
-    appState.removeBackendUrl(backend_id);
+    appState.removeBackendSpec(backend_id);
     resetBackend();
   };
 
@@ -248,6 +251,14 @@ const SettingsView = () => {
                   label="Url"
                   helperText={errorsBackend.url?.message}
                 />
+                <TextField
+                  error={Boolean(errorsBackend.cluster_id)}
+                  {...registerBackend("cluster_id")}
+                  id="cluster_id"
+                  variant="outlined"
+                  label="Cluster ID"
+                  helperText={errorsBackend.cluster_id?.message}
+                />
                 <Button
                   variant="contained"
                   endIcon={<SaveIcon />}
@@ -265,9 +276,10 @@ const SettingsView = () => {
             </Typography>
             <List dense={true}>
               <div key="backend-urls">
-              {appState.backendUrls &&
-                  Object.keys(appState.backendUrls).map(key => {
-                    const backendUrl = appState.backendUrls[key];
+              {appState.backendSpecs &&
+                  Object.keys(appState.backendSpecs).map(key => {
+                    const backendUrl = appState.backendSpecs[key].url;
+                    const clusterId = appState.backendSpecs[key].cluster_id;
                     return (
                     <ListItem>
                       <Button
@@ -289,8 +301,8 @@ const SettingsView = () => {
                           disableElevation
                         />
                       }
-                      <ValidatedLink key={"validate-"+backendUrl} href={backendUrl + "/api/v1/docs"} validate={backendUrl + "/api/v1/docs"} variant="h6">
-                        {key}: {backendUrl}
+                      <ValidatedLink key={"validate-" + {clusterId} +backendUrl} href={backendUrl + "/api/v2/docs"} validate={backendUrl + "/api/v2/docs"} variant="h6">
+                        {key}: {backendUrl} on {clusterId}
                       </ValidatedLink>
                     </ListItem>
                   )}

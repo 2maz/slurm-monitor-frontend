@@ -22,6 +22,8 @@ const useNodes = () => {
     queryKey: ["nodes"],
     queryFn: fetchNodes,
     refetchInterval: 30*1000, // refresh every 30 seconds
+    retry: 3,
+    retryDelay: 1000*3,
   });
 }
 

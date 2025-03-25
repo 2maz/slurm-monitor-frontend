@@ -15,6 +15,7 @@ import AppsIcon from '@mui/icons-material/Apps';
 import QueryStatsIcon from '@mui/icons-material/QueryStats';
 import InventoryIcon from '@mui/icons-material/Inventory';
 import AvTimerIcon from '@mui/icons-material/AvTimer';
+import CloudCircleIcon from '@mui/icons-material/CloudCircle';
 
 import JobsView, { CompletedJobsView } from "./components/JobsView";
 import PartitionsView from "./components/PartitionsView";
@@ -35,6 +36,7 @@ import QueryView from "./components/QueryView";
 import BenchmarksView from "./components/BenchmarksView";
 
 import GithubLogo from "./assets/github-mark.png"
+import ClusterView from "./components/ClusterView";
 
 const theme = createTheme({});
 
@@ -93,6 +95,11 @@ function App() {
           <Box sx={{ border: '0px'}}>
             <Paper elevation={0}>
               <BottomNavigation showLabels value={view}>
+                <BottomNavigationAction
+                   label="Cluster"
+                   icon={<CloudCircleIcon />}
+                   onClick={() => selectView("cluster")}
+                />
                 <BottomNavigationAction
                   label="Partitions"
                   icon={<SegmentIcon />}
@@ -163,16 +170,19 @@ function App() {
                 </MenuItem>
               </Menu>
             </Paper>
-            {view && view == "jobs" && (
+            {view && view == "cluster" && (
+              <ClusterView />
+            )}
+            {false && view && view == "jobs" && (
               <JobsView maxHeightInViewportPercent={70} />
             )}
             {view && view == "nodes" && (
               <NodesView maxHeightInViewportPercent={75} />
             )}
-            {view && view == "partitions" && (
+            {false && view && view == "partitions" && (
               <PartitionsView maxHeightInViewportPercent={75} />
             )}
-            {view && view == "gpu_status" && (
+            {false && view && view == "gpu_status" && (
               <>
                 <h1>GPU Status: {currentTime}</h1>
                 <h3>Usage</h3>
@@ -202,10 +212,10 @@ function App() {
               </>
             )}
             {view && view == "settings" && <SettingsView />}
-            {view && view == "query" && <QueryView />}
+            {false && view && view == "query" && <QueryView />}
             { view && view == "inspect-completed-jobs" && <CompletedJobsView />
             }
-            {view && view == "benchmarks" && <BenchmarksView />}
+            {false && view && view == "benchmarks" && <BenchmarksView />}
           </Box>
         </ThemeProvider>
       </LocalizationProvider>
