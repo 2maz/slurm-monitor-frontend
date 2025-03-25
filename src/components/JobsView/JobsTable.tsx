@@ -150,7 +150,7 @@ const JobsTable = ({ data, sorting, maxHeightInViewportPercent, rowActions }: Pr
 
   const [backdropToggle, setBackdropToggle] = useState(false);
   const [backdropId, setBackdropId] = useState(-1);
-  const backendUrl = useAppState().currentBackendUrl()
+  const { url: backendUrl } = useAppState().currentBackendSpec()
 
   const hasEnabledFilters = () => {
     return (

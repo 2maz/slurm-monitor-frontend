@@ -1,7 +1,7 @@
 import useAppState from '../../AppState';
 
 const CertificateError = () => {
-  const backendUrl = useAppState().currentBackendUrl()
+  const { url: backendUrl } = useAppState().currentBackendSpec()
   return <div>
       This might be a self-signed certificate issue.
       Go to <a href={backendUrl}>{backendUrl} </a>

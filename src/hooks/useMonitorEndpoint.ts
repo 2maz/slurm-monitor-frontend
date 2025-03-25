@@ -30,7 +30,7 @@ class SlurmMonitorEndpoint {
 }
 
 const useMonitorEndpoint = (endpoint: string, params?: Params | undefined) => {
-  const backendUrl = useAppState().currentBackendUrl()
+  const { url: backendUrl } = useAppState().currentBackendSpec()
   const client = axios.create({ baseURL: backendUrl + "/api/v1/monitor"})
 
   return {

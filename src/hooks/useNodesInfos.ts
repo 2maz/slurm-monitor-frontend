@@ -46,6 +46,8 @@ const useNodesInfo = () => {
     queryKey: ["nodes", "info"],
     queryFn: fetchNodeInfos,
     refetchInterval: 1000*3600*24, // refresh daily
+    retry: 3,
+    retryDelay: 1000*3,
   });
 
 };
