@@ -44,7 +44,7 @@ const CPUStatusView = ({nodename, start_time_in_s, end_time_in_s, resolution_in_
               <LineChart width={300} height={250} data={nodes_processes[process_id].data}>
                 <Line yAxisId="1" type="monotone" dataKey="cpu_percent" stroke="#8884d8"/>
                 <CartesianGrid strokeDasharray="3 3"/>
-                <XAxis dataKey="timestamp" tickFormatter={timestamp => DateTime.fromISO(timestamp as string).toFormat("HH:mm")} />
+                <XAxis dataKey="timestamp" tickFormatter={timestamp => DateTime.fromISO(timestamp as string, { zone: 'utc'}).toFormat("HH:mm")} />
                 <YAxis 
                   orientation="left"
                   domain={[0, cpuCount*100]}

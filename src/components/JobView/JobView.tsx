@@ -36,14 +36,14 @@ const JobView = ({ job_id, job_data, refresh_interval_in_s = 60 } : Props) => {
   {
       elements = [...elements,
           <div key="gpu-status">
-          <h3>GPU Usage</h3>
+          <h3>GPU Usage:</h3>
           {error && <div key={job_id}><h4>Error loading GPU status </h4>Loading ...</div>}
           {!error 
             && <GPUStatusView
                 nodename={job_status.batch_host}
                 logical_ids={job_status.gres_detail}
-                start_time_in_s={typeof(job_status.start_time) === "number" ? job_status.start_time : DateTime.fromISO(job_status.start_time as unknown as string).toSeconds()}
-                end_time_in_s={job_status.job_state == "COMPLETED" ? (typeof(job_status.end_time) === "number" ? job_status.end_time : DateTime.fromISO(job_status.end_time as unknown as string).toSeconds()) : undefined}
+                start_time_in_s={typeof(job_status.start_time) === "number" ? job_status.start_time : DateTime.fromISO(job_status.start_time as unknown as string, {zone: 'utc'}).toSeconds()}
+                end_time_in_s={job_status.job_state == "COMPLETED" ? (typeof(job_status.end_time) === "number" ? job_status.end_time : DateTime.fromISO(job_status.end_time as unknown as string, { zone: 'utc'}).toSeconds()) : undefined}
                 refresh_interval_in_s={refresh_interval_in_s}
           />}
           </div>
@@ -59,8 +59,8 @@ const JobView = ({ job_id, job_data, refresh_interval_in_s = 60 } : Props) => {
   elements = [...elements, (<div key="cpu-job-status">
           <h3>CPU Usage</h3>
           <CPUJobStatusView job_id={job_id}
-                         start_time_in_s={Math.floor(DateTime.fromISO(job_status.start_time as unknown as string).toSeconds())}
-                         end_time_in_s={job_status.job_state == "COMPLETED" ? (typeof(job_status.end_time) === "number" ? job_status.end_time : Math.ceil(DateTime.fromISO(job_status.end_time as unknown as string).toSeconds())) : undefined}
+                         start_time_in_s={Math.floor(DateTime.fromISO(job_status.start_time as unknown as string, {zone: 'utc'}).toSeconds())}
+                         end_time_in_s={job_status.job_state == "COMPLETED" ? (typeof(job_status.end_time) === "number" ? job_status.end_time : Math.ceil(DateTime.fromISO(job_status.end_time as unknown as string, {zone: 'utc'}).toSeconds())) : undefined}
                          refresh_interval_in_s={refresh_interval_in_s}
           />
           </div>
