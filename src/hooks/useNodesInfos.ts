@@ -3,21 +3,31 @@ import MetaData from "../components/ResponseMetaData";
 import useMonitorEndpoint from "./useMonitorEndpoint";
 
 interface CPUInfo {
-  model: string;
-  count: number;
+  architecture: string;
+  cpu_model: string;
+  sockets: number;
+  cores_per_socket: number;
+  threads_per_core: number;
 }
 
 interface GPUInfo {
-  model: string,
-  node: string;
   uuid: string;
-  local_id: number;
-  memory_total: number;
+  manufacturer: string;
+  model: string,
+  architecture: string;
+  memory: number;
 }
 
-interface NodeDataInfo {
-  cpus: CPUInfo;
-  gpus: GPUInfo[];
+export interface NodeDataInfo extends CPUInfo{
+  cluster: string;
+  node: string;
+  os_name: string;
+  os_release: string;
+  memory: number;
+  topo_svg?: string | undefined;
+
+  cards: GPUInfo[];
+
   errors: string[]
   meta: MetaData
 }
@@ -26,24 +36,20 @@ interface NodeInfos {
   [name: string]: NodeDataInfo;
 }
 
-interface NodeInfoResponse extends Response {
-  nodes: NodeInfos
-}
-
 const useNodesInfo = () => {
   const { endpoint : endpoint_nodes_info } = useMonitorEndpoint("/nodes/info");
 
   const fetchNodeInfos = async () => {
-    const { request } = endpoint_nodes_info.get<NodeInfoResponse>();
+    const { request } = endpoint_nodes_info.get<Record<string, NodeDataInfo>>();
 
     return request
       .then(({ data }) => {
-        return data ? data.nodes : {} as NodeInfos;
+        return data ? data : {} as NodeInfos;
       })
   };
 
   return useQuery<NodeInfos | undefined, Error>({
-    queryKey: ["nodes", "info"],
+    queryKey: ["cluster", "nodes", "info"],
     queryFn: fetchNodeInfos,
     refetchInterval: 1000*3600*24, // refresh daily
     retry: 3,
