@@ -1,7 +1,5 @@
 import NodesTable from "./NodesTable";
-import useNodes from "../../hooks/useNodes";
 import useNodesInfo from "../../hooks/useNodesInfos";
-import Node from "./Node";
 
 import { DotLoader } from 'react-spinners';
 import CertificateError from "../ErrorReporting";
@@ -11,10 +9,9 @@ interface Props {
   maxHeightInViewportPercent?: number
 }
 const NodesView = ({maxHeightInViewportPercent} : Props) => {
-  const { data : nodes, error : error_nodes, isLoading: nodes_isLoading } = useNodes();
   const { data : nodes_info, error : error_nodes_info, isLoading : nodes_info_isLoading} = useNodesInfo();
 
-  if(!nodes || nodes_isLoading || nodes_info_isLoading)
+  if(!nodes_info || nodes_info_isLoading)
     return (
       <div className="mx-5 flex flex-wrap justify-between">
         <h1 className="centered">Nodes</h1>
@@ -22,24 +19,11 @@ const NodesView = ({maxHeightInViewportPercent} : Props) => {
       </div>
     )
 
-  if (error_nodes)
-    return (
-      <>
-        <h1 className="mx-5 centered">Nodes</h1>
-        {error_nodes && (
-          <>
-          <p className="text-danger">No data available: {error_nodes.message}</p>
-          <CertificateError />
-          </>
-        )}
-      </>
-    );
-
   if(error_nodes_info)
     return (
       <>
         <h1 className="mx-5 centered">Nodes</h1>
-        {error_nodes && (
+        {error_nodes_info && (
           <>
           <p className="text-danger">No nodes info available: {error_nodes_info.message}</p>
           </>
@@ -47,13 +31,20 @@ const NodesView = ({maxHeightInViewportPercent} : Props) => {
       </>
     );
 
-  const prepared_data = nodes.map((node: Node) => ({
-    ...node,
-    gpu_model: nodes_info?.[node.name]?.gpus?.[0].model,
-    gpu_memory: nodes_info?.[node.name]?.gpus?.[0].memory_total,
-    cpu_model: nodes_info?.[node.name]?.cpus.model,
-    id: node.name
-  }));
+  const prepared_data = Object.keys(nodes_info).map((key) => {
+    const value = nodes_info[key];
+    return { ...value,
+      cores: value.cores_per_socket*value.sockets,
+      architecture: "fixme",
+
+      gpus: value.cards? value.cards.length : 0,
+      gpu_memory: value.cards?.[0].memory,
+      gpu_model: value.cards?.[0].model,
+
+      partitions: [],
+      id: value.node
+    }
+  });
 
   return (
     <div className="mx-5 flex flex-wrap justify-between">

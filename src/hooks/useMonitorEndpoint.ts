@@ -2,6 +2,8 @@ import axios, { AxiosInstance } from "axios";
 import Response from "../services/slurm-monitor/response";
 import useAppState from "../AppState";
 
+import { MONITOR_API_PREFIX } from "../services/slurm-monitor/backend.config";
+
 interface Params {
     [name: string]: string | number;
 }
@@ -29,9 +31,9 @@ class SlurmMonitorEndpoint {
   }
 }
 
-const useMonitorEndpoint = (endpoint: string, params?: Params | undefined) => {
-  const { url: backendUrl } = useAppState().currentBackendSpec()
-  const client = axios.create({ baseURL: backendUrl + "/api/v1/monitor"})
+const useMonitorEndpoint = (endpoint: string, params?: Params) => {
+  const { cluster_id, url: backendUrl } = useAppState().currentBackendSpec()
+  const client = axios.create({ baseURL: backendUrl + MONITOR_API_PREFIX + cluster_id + "/"})
 
   return {
     endpoint: new SlurmMonitorEndpoint(client, endpoint, params),

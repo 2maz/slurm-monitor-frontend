@@ -13,13 +13,23 @@ import MemoryStatusView from "../CPUStatusView/MemoryStatusView";
 import NodeTopology from "./NodeTopology";
 import { useNodesStore } from "../../stores";
 import CloseIcon from '@mui/icons-material/Close';
+import { NodeDataInfo } from "../../hooks/useNodesInfos";
+
+interface NodeInfo extends NodeDataInfo {
+  partitions: string[];
+  cores: number;
+  gpus: number;
+  gpu_model?: string;
+  gpu_memory?: number;
+  id: string;
+}
 
 interface Props {
-  data: Node[];
+  data: NodeInfo[];
   maxHeightInViewportPercent?: number
 }
 
-const getMaxGPUMemory = (data: Node[]) =>  {
+const getMaxGPUMemory = (data: NodeInfo[]) =>  {
     const maxValue = data.reduce((prev, current) => {
             if(!prev.gpu_memory)
               return current
@@ -33,10 +43,10 @@ const getMaxGPUMemory = (data: Node[]) =>  {
 }
 const NodesTable = ({ data, maxHeightInViewportPercent }: Props) => {
   const { columnFilters, setColumnFilters, visibility, setVisibility } = useNodesStore();
-  const columns = useMemo<MRT_ColumnDef<Node>[]>(
+  const columns = useMemo<MRT_ColumnDef<NodeInfo>[]>(
     () => [
       {
-        accessorKey: "name",
+        accessorKey: "node",
         header: "Node Name",
         //grow: false,
       },
@@ -45,60 +55,100 @@ const NodesTable = ({ data, maxHeightInViewportPercent }: Props) => {
         header: "Architecture",
         filterVariant: "multi-select",
         filterSelectOptions: [
-          ...new Set(data.map((node: Node) => node.architecture)),
+          ...new Set(data.map((node: NodeInfo) => node.architecture)),
         ].sort(),
       },
       {
-        accessorKey: "operating_system",
+        accessorKey: "os_name",
         header: "Operating System",
         filterVariant: "multi-select",
         filterSelectOptions: [
-          ...new Set(data.map((node: Node) => node.operating_system)),
+          ...new Set(data.map((node: NodeInfo) => node.os_name)),
         ].sort(),
         grow: 1
       },
-      { accessorKey: "cores", header: "Cores" },
       {
-        accessorKey: "free_memory",
-        accessorFn: (originalRow) => { return originalRow.free_memory ? originalRow.free_memory / 1024.0 : 0 },
-        header: "Free Memory (GB)",
+        accessorKey: "os_release",
+        header: "OS Version",
+        filterVariant: "multi-select",
+        filterSelectOptions: [
+          ...new Set(data.map((node: NodeInfo) => node.os_release)),
+        ].sort(),
+        grow: 1
+      },
+      {
+        accessorKey: "memory",
+        accessorFn: (originalRow) => { return originalRow.memory ? originalRow.memory / 1024**2 : 0 },
+        header: "Memory (GB)",
         filterVariant: 'range-slider',
         filterFn: 'betweenInclusive',
         muiFilterSliderProps: {
           valueLabelFormat: (value ) => "" + value + " GB",
           min: 0,
-          max: Math.ceil(data.reduce((prev, current) => { return prev.free_memory > current.free_memory ? prev : current}).free_memory / 1024),
+          max: Math.ceil(data.reduce((prev, current) => { return prev.memory > current.memory ? prev : current}).memory / 1024**2),
           size: 'small',
         },
         Cell: ({row}) => {
-          return Math.ceil(row.original.free_memory / 1024)
+          return Math.ceil(row.original.memory / 1024**2)
         }
       },
+      //{
+      //  accessorKey: "free_memory",
+      //  accessorFn: (originalRow) => { return originalRow.free_memory ? originalRow.free_memory / 1024.0 : 0 },
+      //  header: "Free Memory (GB)",
+      //  filterVariant: 'range-slider',
+      //  filterFn: 'betweenInclusive',
+      //  muiFilterSliderProps: {
+      //    valueLabelFormat: (value ) => "" + value + " GB",
+      //    min: 0,
+      //    max: Math.ceil(data.reduce((prev, current) => { return prev.free_memory > current.free_memory ? prev : current}).free_memory / 1024),
+      //    size: 'small',
+      //  },
+      //  Cell: ({row}) => {
+      //    return Math.ceil(row.original.free_memory / 1024)
+      //  }
+      //},
       {
-        accessorKey: "cpus",
-        accessorFn: (originalRow) => { return Number(originalRow.cpus) },
+        accessorKey: "cores",
+        accessorFn: (originalRow) => { return Number(originalRow.cores) },
         filterVariant: 'range-slider',
         filterFn: 'betweenInclusive',
         muiFilterSliderProps: {
           min: 1,
-          max: data.reduce((prev, current) => { return prev.cpus > current.cpus ? prev : current}).cpus,
+          max: data.reduce((prev, current) => { return prev.cores > current.cores ? prev : current}).cores,
           size: 'small',
         },
         header: "CPUs",
       },
-      { accessorKey: "cpu_model", header: "CPU Model", },
-      {
-        accessorKey: "gres",
-        header: "General Resources",
+      { 
+        accessorKey: "cpu_model", 
+        header: "CPU Model", 
+        filterVariant: "multi-select",
+        filterSelectOptions: [
+          ...new Set(data.map((node: NodeInfo) => node.cpu_model)),
+        ].sort(),
         grow: 1
+      },
+      { 
+        accessorKey: "gpus", 
+        accessorFn: (originalRow) => { return originalRow.gpus },
+        filterVariant: 'range-slider',
+        filterFn: 'betweenInclusive',
+        muiFilterSliderProps: {
+          min: 1,
+          max: data.reduce((prev, current) => { return prev.gpus > current.gpus ? prev : current}).gpus,
+          size: 'small',
+        },
+        header: "GPUs", 
       },
       {
         accessorKey: "gpu_model",
         header: "GPU Model",
-        Cell: ({ cell }) => {
-          const value = cell.getValue<string>()
-          return <div title={value}>{value}</div>
-        }
+        filterVariant: "multi-select",
+        filterSelectOptions: [
+          ...new Set(data.map((node: NodeInfo) => node.gpu_model ? node.gpu_model : "")),
+        ].sort(),
+        grow: 1
       },
       {
         accessorKey: "gpu_memory",
@@ -116,25 +166,25 @@ const NodesTable = ({ data, maxHeightInViewportPercent }: Props) => {
           return row.original.gpu_memory ? row.original.gpu_memory / 1024**2 : 0
         }
       },
-      {
-        accessorKey: "gres_used",
-        header: "Resources (Status)",
-        Cell: ({ row, cell }) => {
-          const free = freeResources(row.original);
-          if (!row.original.gres) return "";
+      //{
+      //  accessorKey: "gres_used",
+      //  header: "Resources (Status)",
+      //  Cell: ({ row, cell }) => {
+      //    const free = freeResources(row.original);
+      //    if (!row.original.gres) return "";
 
-          const textColor = free > 0 ? "text-success" : "text-danger";
-          const titleText = free > 0 ? free + " GPUs are available" : "No GPU available";
-          return availableGPUs(row.original) <= 0 ? (
-            ""
-          ) : (
-            <div className={textColor} title={titleText}>
-              {cell.getValue<string>()} (unused: {free})
-            </div>
-          );
-        },
-        grow: 1
-      },
+      //    const textColor = free > 0 ? "text-success" : "text-danger";
+      //    const titleText = free > 0 ? free + " GPUs are available" : "No GPU available";
+      //    return availableGPUs(row.original) <= 0 ? (
+      //      ""
+      //    ) : (
+      //      <div className={textColor} title={titleText}>
+      //        {cell.getValue<string>()} (unused: {free})
+      //      </div>
+      //    );
+      //  },
+      //  grow: 1
+      //},
       {
         accessorKey: "partitions",
         header: "Partitions",
@@ -143,7 +193,7 @@ const NodesTable = ({ data, maxHeightInViewportPercent }: Props) => {
         },
         filterVariant: "multi-select",
         filterSelectOptions: [
-          ...new Set(data.map((node: Node) => node.partitions).flat()),
+          ...new Set(data.map((node: NodeInfo) => node.partitions).flat()),
         ].sort(),
       },
       //{
@@ -166,23 +216,23 @@ const NodesTable = ({ data, maxHeightInViewportPercent }: Props) => {
       //{ accessorKey: "next_state_after_reboot_flags: string[];
       //{ accessorKey: "address: string;
       //{ accessorKey: "hostname", header: "Hostname" },
-      {
-        accessorKey: "state",
-        header: "State",
-        filterVariant: "multi-select",
-        filterSelectOptions: [
-          ...new Set(data.map((node: Node) => node.state)),
-        ].sort(),
-        Cell: ({ cell }) => {
-          if(cell.getValue() == "down")
-            return (
-            <div className="text-danger">
-              {cell.getValue<string>()} &#x26a0;
-            </div>
-          )
-          return cell.getValue<string>();
-        },
-      },
+      //{
+      //  accessorKey: "state",
+      //  header: "State",
+      //  filterVariant: "multi-select",
+      //  filterSelectOptions: [
+      //    ...new Set(data.map((node: Node) => node.state)),
+      //  ].sort(),
+      //  Cell: ({ cell }) => {
+      //    if(cell.getValue() == "down")
+      //      return (
+      //      <div className="text-danger">
+      //        {cell.getValue<string>()} &#x26a0;
+      //      </div>
+      //    )
+      //    return cell.getValue<string>();
+      //  },
+      //},
       //{ accessorKey: "state_flags: string[];
       //{ accessorKey: "operating_system: string;
       //{ accessorKey: "owner: string;
@@ -200,47 +250,47 @@ const NodesTable = ({ data, maxHeightInViewportPercent }: Props) => {
       //{ accessorKey: "tres_used: string | null;
       //{ accessorKey: "tres_weighted: number;
       //{ accessorKey: "slurmd_version: string;
-      { accessorKey: "alloc_memory", header: "Allocated Memory" },
-      {
-        accessorKey: "alloc_cpus",
-        accessorFn: (originalRow) => { return Number(originalRow.alloc_cpus) },
-        header: "CPUs (allocated)",
-        filterVariant: 'range-slider',
-        filterFn: 'betweenInclusive',
-        muiFilterSliderProps: {
-          marks: true,
-          min: 1,
-          max: data.reduce((prev, current) => { return prev.alloc_cpus > current.alloc_cpus ?  prev : current}).alloc_cpus,
-          size: 'small'
-        },
-        Cell: ({ row }) => {
-          const textColor = row.original.cpus == row.original.alloc_cpus ? "text-danger" : "text-normal"
-          return <div className={textColor}>
-              {row.original.alloc_cpus}
-            </div>
-        },
-      },
-      {
-        accessorKey: "idle_cpus",
-        // for sorting and filtering
-        accessorFn: (originalRow) => { return Number(originalRow.idle_cpus) },
-        header: "Idle CPUs",
-        filterVariant: 'range-slider',
-        filterFn: 'betweenInclusive',
-        muiFilterSliderProps: {
-          min: 0,
-          max: data.reduce((prev, current) => { return prev.idle_cpus > current.idle_cpus ? prev : current}).idle_cpus,
-          size: 'small'
-        },
-        // for display
-        Cell: ({ row }) => {
-          const textColor = 0 == row.original.idle_cpus ? "text-danger" : "text-normal"
-          const titleText = 0 == row.original.idle_cpus ? "Currently no remaining cpus" : row.original.idle_cpus + " available CPUs"
-          return <div className={textColor} title={titleText}>
-              {row.original.idle_cpus}
-            </div>
-        },
-       },
+      //{ accessorKey: "alloc_memory", header: "Allocated Memory" },
+      //{
+      //  accessorKey: "alloc_cpus",
+      //  accessorFn: (originalRow) => { return Number(originalRow.alloc_cpus) },
+      //  header: "CPUs (allocated)",
+      //  filterVariant: 'range-slider',
+      //  filterFn: 'betweenInclusive',
+      //  muiFilterSliderProps: {
+      //    marks: true,
+      //    min: 1,
+      //    max: data.reduce((prev, current) => { return prev.alloc_cpus > current.alloc_cpus ?  prev : current}).alloc_cpus,
+      //    size: 'small'
+      //  },
+      //  Cell: ({ row }) => {
+      //    const textColor = row.original.cpus == row.original.alloc_cpus ? "text-danger" : "text-normal"
+      //    return <div className={textColor}>
+      //        {row.original.alloc_cpus}
+      //      </div>
+      //  },
+      //},
+      //{
+      //  accessorKey: "idle_cpus",
+      //  // for sorting and filtering
+      //  accessorFn: (originalRow) => { return Number(originalRow.idle_cpus) },
+      //  header: "Idle CPUs",
+      //  filterVariant: 'range-slider',
+      //  filterFn: 'betweenInclusive',
+      //  muiFilterSliderProps: {
+      //    min: 0,
+      //    max: data.reduce((prev, current) => { return prev.idle_cpus > current.idle_cpus ? prev : current}).idle_cpus,
+      //    size: 'small'
+      //  },
+      //  // for display
+      //  Cell: ({ row }) => {
+      //    const textColor = 0 == row.original.idle_cpus ? "text-danger" : "text-normal"
+      //    const titleText = 0 == row.original.idle_cpus ? "Currently no remaining cpus" : row.original.idle_cpus + " available CPUs"
+      //    return <div className={textColor} title={titleText}>
+      //        {row.original.idle_cpus}
+      //      </div>
+      //  },
+      // },
     ],
     [data]
   );
@@ -273,22 +323,24 @@ const NodesTable = ({ data, maxHeightInViewportPercent }: Props) => {
       density: "compact",
       showColumnFilters: hasEnabledFilters(),
       columnOrder: [
-        "name",
+        "node",
         "architecture",
         "cpus",
+        "cores",
         "cpu_model",
-        "idle_cpus",
-        "gres",
+        "memory",
+        //"idle_cpus",
+        //"gres",
+        "gpus",
         "gpu_model",
         "gpu_memory",
-        "gres_used",
-        "free_memory",
+        //"gres_used",
+        //"free_memory",
         "partitions",
-        "state",
+        //"state",
         "operating_system",
-        "alloc_memory",
-        "alloc_cpus",
-        "cores",
+        //"alloc_memory",
+        //"alloc_cpus",
       ],
     },
     // disable when memo feature is used
@@ -340,26 +392,26 @@ const NodesTable = ({ data, maxHeightInViewportPercent }: Props) => {
             </IconButton>
           </Box>
           {data
-            .filter((d) => d.name === backdropId)
+            .filter((d) => d.node === backdropId)
             .map((d) => {
               return (
-                <div key={d.name + "-stats"}>
-                 <div key={d.name + "-cpu"} className="mx-3 my-3">
+                <div key={d.node + "-stats"}>
+                 <div key={d.node + "-cpu"} className="mx-3 my-3">
                  <h2>CPU Status (accumulated)</h2>
-                 <CPUStatusView nodename={d.name}/>
+                 <CPUStatusView nodename={d.node}/>
                  </div>
-                 <div key={d.name + "-memory"} className="mx-3 my-3">
+                 <div key={d.node + "-memory"} className="mx-3 my-3">
                  <h2>Memory Status</h2>
-                 <MemoryStatusView nodename={d.name}/>
+                 <MemoryStatusView nodename={d.node}/>
                  </div>
-                 <div key={d.name + "-gpu"} className="mx-3 my-3">
+                 <div key={d.node + "-gpu"} className="mx-3 my-3">
                  <h2>GPU Status</h2>
-                   <GPUStatusView nodename={d.name}/>
+                   <GPUStatusView nodename={d.node}/>
                  </div>
                  <h2>SLURM Node Info</h2>
                  <pre>{JSON.stringify(d, null, 2)}</pre>
                  <h2 title="lstopo-based topology information">Topology</h2>
-                 <NodeTopology nodename={d.name} output_format="svg" />
+                 <NodeTopology nodename={d.node} output_format="svg" />
               </div>
               );
             })}
