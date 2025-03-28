@@ -26,7 +26,7 @@ export interface AppState {
 
     backendSpecs: BackendSpecStore;
     addBackendSpec: (id: string, spec: BackendSpec) => void;
-    removeBackendSpec: (id: string) => { backendSpecs: BackendSpecStore};
+    removeBackendSpec: (id: string) => void;
     selectBackend: (id: string) => void;
 }
 
@@ -50,6 +50,8 @@ const useAppState = create<AppState>()(
       currentBackend: 'ex3',
       currentBackendSpec: () => get().backendSpecs[get().currentBackend],
       selectBackend: (id: string) => set({ currentBackend: id }),
+
+      currentCluster: () => get().currentBackendSpec().cluster_id
     }),
     {
       name: "slurm-runs",

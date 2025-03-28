@@ -1,9 +1,6 @@
 import NodesTable from "./NodesTable";
 import useNodesInfo from "../../hooks/useNodesInfos";
-
 import { DotLoader } from 'react-spinners';
-import CertificateError from "../ErrorReporting";
-
 
 interface Props {
   maxHeightInViewportPercent?: number
