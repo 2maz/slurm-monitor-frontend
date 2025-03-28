@@ -3,86 +3,30 @@ import { buildParameters, QueryParameters } from "./useCPUStatus";
 import useMonitorEndpoint from "./useMonitorEndpoint";
 
 interface GPUStatus {
-    name: string;
-    uuid: string;
-    local_id: number;
-    node: string;
-    temperature_gpu: number;
-    power_draw: number;
-    utilization_gpu: number;
-    utilization_memory: number;
-    memory_total: number;
-
-    // datetime string needs to be formatted
+    failure_count: number;
+    memory: number;
+    memory_util: number;
+    ce_util: number;
+    temperature: number;
+    power: number;
+    power_limit: number;
+    memory_clock: number;
     timestamp: string,
 }
 
+interface LocalGPUStatusDataSeries {
+  uuid: string
+  local_index?: number
+  data: GPUStatus[]
+}
+
 export interface GPUDataSeries {
-    label: string;
-    data: GPUStatus[];
+  [node: string]: LocalGPUStatusDataSeries[]
 }
 
 interface GPUDataSeriesResponse extends Response {
-  gpu_status: GPUDataSeries[];
+    gpu_status: GPUDataSeries
 }
-
-export const dummy_gpu_data_series : GPUDataSeries[] = [
-    {
-        label: "g001-gpu-0",
-        data: [
-            {   name: "Tesla A100", 
-                uuid: "abc",
-                local_id: 0,
-                node: "g001",
-                temperature_gpu: 10,
-                power_draw: 40,
-                utilization_gpu: 75,
-                utilization_memory: 25,
-                memory_total: 10000000,
-                timestamp: "2024-07-10 02:39:56.910603"
-            },
-            {   name: "Tesla A100", 
-                uuid: "abc",
-                local_id: 0,
-                node: "g001",
-                temperature_gpu: 90,
-                power_draw: 120,
-                utilization_gpu: 100,
-                utilization_memory: 50,
-                memory_total: 10000000,
-                timestamp: "2024-07-10 04:39:56.910603"
-            }
-        ]
-    },
-    {
-        label: "n010-gpu-0",
-        data: [
-            {   name: "Tesla Volta", 
-                uuid: "abcd",
-                local_id: 0,
-                node: "n010",
-                temperature_gpu: 10,
-                power_draw: 20,
-                utilization_gpu: 35,
-                utilization_memory: 15,
-                memory_total: 100000,
-                timestamp: "2024-07-10 01:39:56.910603"
-            },
-            {   name: "Tesla Volta", 
-                uuid: "abcd",
-                local_id: 0,
-                node: "n010",
-                temperature_gpu: 30,
-                power_draw: 80,
-                utilization_gpu: 30,
-                utilization_memory: 25,
-                memory_total: 10000000,
-                timestamp: "2024-07-10 03:39:56.910603"
-            }
-        ]
-    }
-];
- 
 
 interface GPUStatusQueryParameters extends QueryParameters {
     logical_ids?: number[];
@@ -104,12 +48,12 @@ const useGPUStatus = (
     const { request } = endpoint.get<GPUDataSeriesResponse>();
 
     return request
-      .then<GPUDataSeries[]>(({ data }) => {
-        return data ? data.gpu_status : [] as GPUDataSeries[];
+      .then<GPUDataSeries>(({ data }) => {
+        return data ? data.gpu_status : {} as GPUDataSeries
       })
   };
 
-  return useQuery<GPUDataSeries[]>({
+  return useQuery<GPUDataSeries, Error>({
     queryKey: ["gpu_status", query_parameters],
     queryFn: fetchStatus,
     refetchInterval: refresh_interval_in_s*1000, // refresh every minute

@@ -1,4 +1,3 @@
-import Node, { freeResources, availableGPUs } from "./Node";
 import {
   MRT_ColumnDef,
   MaterialReactTable,
@@ -14,29 +13,25 @@ import NodeTopology from "./NodeTopology";
 import { useNodesStore } from "../../stores";
 import CloseIcon from '@mui/icons-material/Close';
 import { NodeDataInfo } from "../../hooks/useNodesInfos";
-
+import CloseIcon from '@mui/icons-material/Close';
 interface NodeInfo extends NodeDataInfo {
   partitions: string[];
   cores: number;
-  gpus: number;
+  gpu_count: number;
   gpu_model?: string;
   gpu_memory?: number;
   id: string;
 }
-
 interface Props {
   data: NodeInfo[];
   maxHeightInViewportPercent?: number
 }
-
 const getMaxGPUMemory = (data: NodeInfo[]) =>  {
     const maxValue = data.reduce((prev, current) => {
             if(!prev.gpu_memory)
               return current
-
             if (!current.gpu_memory)
               return prev
-
             return prev.gpu_memory > current.gpu_memory ? prev : current}
           ).gpu_memory
     return maxValue ? Math.ceil(maxValue / 1024**3) : 0
@@ -120,26 +115,14 @@ const NodesTable = ({ data, maxHeightInViewportPercent }: Props) => {
         },
         header: "CPUs",
       },
-      { 
-        accessorKey: "cpu_model", 
-        header: "CPU Model", 
+      {
+        accessorKey: "cpu_model",
+        header: "CPU Model",
         filterVariant: "multi-select",
         filterSelectOptions: [
           ...new Set(data.map((node: NodeInfo) => node.cpu_model)),
         ].sort(),
         grow: 1
-      },
-      { 
-        accessorKey: "gpus", 
-        accessorFn: (originalRow) => { return originalRow.gpus },
-        filterVariant: 'range-slider',
-        filterFn: 'betweenInclusive',
-        muiFilterSliderProps: {
-          min: 1,
-          max: data.reduce((prev, current) => { return prev.gpus > current.gpus ? prev : current}).gpus,
-          size: 'small',
-        },
-        header: "GPUs", 
       },
       {
         accessorKey: "gpu_model",
@@ -166,13 +149,23 @@ const NodesTable = ({ data, maxHeightInViewportPercent }: Props) => {
           return row.original.gpu_memory ? row.original.gpu_memory / 1024**2 : 0
         }
       },
+      {
+        accessorKey: "gpu_count",
+        filterVariant: 'range-slider',
+        filterFn: 'betweenInclusive',
+        muiFilterSliderProps: {
+          min: 0,
+          max: data.reduce((prev, current) => { return prev.gpu_count > current.gpu_count ? prev : current}).gpu_count,
+          size: 'small',
+        },
+        header: "GPU Count",
+      },
       //{
       //  accessorKey: "gres_used",
       //  header: "Resources (Status)",
       //  Cell: ({ row, cell }) => {
       //    const free = freeResources(row.original);
       //    if (!row.original.gres) return "";
-
       //    const textColor = free > 0 ? "text-success" : "text-danger";
       //    const titleText = free > 0 ? free + " GPUs are available" : "No GPU available";
       //    return availableGPUs(row.original) <= 0 ? (
@@ -294,10 +287,8 @@ const NodesTable = ({ data, maxHeightInViewportPercent }: Props) => {
     ],
     [data]
   );
-
   const [backdropToggle, setBackdropToggle] = useState(false);
   const [backdropId, setBackdropId] = useState("");
-
   const hasEnabledFilters = () => {
     return (
       columnFilters.filter(
@@ -305,7 +296,6 @@ const NodesTable = ({ data, maxHeightInViewportPercent }: Props) => {
       ).length > 0
     );
   };
-
   const table = useMaterialReactTable({
     columns: columns,
     data: data, //must be memoized or stable (useState, useMemo, defined outside of this component, etc.)
@@ -331,7 +321,7 @@ const NodesTable = ({ data, maxHeightInViewportPercent }: Props) => {
         "memory",
         //"idle_cpus",
         //"gres",
-        "gpus",
+        "gpu_count",
         "gpu_model",
         "gpu_memory",
         //"gres_used",
@@ -353,7 +343,7 @@ const NodesTable = ({ data, maxHeightInViewportPercent }: Props) => {
     muiTableBodyRowProps: ({ row }) => ({
       onDoubleClick: (/*event*/) => {
         setBackdropToggle(true);
-        setBackdropId(row.getValue<string>("name"));
+        setBackdropId(row.getValue<string>("node"));
       },
       style: {
         cursor: "pointer", //you might want to change the cursor too when adding an onClick
@@ -371,15 +361,12 @@ const NodesTable = ({ data, maxHeightInViewportPercent }: Props) => {
       </div>
     ),
   });
-
   const resetState = () => {
     setColumnFilters([]);
   };
-
   return (
     <div>
       <MaterialReactTable table={table} />
-
       <Backdrop
         sx={{ color: "#aaa", zIndex: (theme) => theme.zIndex.drawer + 1 }}
         open={backdropToggle}
@@ -391,7 +378,8 @@ const NodesTable = ({ data, maxHeightInViewportPercent }: Props) => {
               <CloseIcon />
             </IconButton>
           </Box>
-          {data
+          {
+           data
             .filter((d) => d.node === backdropId)
             .map((d) => {
               return (
@@ -408,8 +396,8 @@ const NodesTable = ({ data, maxHeightInViewportPercent }: Props) => {
                  <h2>GPU Status</h2>
                    <GPUStatusView nodename={d.node}/>
                  </div>
-                 <h2>SLURM Node Info</h2>
-                 <pre>{JSON.stringify(d, null, 2)}</pre>
+                 <h2 className="mx-2">SLURM Node Info</h2>
+                 <pre className="mx-5">{JSON.stringify(d, null, 2)}</pre>
                  <h2 title="lstopo-based topology information">Topology</h2>
                  <NodeTopology nodename={d.node} output_format="svg" />
               </div>
@@ -420,5 +408,4 @@ const NodesTable = ({ data, maxHeightInViewportPercent }: Props) => {
     </div>
   );
 };
-
 export default NodesTable;

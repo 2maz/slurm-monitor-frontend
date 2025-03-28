@@ -16,7 +16,7 @@ interface Props {
 
 const CPUStatusView = ({nodename, start_time_in_s, end_time_in_s, resolution_in_s, refresh_interval_in_s = 1000*60} : Props) => {
     const { data : nodes_info, error: nodes_info_error, isLoading: nodes_info_isLoading } = useNodesInfo()
-    const {data: nodes_processes, error, isLoading, isSuccess } = useCPUStatus({
+    const {data: nodes, error, isLoading, isSuccess } = useCPUStatus({
       nodename: nodename,
       start_time_in_s: start_time_in_s,
       end_time_in_s: end_time_in_s,
@@ -32,25 +32,26 @@ const CPUStatusView = ({nodename, start_time_in_s, end_time_in_s, resolution_in_
   if(error)
     return "Failed loading processes data for {nodename}"
 
-  const cpuCount = nodes_info && nodes_info[nodename] ? nodes_info[nodename].cpus.count : 1
+  const cpuCount = nodes_info && nodes_info[nodename] ? nodes_info[nodename].cores_per_socket*nodes_info[nodename].sockets : 1
 
   const elements : JSX.Element[] = []
   if(isSuccess) {
-    Object.keys(nodes_processes).map((process_id: string) => {
+    Object.keys(nodes).map((node: string) => {
+      console.log(nodes[node]);
       elements.push(
-            <div key={process_id + "cpu_status"}>
+            <div key={node + "cpu_status"}>
             <h4>Node: {nodename}</h4>
-            <div className="mx-5" key={nodename + "-" + process_id + "-accumulated"} >
-              <LineChart width={300} height={250} data={nodes_processes[process_id].data}>
-                <Line yAxisId="1" type="monotone" dataKey="cpu_percent" stroke="#8884d8"/>
+            <div className="mx-5" key={nodename + "-accumulated"} >
+              <LineChart width={300} height={250} data={nodes[node]}>
+                <Line yAxisId="1" type="monotone" dataKey="cpu_util" stroke="#8884d8"/>
+                <Line yAxisId="1" type="monotone" dataKey="cpu_avg" stroke="#008400"/>
                 <CartesianGrid strokeDasharray="3 3"/>
                 <XAxis dataKey="timestamp" tickFormatter={timestamp => DateTime.fromISO(timestamp as string, { zone: 'utc'}).toFormat("HH:mm")} />
-                <YAxis 
-                  orientation="left"
+                <YAxis orientation="left"
                   domain={[0, cpuCount*100]}
                   yAxisId="1"
                   label={{
-                    value: `percentages (%)`,
+                    value: `percentage (%)`,
                     style: { textAnchor: 'middle' },
                     angle: -90,
                     position: 'left',
