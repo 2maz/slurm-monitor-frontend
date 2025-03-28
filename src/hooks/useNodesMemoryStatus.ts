@@ -2,23 +2,19 @@ import { buildParameters, QueryParameters } from "./useCPUStatus";
 import { useQuery } from "@tanstack/react-query";
 import useMonitorEndpoint from "./useMonitorEndpoint";
 
-interface MemoryStatus {
-    percent: number;
-    timestamp: string;
+export interface MemoryStatus {
+  memory_resident: number;
+  memory_virtual: number;
+  memory_util: number;
+  timestamp: string;
 }
-
-interface MemoryDataSeries {
-    label: string;
-    data: MemoryStatus[];
-}
-
 
 interface NodesMemoryStatus {
-  [nodename: string]: MemoryDataSeries;
+  [nodename: string]: MemoryStatus[]
 }
 
 interface NodesMemoryStatusTimeseriesResponse extends Response {
-  memory_status: NodesMemoryStatus
+  cpu_memory_status: NodesMemoryStatus
 }
 
 const useNodesMemoryStatus = (
@@ -26,7 +22,7 @@ const useNodesMemoryStatus = (
     refresh_interval_in_s: number = 60
 ) => {
 
-  const query = "/nodes/"+ query_parameters.nodename + "/memory_status";
+  const query = "/nodes/"+ query_parameters.nodename + "/cpu_memory_status";
   const { endpoint } = useMonitorEndpoint(query, buildParameters(query_parameters));
 
   const fetchStatus = async () => {
@@ -34,12 +30,12 @@ const useNodesMemoryStatus = (
 
     return request
       .then<NodesMemoryStatus>(({ data }) => {
-        return data ? data.memory_status : {} as NodesMemoryStatus;
+        return data ? data.cpu_memory_status : {} as NodesMemoryStatus;
       })
   };
 
   return useQuery<NodesMemoryStatus>({
-    queryKey: ["nodes", "memory_status", query_parameters],
+    queryKey: ["nodes", "cpu_memory_status", query_parameters],
     queryFn: fetchStatus,
     refetchInterval: refresh_interval_in_s, // refresh every minute
   });

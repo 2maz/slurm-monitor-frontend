@@ -4,6 +4,7 @@ import { DateTime } from 'luxon';
 
 import useJobStatus from "../../hooks/useJobStatus";
 import useNodesProcessesStats from "../../hooks/useNodesProcessesStats";
+import { JSX } from 'react';
 
 interface Props {
   job_id: number;
@@ -20,7 +21,7 @@ const CPUJobStatusView = ({job_id, start_time_in_s, end_time_in_s, resolution_in
       end_time_in_s: end_time_in_s,
       resolution_in_s: resolution_in_s,
     },
-    refresh_interval_in_s=refresh_interval_in_s
+    refresh_interval_in_s
   )
   const { data: job_status, error : job_status_error, isLoading : job_status_isLoading } = useJobStatus(job_id, 3600) // no frequent refresh necessary, just getting cpu allocation
 
@@ -33,7 +34,7 @@ const CPUJobStatusView = ({job_id, start_time_in_s, end_time_in_s, resolution_in
   if(job_status_error)
     return "Failed to retrieve status data for job {job_id}"
 
-  var elements : any[] = []
+  const elements : JSX.Element[] = []
 
   if(nodes_processes && job_status) {
     Object.keys(nodes_processes).map((nodename: string, index: number) => {

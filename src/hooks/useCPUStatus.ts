@@ -2,21 +2,18 @@ import { useQuery } from "@tanstack/react-query";
 import useMonitorEndpoint from "./useMonitorEndpoint";
 
 interface CPUStatus {
-  cpu_percent: number;
+  cpu_avg: number;
+  cpu_util: number;
+  cpu_time: number;
   timestamp: string;
 }
 
-interface CPUDataSeries {
-  label: string;
-  data: CPUStatus[];
-}
-
 interface NodesCPUStatus {
-  [nodename: string]: CPUDataSeries;
+  [nodename: string]: CPUStatus[]
 }
 
 interface NodesCPUStatusTimeseriesResponse extends Response {
-  cpu_status: NodesCPUStatus;
+  cpu_memory_status: NodesCPUStatus;
 }
 
 export interface QueryParameters {
@@ -55,19 +52,19 @@ const useCPUStatus = (
   refresh_interval_in_s: number = 60
 ) => {
   const { endpoint } = useMonitorEndpoint(
-        "/nodes/" + query_parameters.nodename + "/cpu_status",
+        "/nodes/" + query_parameters.nodename + "/cpu_memory_status",
         buildParameters(query_parameters))
 
   const fetchStatus = async () => {
     const { request } = endpoint.get<NodesCPUStatusTimeseriesResponse>();
 
     return request.then<NodesCPUStatus>(({ data }) => {
-      return data ? data.cpu_status : ({} as NodesCPUStatus);
+      return data ? data.cpu_memory_status : ({} as NodesCPUStatus);
     });
   };
 
   return useQuery<NodesCPUStatus, Error>({
-    queryKey: ["nodes", "cpu_status", query_parameters],
+    queryKey: ["nodes", "cpu_memory_status", query_parameters],
     queryFn: fetchStatus,
     refetchInterval: refresh_interval_in_s * 1000, // refresh every minute
   });
