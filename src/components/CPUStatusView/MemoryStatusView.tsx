@@ -1,6 +1,6 @@
 import { LineChart, Line, Tooltip, XAxis, YAxis, Legend, CartesianGrid } from 'recharts';
 import { BarLoader } from 'react-spinners';
-import useNodesMemoryStatus, { MemoryStatus } from "../../hooks/useNodesMemoryStatus";
+import useNodesMemoryStatus  from "../../hooks/useNodesMemoryStatus";
 import { DateTime } from 'luxon';
 import { JSX } from 'react';
 interface Props {

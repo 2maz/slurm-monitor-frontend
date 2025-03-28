@@ -198,10 +198,9 @@ function App() {
                   you can identify the GPU logical ids from the gres_detail
                   property.
                 </p>
-                {nodes_info &&
-                  Object.keys(nodes_info).map(
-                    (nodename) =>
-                      nodes_info[nodename].gpus && (
+                {nodes_info && Object.entries(nodes_info!).map(
+                    ([nodename, config]) =>
+                      config.cards && (
                         <>
                           <div key={nodename}>
                             <GPUStatusView nodename={nodename} />
