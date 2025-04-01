@@ -5,13 +5,14 @@ import {
   useMaterialReactTable,
 } from "material-react-table";
 import Button from "@mui/material/Button";
-import { Backdrop } from "@mui/material";
+import { Backdrop, Box, IconButton } from "@mui/material";
 import { useMemo, useState } from "react";
 import GPUStatusView from "../GPUStatusView";
 import CPUStatusView from "../CPUStatusView/CPUStatusView";
 import MemoryStatusView from "../CPUStatusView/MemoryStatusView";
 import NodeTopology from "./NodeTopology";
 import { useNodesStore } from "../../stores";
+import CloseIcon from '@mui/icons-material/Close';
 
 interface Props {
   data: Node[];
@@ -330,12 +331,14 @@ const NodesTable = ({ data, maxHeightInViewportPercent }: Props) => {
       <Backdrop
         sx={{ color: "#aaa", zIndex: (theme) => theme.zIndex.drawer + 1 }}
         open={backdropToggle}
-        onClick={() => {
-          setBackdropToggle(!backdropToggle);
-        }}
       >
         <div className="h-75 bg-white text-muted rounded overflow-auto"
         style={{maxWidth: '90%'}}>
+          <Box sx={{ position: 'sticky', top: 0}}>
+            <IconButton style={{ float: 'right'}} aria-label="close" onClick={() => {setBackdropToggle(!backdropToggle);}}>
+              <CloseIcon />
+            </IconButton>
+          </Box>
           {data
             .filter((d) => d.name === backdropId)
             .map((d) => {

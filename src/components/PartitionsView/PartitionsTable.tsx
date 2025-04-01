@@ -6,8 +6,9 @@ import {
   MaterialReactTable,
   useMaterialReactTable,
 } from "material-react-table";
-import { Backdrop, Button } from "@mui/material";
+import { Backdrop, Box, Button, IconButton } from "@mui/material";
 import { usePartitionsStore } from "../../stores";
+import CloseIcon from '@mui/icons-material/Close';
 
 interface Props {
   data: Partition[];
@@ -231,11 +232,13 @@ const PartitionsTable = ({ data, maxHeightInViewportPercent }: Props) => {
       <Backdrop
         sx={{ color: "#aaa", zIndex: (theme) => theme.zIndex.drawer + 1 }}
         open={backdropToggle}
-        onClick={() => {
-          setBackdropToggle(!backdropToggle);
-        }}
       >
         <div className="h-75 bg-white text-muted rounded overflow-auto">
+          <Box sx={{ position: 'sticky', top: 0}}>
+            <IconButton style={{ float: 'right'}} aria-label="close" onClick={() => {setBackdropToggle(!backdropToggle);}}>
+              <CloseIcon />
+            </IconButton>
+          </Box>
           {data
             .filter((d) => d.name === backdropId)
             .map((d) => {

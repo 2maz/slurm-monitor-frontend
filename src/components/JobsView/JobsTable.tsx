@@ -1,11 +1,13 @@
 import ArrowOutwordIcon from "@mui/icons-material/ArrowOutward";
-import { Backdrop, Button, Link, MenuItem } from "@mui/material";
+import { Backdrop, Box, Button, IconButton, Link, MenuItem } from "@mui/material";
 import {
   MRT_ColumnDef,
   MRT_ColumnFiltersState,
   MaterialReactTable,
   useMaterialReactTable,
 } from "material-react-table";
+import CloseIcon from '@mui/icons-material/Close';
+
 import { useMemo, useState } from "react";
 import Job from "./Job";
 
@@ -222,11 +224,14 @@ const JobsTable = ({ data, sorting, maxHeightInViewportPercent, rowActions }: Pr
       <Backdrop
         sx={{ color: "#aaa", zIndex: (theme) => theme.zIndex.drawer + 1 }}
         open={backdropToggle}
-        onClick={() => {
-          setBackdropToggle(!backdropToggle);
-        }}
       >
         <div className="h-75 bg-white text-muted rounded overflow-auto">
+          <Box sx={{ position: 'sticky', top: 0}}>
+            <IconButton style={{ float: 'right'}} aria-label="close" onClick={() => {setBackdropToggle(!backdropToggle);}}>
+              <CloseIcon />
+            </IconButton>
+          </Box>
+
           {data
             .filter((d) => d.job_id === backdropId)
             .map((d) => <JobView job_id={d.job_id} job_data={d}/> )}
