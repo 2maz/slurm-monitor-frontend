@@ -1,6 +1,5 @@
 import ArrowOutwordIcon from "@mui/icons-material/ArrowOutward";
 import { Backdrop, Box, Button, IconButton, Link, MenuItem } from "@mui/material";
-import CloseIcon from '@mui/icons-material/Close';
 import {
   MRT_ColumnDef,
   MRT_ColumnFiltersState,

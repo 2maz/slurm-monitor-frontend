@@ -11,7 +11,6 @@ import CPUStatusView from "../CPUStatusView/CPUStatusView";
 import MemoryStatusView from "../CPUStatusView/MemoryStatusView";
 import NodeTopology from "./NodeTopology";
 import { useNodesStore } from "../../stores";
-import CloseIcon from '@mui/icons-material/Close';
 import { NodeDataInfo } from "../../hooks/useNodesInfos";
 import CloseIcon from '@mui/icons-material/Close';
 interface NodeInfo extends NodeDataInfo {
