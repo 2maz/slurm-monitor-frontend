@@ -386,15 +386,15 @@ const NodesTable = ({ data, maxHeightInViewportPercent }: Props) => {
                 <div key={d.node + "-stats"}>
                  <div key={d.node + "-cpu"} className="mx-3 my-3">
                  <h2>CPU Status (accumulated)</h2>
-                 <CPUStatusView nodename={d.node}/>
+                 <CPUStatusView nodename={d.node} start_time_in_s={start_time_in_s}/>
                  </div>
                  <div key={d.node + "-memory"} className="mx-3 my-3">
                  <h2>Memory Status</h2>
-                 <MemoryStatusView nodename={d.node}/>
+                 <MemoryStatusView nodename={d.node} start_time_in_s={start_time_in_s}/>
                  </div>
                  <div key={d.node + "-gpu"} className="mx-3 my-3">
                  <h2>GPU Status</h2>
-                   <GPUStatusView nodename={d.node}/>
+                 <GPUStatusView nodename={d.node} start_time_in_s={start_time_in_s}/>
                  </div>
                  <h2 className="mx-2">SLURM Node Info</h2>
                  <pre className="mx-5">{JSON.stringify(d, null, 2)}</pre>

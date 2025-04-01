@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import useMonitorEndpoint from "./useMonitorEndpoint";
 
-interface CPUStatus {
+export interface CPUStatus {
   cpu_avg: number;
   cpu_util: number;
   cpu_time: number;

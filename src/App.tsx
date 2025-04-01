@@ -173,7 +173,7 @@ function App() {
             {view && view == "cluster" && (
               <ClusterView />
             )}
-            {false && view && view == "jobs" && (
+            {view && view == "jobs" && (
               <JobsView maxHeightInViewportPercent={70} />
             )}
             {view && view == "nodes" && (
@@ -182,7 +182,7 @@ function App() {
             {false && view && view == "partitions" && (
               <PartitionsView maxHeightInViewportPercent={75} />
             )}
-            {false && view && view == "gpu_status" && (
+            {view && view == "gpu_status" && (
               <>
                 <h1>GPU Status: {currentTime}</h1>
                 <h3>Usage</h3>
@@ -198,7 +198,7 @@ function App() {
                   you can identify the GPU logical ids from the gres_detail
                   property.
                 </p>
-                {nodes_info && Object.entries(nodes_info!).map(
+                {nodes_info && Object.entries(nodes_info).map(
                     ([nodename, config]) =>
                       config.cards && (
                         <>

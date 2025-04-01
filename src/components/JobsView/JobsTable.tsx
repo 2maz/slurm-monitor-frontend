@@ -1,5 +1,6 @@
 import ArrowOutwordIcon from "@mui/icons-material/ArrowOutward";
 import { Backdrop, Box, Button, IconButton, Link, MenuItem } from "@mui/material";
+import CloseIcon from '@mui/icons-material/Close';
 import {
   MRT_ColumnDef,
   MRT_ColumnFiltersState,
@@ -35,7 +36,7 @@ const JobsTable = ({ data, sorting, maxHeightInViewportPercent, rowActions }: Pr
   const columns = useMemo<MRT_ColumnDef<Job>[]>(
     () => [
       {
-        accessorKey: "name",
+        accessorKey: "job_name",
         header: "Job Name",
         grow: false,
       },
@@ -84,52 +85,53 @@ const JobsTable = ({ data, sorting, maxHeightInViewportPercent, rowActions }: Pr
           return cellValue;
         },
       },
-      {
-        accessorKey: "start_time",
-        header: "Start Time",
-        accessorFn: (row) => new Date(row.start_time * 1000),
-        filterVariant: "datetime-range",
-        Cell: ({ cell }) =>
-          `${cell.getValue<Date>().toLocaleDateString()} ${cell
-            .getValue<Date>()
-            .toLocaleTimeString()}`,
-        minSize: 50,
-        grow: true,
-      },
-      {
-        accessorKey: "submit_time",
-        header: "Submit Time",
-        accessorFn: (row) => new Date(row.submit_time * 1000),
-        filterVariant: "datetime-range",
-        Cell: ({ cell }) =>
-          `${cell.getValue<Date>().toLocaleDateString()} ${cell
-            .getValue<Date>()
-            .toLocaleTimeString()}`,
-        minSize: 50,
-        grow: true,
-      },
-      {
-        accessorKey: "end_time",
-        header: "End Time",
-        accessorFn: (row) => new Date(row.end_time * 1000),
-        filterVariant: "datetime-range",
-        Cell: ({ cell }) =>
-          `${cell.getValue<Date>().toLocaleDateString()} ${cell
-            .getValue<Date>()
-            .toLocaleTimeString()}`,
-        minSize: 50,
-        grow: true,
-      },
-      {
-        accessorKey: "state_reason",
-        header: "State Reason",
-        filterVariant: "multi-select",
-        filterSelectOptions: getStringValues(data, "state_reason"),
-        Cell: ({ cell }) => {
-          const cellValue = cell.getValue<string>();
-          return cellValue != "None" ? cellValue : "";
-        },
-      },
+     {
+       accessorKey: "start_time",
+       accessorFn: (originalRow) => new Date(originalRow.start_time), // convert to date for sorting and filtering
+       header: "Start Time",
+       filterVariant: "date-range",
+       filterFn: "betweenInclusive",
+       minSize: 50,
+       grow: true,
+       Cell: ({ cell }) =>
+        `${cell.getValue<Date>().toLocaleDateString()} ${cell
+          .getValue<Date>()
+          .toLocaleTimeString()}`, // convert for display
+     },
+     //{
+     //  accessorKey: "submit_time",
+     //  accessorFn: (originalRow) => DateTime.fromISO(originalRow.start_time).toJSDate(),
+     //  header: "Submit Time",
+     //  filterVariant: "datetime-range",
+     //  minSize: 50,
+     //  grow: true,
+     //  Cell: ({ cell }) =>
+     //   `${cell.getValue<Date>().toLocaleDateString()} ${cell
+     //     .getValue<Date>()
+     //     .toLocaleTimeString()}`,
+     //},
+     //{
+     //  accessorKey: "end_time",
+     //  accessorFn: (originalRow) => DateTime.fromISO(originalRow.start_time).toJSDate(),
+     //  header: "End Time",
+     //  filterVariant: "datetime-range",
+     //  minSize: 50,
+     //  grow: true,
+     //  Cell: ({ cell }) =>
+     //   `${cell.getValue<Date>().toLocaleDateString()} ${cell
+     //     .getValue<Date>()
+     //     .toLocaleTimeString()}`,
+     //},
+      //{
+      //  accessorKey: "state_reason",
+      //  header: "State Reason",
+      //  filterVariant: "multi-select",
+      //  filterSelectOptions: getStringValues(data, "state_reason"),
+      //  Cell: ({ cell }) => {
+      //    const cellValue = cell.getValue<string>();
+      //    return cellValue != "None" ? cellValue : "";
+      //  },
+      //},
       {
         accessorKey: "mlflow_ref",
         header: "Mlflow Run",
@@ -164,7 +166,7 @@ const JobsTable = ({ data, sorting, maxHeightInViewportPercent, rowActions }: Pr
     columns: columns,
     data: data, //must be memoized or stable (useState, useMemo, defined outside of this component, etc.)
     //layoutMode: "grid-no-grow",
-    //enableColumnResizing: true,
+    enableColumnResizing: true,
     enableRowActions: rowActions,
     renderRowActionMenuItems: ({ row, closeMenu }) => {
       const download_url = backendUrl + MONITOR_API_PREFIX + "jobs/"+ row.original.job_id + "/export"
@@ -200,6 +202,7 @@ const JobsTable = ({ data, sorting, maxHeightInViewportPercent, rowActions }: Pr
         cursor: "pointer", //you might want to change the cursor too when adding an onClick
       },
     }),
+
     onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setVisibility,
     state: {
@@ -231,7 +234,6 @@ const JobsTable = ({ data, sorting, maxHeightInViewportPercent, rowActions }: Pr
               <CloseIcon />
             </IconButton>
           </Box>
-
           {data
             .filter((d) => d.job_id === backdropId)
             .map((d) => <JobView job_id={d.job_id} job_data={d}/> )}

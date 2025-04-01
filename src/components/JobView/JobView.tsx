@@ -32,31 +32,34 @@ const JobView = ({ job_id, job_data, refresh_interval_in_s = 60 } : Props) => {
           </>
 
   let elements : JSX.Element[] = []
-  if(job_status.gres_detail && job_status.gres_detail.length > 0)
+  if(job_status.used_gpu_uuids || (job_status.sacct && job_status.sacct.AllocTRES.includes("gpu")))
   {
       elements = [...elements,
           <div key="gpu-status">
           <h3>GPU Usage:</h3>
-          {error && <div key={job_id}><h4>Error loading GPU status </h4>Loading ...</div>}
+          {error && <div key="{job_id}-gpu-status"><h4>Error loading GPU status </h4>Loading ...</div>}
           {!error 
-            && <GPUStatusView
-                nodename={job_status.batch_host}
-                logical_ids={job_status.gres_detail}
-                start_time_in_s={typeof(job_status.start_time) === "number" ? job_status.start_time : DateTime.fromISO(job_status.start_time as unknown as string, {zone: 'utc'}).toSeconds()}
-                end_time_in_s={job_status.job_state == "COMPLETED" ? (typeof(job_status.end_time) === "number" ? job_status.end_time : DateTime.fromISO(job_status.end_time as unknown as string, { zone: 'utc'}).toSeconds()) : undefined}
-                refresh_interval_in_s={refresh_interval_in_s}
-          />}
+            && job_status.nodes.map((node) => 
+              <GPUStatusView
+                  nodename={node}
+                  uuids={job_status.used_gpu_uuids}
+                  start_time_in_s={typeof(job_status.start_time) === "number" ? job_status.start_time : DateTime.fromISO(job_status.start_time as unknown as string, {zone: 'utc'}).toSeconds()}
+                  end_time_in_s={job_status.job_state == "COMPLETED" ? (typeof(job_status.end_time) === "number" ? job_status.end_time : DateTime.fromISO(job_status.end_time as unknown as string, { zone: 'utc'}).toSeconds()) : undefined}
+                  refresh_interval_in_s={refresh_interval_in_s}
+              />
+            )
+          }
           </div>
       ]
   } else {
-          elements = [...elements, (<div key="gpu-status">
+          elements = [...elements, (<div key="{job_id}-gpu-status">
             <h3>GPU Usage</h3>
             <p>No GPUs used</p>
             </div>
           )]
   }
 
-  elements = [...elements, (<div key="cpu-job-status">
+  elements = [...elements, (<div key="{job_id}-cpu-status">
           <h3>CPU Usage</h3>
           <CPUJobStatusView job_id={job_id}
                          start_time_in_s={Math.floor(DateTime.fromISO(job_status.start_time as unknown as string, {zone: 'utc'}).toSeconds())}

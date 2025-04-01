@@ -47,10 +47,10 @@ const CompletedJobsTableView = ({ constraints } : ConstraintsProps) => {
   const prepared_data = jobs.map((job : Job) => ({
     ...job,
     id: job.job_id,
+    end_time: job.end_time ? job.end_time : '',
+    submit_time: job.submit_time ? job.submit_time : '',
+    start_time: job.start_time ? job.start_time : '',
     mlflow_ref: mlflowSlurmJobs.filter(r => Number(r.SLURM_JOB_ID) == job.job_id)[0]?.mlflow_run_uri,
-    start_time: DateTime.fromISO(job.start_time as unknown as string, { zone: 'utc' }).toSeconds(),
-    submit_time: DateTime.fromISO(job.submit_time as unknown as string, { zone: 'utc'}).toSeconds(),
-    end_time: DateTime.fromISO(job.end_time as unknown as string, { zone: 'utc'}).toSeconds(),
   }));
 
   return (

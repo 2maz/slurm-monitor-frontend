@@ -1,55 +1,103 @@
 import MetaData from "../ResponseMetaData";
 
+interface SAcctData {
+  AllocTRES: string;
+  ElapsedRaw: number;
+  SystemCPU: number;
+  UserCPU: number;
+
+  AveVMSize: number;
+  MaxVMSize: number
+
+  AveCPU: number;
+  MinCPU: number;
+
+  AveRSS: number;
+  MaxRSS: number;
+
+  AveDiskRead: number;
+  AveDiskWrite: number;
+}
 export interface SlurmJob {
-  account?: string;
-  accrue_time: number;
-  admin_comment: string;
-  array_job_id: number;
-  array_task_id?: number | null;
-  array_max_tasks: number;
-  array_task_string: string;
-  association_id: number;
-  batch_features: string;
-  batch_flag: boolean;
-  batch_host: string;
-  //flags:
-  burst_buffer: string;
-  burst_buffer_state: string;
-  cluster: string;
-  cluster_features: string;
-  command: string;
-  comment: string;
-  contiguous: boolean;
-  cpus: number;
-
-  //core_spec:
-  //thread_spec:
-
-  eligible_time: number;
-  end_time: number;
-  excluded_nodes: string;
-  exit_code: number;
-  features: string;
-  group_id: number;
   job_id: number;
+  job_step: string;
+  job_name: string;
   //job_resources:
   job_state: "COMPLETED" | "PENDING" | "CANCELLED" | "RUNNING";
-  last_sched_evaluation: number;
 
-  max_cpus: number;
-  max_nodes: number;
-  name: string;
-  nodes: string;
+  array_job_id: number;
+  array_task_id?: number | null;
+
+  het_job_id: number;
+  het_job_offset: number;
+  user_name: string;
+
+  account?: string;
+
+  start_time: string;
+ // state_reason: string;
+  submit_time: string;
+  suspend_time: number;
+ //eligible_time: number;
+  time_limit: number;
+  end_time: string
+
+  exit_code: number;
   partition: string;
+
+  reservation: string;
+
+  nodes: string[];
   priority: number;
 
-  start_time: number;
-  state_reason: string;
-  submit_time: number;
-  suspend_time: number;
+  distribution: string;
+  gres_detail: string[] | undefined
 
-  current_working_directory: string;
-  user_name: string;
+  // GPUs in use by
+  used_gpu_uuids: string[] | undefined
+
+  requested_cpus: number;
+  requested_memory_per_node: number;
+  requested_node_count: number;
+
+  minimum_cpus_per_node: number;
+  timestamp: string
+
+  sacct?: SAcctData
+
+//  accrue_time: number;
+//  admin_comment: string;
+//  array_max_tasks: number;
+//  array_task_string: string;
+//  association_id: number;
+//  batch_features: string;
+//  batch_flag: boolean;
+//  batch_host: string;
+//  //flags:
+//  burst_buffer: string;
+//  burst_buffer_state: string;
+//  cluster: string;
+//  cluster_features: string;
+//  command: string;
+//  comment: string;
+//  contiguous: boolean;
+//  cpus: number;
+//
+//  //core_spec:
+//  //thread_spec:
+//
+//  excluded_nodes: string;
+//  features: string;
+//  group_id: number;
+//
+//
+//  last_sched_evaluation: number;
+//
+//  max_cpus: number;
+//  max_nodes: number;
+//
+//  current_working_directory: string;
+//  user_name: string;
 }
 
 // Provide id as an alias for the job_id

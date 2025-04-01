@@ -42,7 +42,7 @@ const JobsView = ({ maxHeightInViewportPercent } : Props) => {
   if(!jobs)
     return "No Jobs data available"
 
-  const prepared_data = jobs.map((job : Job) => ({
+  const prepared_data = jobs.filter((job: Job) => job.user_name != '').map((job : Job) => ({
     ...job,
     id: job.job_id,
     mlflow_ref: mlflowSlurmJobs.filter(r => Number(r.SLURM_JOB_ID) == job.job_id)[0]?.mlflow_run_uri
