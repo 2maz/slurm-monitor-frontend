@@ -17,9 +17,9 @@ import {
   ListItemText,
   TextField,
   Typography,
+  TypographyOwnProps,
 } from "@mui/material";
 import Tab from "@mui/material/Tab";
-import { Variant } from "@mui/material/styles/createTypography";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import React, { useState } from "react";
@@ -44,7 +44,7 @@ type BackendFormData = z.infer<typeof schemaBackend>
 
 interface ValidatedLinkProps {
   href: string;
-  variant: Variant | undefined;
+  variant: TypographyOwnProps['variant'] | undefined;
   children: string | string[];
   validate?: string;
 }
@@ -69,7 +69,7 @@ const ValidatedLink = ({
         })
         .catch((reason) => {
           controller.abort();
-          setError(reason.message);
+          setError(reason.message as string);
           return "inaccessible";
         });
 
