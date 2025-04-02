@@ -3,6 +3,7 @@ import { MRT_ColumnFiltersState, MRT_VisibilityState } from "material-react-tabl
 import { create as createZustand } from "zustand"
 import { createJSONStorage, persist } from "zustand/middleware";
 import { mountStoreDevtool } from 'simple-zustand-devtools'
+import { DateTime } from "luxon";
 
 interface TableState {
   columnFilters: MRT_ColumnFiltersState,
@@ -22,7 +23,30 @@ const createTableStore = (storeName: string, visibility: MRT_VisibilityState = {
           if (typeof x !== 'function') {
             set((state) => ({...state, columnFilters: x}))
           } else {
-            set((state) => ({...state, columnFilters: x(state.columnFilters)}))
+            set(
+              (state) => {
+                const updatedFilters = x(state.columnFilters).map((value) => {
+                  if(value['id'].includes("_time")) {
+                    const minmax = value['value']
+                    if(Array.isArray(minmax)) {
+                      if(!minmax[0] || !(minmax[0] as DateTime).isValid)
+                      {
+                        minmax[0] = ''
+                      }
+                      if(!minmax[1] || !(minmax[1] as DateTime).isValid)
+                      {
+                        minmax[1] = ''
+                      }
+                    }
+                  }
+                  return value
+                })
+                return ({
+                    ...state,
+                    columnFilters: updatedFilters
+                })
+              }
+            )
           }
         },
         setVisibility: (x) => {
