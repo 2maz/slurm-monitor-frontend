@@ -88,7 +88,7 @@ const JobsTable = ({ data, sorting, maxHeightInViewportPercent, rowActions }: Pr
        accessorKey: "start_time",
        accessorFn: (originalRow) => new Date(originalRow.start_time), // convert to date for sorting and filtering
        header: "Start Time",
-       filterVariant: "date-range",
+       filterVariant: "datetime-range",
        filterFn: "betweenInclusive",
        minSize: 50,
        grow: true,
@@ -97,30 +97,30 @@ const JobsTable = ({ data, sorting, maxHeightInViewportPercent, rowActions }: Pr
           .getValue<Date>()
           .toLocaleTimeString()}`, // convert for display
      },
-     //{
-     //  accessorKey: "submit_time",
-     //  accessorFn: (originalRow) => DateTime.fromISO(originalRow.start_time).toJSDate(),
-     //  header: "Submit Time",
-     //  filterVariant: "datetime-range",
-     //  minSize: 50,
-     //  grow: true,
-     //  Cell: ({ cell }) =>
-     //   `${cell.getValue<Date>().toLocaleDateString()} ${cell
-     //     .getValue<Date>()
-     //     .toLocaleTimeString()}`,
-     //},
-     //{
-     //  accessorKey: "end_time",
-     //  accessorFn: (originalRow) => DateTime.fromISO(originalRow.start_time).toJSDate(),
-     //  header: "End Time",
-     //  filterVariant: "datetime-range",
-     //  minSize: 50,
-     //  grow: true,
-     //  Cell: ({ cell }) =>
-     //   `${cell.getValue<Date>().toLocaleDateString()} ${cell
-     //     .getValue<Date>()
-     //     .toLocaleTimeString()}`,
-     //},
+     {
+       accessorKey: "submit_time",
+       accessorFn: (originalRow) => DateTime.fromISO(originalRow.start_time).toJSDate(),
+       header: "Submit Time",
+       filterVariant: "datetime-range",
+       minSize: 50,
+       grow: true,
+       Cell: ({ cell }) =>
+        `${cell.getValue<Date>().toLocaleDateString()} ${cell
+          .getValue<Date>()
+          .toLocaleTimeString()}`,
+     },
+     {
+       accessorKey: "end_time",
+       accessorFn: (originalRow) => DateTime.fromISO(originalRow.start_time).toJSDate(),
+       header: "End Time",
+       filterVariant: "datetime-range",
+       minSize: 50,
+       grow: true,
+       Cell: ({ cell }) =>
+        `${cell.getValue<Date>().toLocaleDateString()} ${cell
+          .getValue<Date>()
+          .toLocaleTimeString()}`,
+     },
       //{
       //  accessorKey: "state_reason",
       //  header: "State Reason",
