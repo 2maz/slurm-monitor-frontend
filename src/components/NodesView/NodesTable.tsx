@@ -13,6 +13,8 @@ import NodeTopology from "./NodeTopology";
 import { useNodesStore } from "../../stores";
 import { NodeDataInfo } from "../../hooks/useNodesInfos";
 import CloseIcon from '@mui/icons-material/Close';
+import { DateTimePicker } from "@mui/x-date-pickers";
+import { DateTime } from "luxon";
 interface NodeInfo extends NodeDataInfo {
   partitions: string[];
   cores: number;
@@ -37,6 +39,9 @@ const getMaxGPUMemory = (data: NodeInfo[]) =>  {
 }
 const NodesTable = ({ data, maxHeightInViewportPercent }: Props) => {
   const { columnFilters, setColumnFilters, visibility, setVisibility } = useNodesStore();
+  const [startTime, setStartTime] = useState(DateTime.now().toSeconds() - 3600);
+  const [endTime, setEndTime] = useState(DateTime.now().toSeconds());
+
   const columns = useMemo<MRT_ColumnDef<NodeInfo>[]>(
     () => [
       {
@@ -363,6 +368,7 @@ const NodesTable = ({ data, maxHeightInViewportPercent }: Props) => {
   const resetState = () => {
     setColumnFilters([]);
   };
+
   return (
     <div>
       <MaterialReactTable table={table} />
@@ -382,18 +388,50 @@ const NodesTable = ({ data, maxHeightInViewportPercent }: Props) => {
             .filter((d) => d.node === backdropId)
             .map((d) => {
               return (
-                <div key={d.node + "-stats"}>
+                <div key={d.node + "-stats"} className="mx-3 my-3">
+                  <h1>Node: {d.node}</h1>
+                  <div key="node-datetime-pickers">
+                  <DateTimePicker
+                    className="mx-3 my-3"
+                    label="From"
+                    value={DateTime.fromSeconds(startTime)}
+                    timezone="default"
+                    onChange={(newValue) => {
+                      if(newValue) {
+                        setStartTime(newValue.toSeconds())
+                      }
+                    }}
+                  />
+                  <DateTimePicker
+                    className="mx-3 my-3"
+                    label="To"
+                    value={DateTime.fromSeconds(endTime)}
+                    timezone="default"
+                    onChange={(newValue) => {
+                      if(newValue) {
+                        setEndTime(newValue.toSeconds())
+                      }
+                    }}
+                  />
+                  <div className="d-flex">
+                    <Button onClick={() => {
+                      setStartTime(DateTime.now().toSeconds() - 3600);
+                      setEndTime(DateTime.now().toSeconds());
+                    }}
+                    >Reset to Last Hour</Button>
+                  </div>
+                 </div>
                  <div key={d.node + "-cpu"} className="mx-3 my-3">
                  <h2>CPU Status (accumulated)</h2>
-                 <CPUStatusView nodename={d.node} start_time_in_s={start_time_in_s}/>
+                 <CPUStatusView nodename={d.node} start_time_in_s={startTime}/>
                  </div>
                  <div key={d.node + "-memory"} className="mx-3 my-3">
                  <h2>Memory Status</h2>
-                 <MemoryStatusView nodename={d.node} start_time_in_s={start_time_in_s}/>
+                 <MemoryStatusView nodename={d.node} start_time_in_s={startTime}/>
                  </div>
                  <div key={d.node + "-gpu"} className="mx-3 my-3">
                  <h2>GPU Status</h2>
-                 <GPUStatusView nodename={d.node} start_time_in_s={start_time_in_s}/>
+                 <GPUStatusView nodename={d.node} start_time_in_s={startTime}/>
                  </div>
                  <h2 className="mx-2">SLURM Node Info</h2>
                  <pre className="mx-5">{JSON.stringify(d, null, 2)}</pre>
