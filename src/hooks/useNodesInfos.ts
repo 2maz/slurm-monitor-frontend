@@ -37,7 +37,7 @@ interface NodeInfos {
   [name: string]: NodeDataInfo;
 }
 
-const useNodesInfo = (time: Date | undefined) => {
+const useNodesInfo = (time?: Date) => {
   let params = {}
   if(time) {
     params = { time_in_s: time.getTime() }

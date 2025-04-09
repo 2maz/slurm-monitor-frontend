@@ -1,4 +1,4 @@
-import { LineChart, Line, Tooltip, XAxis, YAxis, Legend, CartesianGrid, ReferenceLine } from 'recharts';
+import { LineChart, Line, Tooltip, XAxis, YAxis, Legend, CartesianGrid } from 'recharts';
 import { BarLoader } from "react-spinners";
 import { DateTime } from 'luxon';
 
@@ -32,7 +32,7 @@ const CPUJobStatusView = ({job_id, start_time_in_s, end_time_in_s, resolution_in
 
   const elements : JSX.Element[] = []
 
-                  //<ReferenceLine yAxisId="1" y={allocated_cpus*100} label={allocated_cpus + " cpu(s) allocated"} stroke="red" strokeDasharray="40 150"/>
+  //<ReferenceLine yAxisId="1" y={allocated_cpus*100} label={allocated_cpus + " cpu(s) allocated"} stroke="red" strokeDasharray="40 150"/>
   if(data && data.length > 0) {
     Object.keys(data[0].nodes).map((nodename: string, index: number) => {
       const node_data = data[0].nodes[nodename].cpu_memory
