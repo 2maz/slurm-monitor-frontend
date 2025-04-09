@@ -19,19 +19,22 @@ interface Partition {
   maximum_nodes_per_job: number;
   max_time_limit: number;
   min_nodes_per_job: number;
-  name: string;
-  nodes: string;
   over_time_limit: string;
   priority_job_factor: number;
   priority_tier: number;
   qos: string;
   nodes_online: number;
+
+  name: string;
+  nodes: string;
+  nodes_compact: string;
+
   total_cpus: number;
   total_nodes: number;
   tres: string;
 
-  pending_jobs?: Job[]
-  running_jobs?: Job[]
+  jobs_pending?: Job[]
+  jobs_running?: Job[]
   pending_max_submit_time?: number | undefined
   running_latest_wait_time?: number | undefined
 }

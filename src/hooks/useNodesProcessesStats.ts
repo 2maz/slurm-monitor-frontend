@@ -7,7 +7,7 @@ interface ProcessStatus {
     node: string;
     cpu_percent: number;
     memory_percent: number;
-    timestamp: string;
+    time: string;
 
 }
 interface ProcessTimeseries {
@@ -19,7 +19,7 @@ interface ProcessesStats {
     active_pids: number[];
     accumulated: ProcessStatus[];
     timeseries: ProcessTimeseries;
-    timestamp: string;
+    time: string;
 }
 
 interface NodesProcessesStats {

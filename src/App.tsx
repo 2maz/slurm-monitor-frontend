@@ -179,7 +179,7 @@ function App() {
             {view && view == "nodes" && (
               <NodesView maxHeightInViewportPercent={75} />
             )}
-            {false && view && view == "partitions" && (
+            {view && view == "partitions" && (
               <PartitionsView maxHeightInViewportPercent={75} />
             )}
             {view && view == "gpu_status" && (

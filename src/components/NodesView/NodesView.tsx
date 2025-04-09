@@ -4,9 +4,11 @@ import { DotLoader } from 'react-spinners';
 
 interface Props {
   maxHeightInViewportPercent?: number
+  time?: Date
 }
-const NodesView = ({maxHeightInViewportPercent} : Props) => {
-  const { data : nodes_info, error : error_nodes_info, isLoading : nodes_info_isLoading} = useNodesInfo();
+const NodesView = ({maxHeightInViewportPercent, time} : Props) => {
+  const { data : nodes_info, error : error_nodes_info, isLoading : nodes_info_isLoading} = useNodesInfo(time);
+
 
   if(!nodes_info || nodes_info_isLoading)
     return (
@@ -32,11 +34,10 @@ const NodesView = ({maxHeightInViewportPercent} : Props) => {
     const value = nodes_info[key];
     return { ...value,
       cores: value.cores_per_socket*value.sockets,
-      architecture: "fixme",
-      gpu_count: value.cards? value.cards.length : 0,
+      architecture: value.architecture,
+      gpu_count: value.cards ? value.cards.length : 0,
       gpu_memory: value.cards?.[0].memory,
       gpu_model: value.cards?.[0].model,
-      partitions: [],
       id: value.node,
     }
   });

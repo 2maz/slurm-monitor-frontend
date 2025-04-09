@@ -5,7 +5,7 @@ export interface CPUStatus {
   cpu_avg: number;
   cpu_util: number;
   cpu_time: number;
-  timestamp: string;
+  time: string;
 }
 
 interface NodesCPUStatus {

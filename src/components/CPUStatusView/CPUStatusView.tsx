@@ -27,12 +27,12 @@ const CPUStatusView = ({nodename, start_time_in_s, end_time_in_s, resolution_in_
     return <BarLoader />
 
   if(nodes_info_error)
-    return "Failed loading processes data for {nodename}"
+    return "Failed loading processes data for " + nodename
 
   if(error)
-    return "Failed loading processes data for {nodename}"
+    return "Failed loading processes data for " + nodename
 
-  const cpuCount = nodes_info && nodes_info[nodename] ? nodes_info[nodename].cores_per_socket*nodes_info[nodename].sockets : 1
+  const cpuCount = nodes_info && nodes_info[nodename] ? nodes_info[nodename].cores_per_socket*nodes_info[nodename].sockets*nodes_info[nodename].threads_per_core : 1
 
   const elements : JSX.Element[] = []
   if(isSuccess) {
@@ -46,7 +46,7 @@ const CPUStatusView = ({nodename, start_time_in_s, end_time_in_s, resolution_in_
                 <Line yAxisId="1" type="monotone" dataKey="cpu_util" stroke="#8884d8"/>
                 <Line yAxisId="1" type="monotone" dataKey="cpu_avg" stroke="#008400"/>
                 <CartesianGrid strokeDasharray="3 3"/>
-                <XAxis dataKey="timestamp" tickFormatter={timestamp => DateTime.fromISO(timestamp as string, { zone: 'utc'}).toFormat("HH:mm")} />
+                <XAxis dataKey="time" tickFormatter={timestamp => DateTime.fromISO(timestamp as string, { zone: 'utc'}).toFormat("HH:mm")} />
                 <YAxis orientation="left"
                   domain={[0, cpuCount*100]}
                   yAxisId="1"

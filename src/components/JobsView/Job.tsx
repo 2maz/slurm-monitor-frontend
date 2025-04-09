@@ -61,7 +61,7 @@ export interface SlurmJob {
   requested_node_count: number;
 
   minimum_cpus_per_node: number;
-  timestamp: string
+  time: string
 
   sacct?: SAcctData
 

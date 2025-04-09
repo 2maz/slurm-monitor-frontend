@@ -25,8 +25,10 @@ const CPUJobStatusView = ({job_id, start_time_in_s, end_time_in_s, resolution_in
   if(isLoading)
     return <BarLoader />
 
-  if(error)
-    return "Failed to retrieve status data for job {job_id}"
+  if(error) {
+    const details = error.response as { data: { detail: string }}
+    return "Failed to retrieve status data for job " + job_id + " -- " + details.data.detail
+  }
 
   const elements : JSX.Element[] = []
 
@@ -43,7 +45,7 @@ const CPUJobStatusView = ({job_id, start_time_in_s, end_time_in_s, resolution_in
                   <Line yAxisId="1" type="monotone" dataKey="memory_util" stroke="#888400"/>
                   <Line yAxisId="2" type="monotone" dataKey="pids" stroke="#008400"/>
                   <CartesianGrid strokeDasharray="3 3"/>
-                  <XAxis dataKey="timestamp" tickFormatter={timestamp => DateTime.fromISO(timestamp as unknown as string, { zone: 'utc'}).toFormat("HH:mm")} />
+                  <XAxis dataKey="time" tickFormatter={timestamp => DateTime.fromISO(timestamp as unknown as string, { zone: 'utc'}).toFormat("HH:mm")} />
                   <YAxis orientation="left" domain={[0, 100]} yAxisId="1"
                     label={{
                       value: `percentage (%)`,

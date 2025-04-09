@@ -56,8 +56,7 @@ const GPUStatusView = ({nodename, uuids, logical_ids, start_time_in_s, end_time_
                 <Line yAxisId="2" type="monotone" dataKey="power" stroke="#ff8400"/>
                 <Line yAxisId="2" type="monotone" dataKey="temperature" stroke="#008400"/>
                 <CartesianGrid strokeDasharray="3 3"/>
-                # timeformat here: 2025-03-18T08:00:00.123456
-                <XAxis dataKey="timestamp" tickFormatter={timestamp => DateTime.fromISO(timestamp as string, { zone: 'utc'}).toFormat("HH:mm")} />
+                <XAxis dataKey="time" tickFormatter={timestamp => DateTime.fromISO(timestamp as string, { zone: 'utc'}).toFormat("HH:mm")} />
                 <YAxis orientation="left" domain={[0,100]} yAxisId="1"
                   label={{
                     value: `percentage (%) / °C`,

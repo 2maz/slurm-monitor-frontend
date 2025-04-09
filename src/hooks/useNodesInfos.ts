@@ -21,6 +21,7 @@ interface GPUInfo {
 export interface NodeDataInfo extends CPUInfo{
   cluster: string;
   node: string;
+  partitions: string[];
   os_name: string;
   os_release: string;
   memory: number;
@@ -28,16 +29,20 @@ export interface NodeDataInfo extends CPUInfo{
 
   cards: GPUInfo[];
 
-  errors: string[]
-  meta: MetaData
+  errors: string[];
+  meta: MetaData;
 }
 
 interface NodeInfos {
   [name: string]: NodeDataInfo;
 }
 
-const useNodesInfo = () => {
-  const { endpoint : endpoint_nodes_info } = useMonitorEndpoint("/nodes/info");
+const useNodesInfo = (time: Date | undefined) => {
+  let params = {}
+  if(time) {
+    params = { time_in_s: time.getTime() }
+  }
+  const { endpoint : endpoint_nodes_info } = useMonitorEndpoint("/nodes/info", params);
 
   const fetchNodeInfos = async () => {
     const { request } = endpoint_nodes_info.get<Record<string, NodeDataInfo>>();

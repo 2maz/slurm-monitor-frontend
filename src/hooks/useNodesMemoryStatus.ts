@@ -6,7 +6,7 @@ export interface MemoryStatus {
   memory_resident: number;
   memory_virtual: number;
   memory_util: number;
-  timestamp: string;
+  time: string;
 }
 
 interface NodesMemoryStatus {

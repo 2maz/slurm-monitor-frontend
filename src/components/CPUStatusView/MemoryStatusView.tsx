@@ -40,7 +40,7 @@ const MemoryStatusView = ({nodename, start_time_in_s, end_time_in_s, resolution_
                 <Line yAxisId="2" type="monotone" dataKey="memory_virtual" stroke="#880000"/>
                 <CartesianGrid strokeDasharray="3 3"/>
                 # timeformat here: 2025-03-18T08:00:00.123456
-                <XAxis dataKey="timestamp" tickFormatter={timestamp => DateTime.fromISO(timestamp as string, { zone: 'utc'}).toFormat("HH:mm")} />
+                <XAxis dataKey="time" tickFormatter={timestamp => DateTime.fromISO(timestamp as string, { zone: 'utc'}).toFormat("HH:mm")} />
                 <YAxis orientation="left" domain={[0, 100]} yAxisId="1"
                   label={{
                     value: `percentage (%)`,

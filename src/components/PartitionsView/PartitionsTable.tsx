@@ -39,7 +39,7 @@ const PartitionsTable = ({ data, maxHeightInViewportPercent }: Props) => {
         header: "Name",
       },
       {
-        accessorKey: "nodes",
+        accessorKey: "nodes_compact",
         header: "Nodes",
       },
       {
@@ -65,30 +65,30 @@ const PartitionsTable = ({ data, maxHeightInViewportPercent }: Props) => {
         },
       },
       {
-        accessorKey: "pending_jobs",
-        accessorFn: (originalRow) => { return originalRow.pending_jobs ? originalRow.pending_jobs.length : 0 },
+        accessorKey: "jobs_pending",
+        accessorFn: (originalRow) => { return originalRow.jobs_pending ? originalRow.jobs_pending.length : 0 },
         header: "Pending Jobs",
         filterVariant: "range-slider",
         filterFn: "betweenInclusive",
         muiFilterSliderProps: {
           min: 1,
-          max: data.reduce((prev, current) => { return prev.pending_jobs!.length > current.pending_jobs!.length ? prev : current}).pending_jobs!.length,
+          max: data.reduce((prev, current) => { return prev.jobs_pending!.length > current.jobs_pending!.length ? prev : current}).jobs_pending!.length,
           size: 'small',
         },
-        Cell: ({row}) => { return row.original.pending_jobs!.length }
+        Cell: ({row}) => { return row.original.jobs_pending!.length }
       },
       {
-        accessorKey: "running_jobs",
-        accessorFn: (originalRow) => { return originalRow.running_jobs ? originalRow.running_jobs.length : 0 },
+        accessorKey: "jobs_running",
+        accessorFn: (originalRow) => { return originalRow.jobs_running ? originalRow.jobs_running.length : 0 },
         header: "Running Jobs",
         filterVariant: "range-slider",
         filterFn: "betweenInclusive",
         muiFilterSliderProps: {
           min: 0,
-          max: data.reduce((prev, current) => { return prev.running_jobs!.length > current.running_jobs!.length ? prev : current}).running_jobs!.length,
+          max: data.reduce((prev, current) => { return prev.jobs_running!.length > current.jobs_running!.length ? prev : current}).jobs_running!.length,
           size: 'small',
         },
-        Cell: ({row}) => { return row.original.running_jobs!.length }
+        Cell: ({row}) => { return row.original.jobs_running!.length }
       },
       {
         accessorKey: "pending_max_submit_time",
@@ -156,12 +156,12 @@ const PartitionsTable = ({ data, maxHeightInViewportPercent }: Props) => {
           }
         }
       },
-      { accessorKey: "flags", header: "Flags" },
-      { accessorKey: "maximum_cpus_per_job", header: "Max CPU/Jobs" },
-      { accessorKey: "maximum_nodes_per_job", header: "Max Nodes/Jobs" },
-      { accessorKey: "maximum_memory_per_job", header: "Max Memory/Jobs" },
-      { accessorKey: "max_time_limit", header: "Max Time Limit" },
-      { accessorKey: "nodes_online", header: "Nodes Online" },
+      //{ accessorKey: "flags", header: "Flags" },
+      //{ accessorKey: "maximum_cpus_per_job", header: "Max CPU/Jobs" },
+      //{ accessorKey: "maximum_nodes_per_job", header: "Max Nodes/Jobs" },
+      //{ accessorKey: "maximum_memory_per_job", header: "Max Memory/Jobs" },
+      //{ accessorKey: "max_time_limit", header: "Max Time Limit" },
+      //{ accessorKey: "nodes_online", header: "Nodes Online" },
     ],
     [data]
   );

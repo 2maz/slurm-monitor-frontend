@@ -15,6 +15,7 @@ import useAppState from "../../AppState";
 import { MONITOR_API_PREFIX } from "../../services/slurm-monitor/backend.config";
 import { useJobsStore } from "../../stores";
 import JobView from "../JobView";
+import { DateTime } from "luxon";
 
 interface Props {
   data: Job[];

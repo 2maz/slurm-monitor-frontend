@@ -3,8 +3,7 @@ import Partition from "./Partition";
 import PartitionsTable from "./PartitionsTable";
 
 import { DotLoader } from "react-spinners";
-import CertificateError from "../ErrorReporting";
-import usePartitionsQueue from "../../hooks/usePartitionsQueue";
+import usePartitions from "../../hooks/usePartitions";
 
 
 interface Props {
@@ -12,23 +11,13 @@ interface Props {
 }
 
 const PartitionsView = ({ maxHeightInViewportPercent }: Props) => {
-  const { partitions, isLoading, error } = usePartitionsQueue()
+  const { data: partitions, isLoading, error } = usePartitions()
 
-  if(error.jobs) {
+  if(error) {
     return (
       <>
         <h1 className="mx-5 centered">Partitions</h1>
-          <p className="text-danger">No data available: {error.jobs.message}</p>
-          {<CertificateError />}
-      </>
-    );
-  }
-
-  if(error.partitions) {
-    return (
-      <>
-        <h1 className="mx-5 centered">Partitions</h1>
-        <p className="text-danger">No data available: {error.partitions?.message}</p>
+        <p className="text-danger">No data available: {error.message}</p>
       </>
     )
   }
@@ -42,6 +31,7 @@ const PartitionsView = ({ maxHeightInViewportPercent }: Props) => {
 
   const prepared_data = partitions.map((partition: Partition) => ({
     ...partition,
+    total_nodes: partition.nodes.length,
     id: partition.name,
   }));
 

@@ -11,7 +11,7 @@ interface GPUStatus {
     power: number;
     power_limit: number;
     memory_clock: number;
-    timestamp: string,
+    time: string,
 }
 
 interface LocalGPUStatusDataSeries {

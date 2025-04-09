@@ -35,9 +35,9 @@ const JobView = ({ job_id, job_data, refresh_interval_in_s = 60 } : Props) => {
   if(job_status.used_gpu_uuids || (job_status.sacct && job_status.sacct.AllocTRES.includes("gpu")))
   {
       elements = [...elements,
-          <div key="gpu-status">
+          <div key={"gpu-status"+job_id}>
           <h3>GPU Usage:</h3>
-          {error && <div key="{job_id}-gpu-status"><h4>Error loading GPU status </h4>Loading ...</div>}
+          {error && <div key={"gpu-status-"+job_id}><h4>Error loading GPU status </h4>Loading ...</div>}
           {!error 
             && job_status.nodes.map((node) => 
               <GPUStatusView
@@ -52,14 +52,14 @@ const JobView = ({ job_id, job_data, refresh_interval_in_s = 60 } : Props) => {
           </div>
       ]
   } else {
-          elements = [...elements, (<div key="{job_id}-gpu-status">
+          elements = [...elements, (<div key={"gpu-status"+job_id}>
             <h3>GPU Usage</h3>
             <p>No GPUs used</p>
             </div>
           )]
   }
 
-  elements = [...elements, (<div key="{job_id}-cpu-status">
+  elements = [...elements, (<div key={"cpu-status-"+job_id}>
           <h3>CPU Usage</h3>
           <CPUJobStatusView job_id={job_id}
                          start_time_in_s={Math.floor(DateTime.fromISO(job_status.start_time as unknown as string, {zone: 'utc'}).toSeconds())}
@@ -74,7 +74,7 @@ const JobView = ({ job_id, job_data, refresh_interval_in_s = 60 } : Props) => {
       <pre>{job_data && JSON.stringify(job_data, null, 2)}</pre>
     </div>
   )]
-  return <div key="{{job_id}}" className="mx-3 my-3"><h2>Job Id: {job_id}</h2>{elements}</div>
+  return <div key={"job-view"+ job_id} className="mx-3 my-3"><h2>Job Id: {job_id}</h2>{elements}</div>
 
 }
 

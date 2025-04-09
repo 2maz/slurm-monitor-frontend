@@ -2,19 +2,15 @@ import { useQuery } from "@tanstack/react-query";
 import Partition from "../components/PartitionsView/Partition";
 import useMonitorEndpoint from "./useMonitorEndpoint";
 
-interface PartitionsResponse extends Response {
-  partitions: Partition[];
-}
-
 const usePartitions = () => {
   const { endpoint } = useMonitorEndpoint("/partitions");
 
   const fetchPartitions = async () => {
-    const { request } = endpoint.get<PartitionsResponse>();
+    const { request } = endpoint.get<Partition[]>();
 
     return request
       .then(({ data }) => {
-        return data ? data.partitions : [] as Partition[];
+        return data ? data : [] as Partition[];
       })
   };
 
