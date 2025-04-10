@@ -13,8 +13,8 @@ import NodeTopology from "./NodeTopology";
 import { useNodesStore } from "../../stores";
 import { NodeDataInfo } from "../../hooks/useNodesInfos";
 import CloseIcon from '@mui/icons-material/Close';
-import { DateTimePicker } from "@mui/x-date-pickers";
 import { DateTime } from "luxon";
+import TimeWindowPicker from "../TimeWindowPicker";
 interface NodeInfo extends NodeDataInfo {
   partitions: string[];
   cores: number;
@@ -377,7 +377,7 @@ const NodesTable = ({ data, maxHeightInViewportPercent }: Props) => {
         open={backdropToggle}
       >
         <div className="h-75 bg-white text-muted rounded overflow-auto"
-        style={{maxWidth: '90%'}}>
+        style={{maxWidth: '90%', minWidth: '90%'}}>
           <Box sx={{ position: 'sticky', top: 0}}>
             <IconButton style={{ float: 'right'}} aria-label="close" onClick={() => {setBackdropToggle(!backdropToggle);}}>
               <CloseIcon />
@@ -390,48 +390,21 @@ const NodesTable = ({ data, maxHeightInViewportPercent }: Props) => {
               return (
                 <div key={d.node + "-stats"} className="mx-3 my-3">
                   <h1>Node: {d.node}</h1>
-                  <div key="node-datetime-pickers">
-                  <DateTimePicker
-                    className="mx-3 my-3"
-                    label="From"
-                    value={DateTime.fromSeconds(startTime)}
-                    timezone="default"
-                    onChange={(newValue) => {
-                      if(newValue) {
-                        setStartTime(newValue.toSeconds())
-                      }
-                    }}
+                  <TimeWindowPicker
+                    startTime={startTime} setStartTime={setStartTime}
+                    endTime={endTime} setEndTime={setEndTime}
                   />
-                  <DateTimePicker
-                    className="mx-3 my-3"
-                    label="To"
-                    value={DateTime.fromSeconds(endTime)}
-                    timezone="default"
-                    onChange={(newValue) => {
-                      if(newValue) {
-                        setEndTime(newValue.toSeconds())
-                      }
-                    }}
-                  />
-                  <div className="d-flex">
-                    <Button onClick={() => {
-                      setStartTime(DateTime.now().toSeconds() - 3600);
-                      setEndTime(DateTime.now().toSeconds());
-                    }}
-                    >Reset to Last Hour</Button>
-                  </div>
-                 </div>
                  <div key={d.node + "-cpu"} className="mx-3 my-3">
                  <h2>CPU Status (accumulated)</h2>
-                 <CPUStatusView nodename={d.node} start_time_in_s={startTime}/>
+                 <CPUStatusView nodename={d.node} start_time_in_s={startTime} end_time_in_s={endTime}/>
                  </div>
                  <div key={d.node + "-memory"} className="mx-3 my-3">
                  <h2>Memory Status</h2>
-                 <MemoryStatusView nodename={d.node} start_time_in_s={startTime}/>
+                 <MemoryStatusView nodename={d.node} start_time_in_s={startTime} end_time_in_s={endTime}/>
                  </div>
                  <div key={d.node + "-gpu"} className="mx-3 my-3">
                  <h2>GPU Status</h2>
-                 <GPUStatusView nodename={d.node} start_time_in_s={startTime}/>
+                 <GPUStatusView nodename={d.node} start_time_in_s={startTime} end_time_in_s={endTime}/>
                  </div>
                  <h2 className="mx-2">SLURM Node Info</h2>
                  <pre className="mx-5">{JSON.stringify(d, null, 2)}</pre>
