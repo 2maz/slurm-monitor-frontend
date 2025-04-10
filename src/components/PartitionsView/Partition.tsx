@@ -33,6 +33,10 @@ interface Partition {
   total_nodes: number;
   tres: string;
 
+  total_gpus: number;
+  gpus_in_use: string[];
+  gpus_reserved: number;
+
   jobs_pending?: Job[]
   jobs_running?: Job[]
   pending_max_submit_time?: number | undefined

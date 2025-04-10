@@ -47,11 +47,46 @@ const PartitionsTable = ({ data, maxHeightInViewportPercent }: Props) => {
         filterVariant: "range-slider",
         filterFn: "betweenInclusive",
         muiFilterSliderProps: {
-          min: 1,
-          max: data.reduce((prev, current) => { return prev.total_cpus > current.total_cpus ? prev : current}).total_cpus,
+          min: 0,
+          max: data.length == 0 ? 0 : data.reduce((prev, current) => { return prev.total_cpus > current.total_cpus ? prev : current}).total_cpus,
           size: 'small',
         },
         header: "Total CPUs"
+      },
+      {
+        accessorKey: "total_gpus",
+        filterVariant: "range-slider",
+        filterFn: "betweenInclusive",
+        muiFilterSliderProps: {
+          min: 0,
+          max: data.length == 0 ? 0: data.reduce((prev, current) => { return prev.total_gpus > current.total_gpus ? prev : current}).total_gpus,
+          size: 'small',
+        },
+        header: "Total GPUs"
+      },
+      {
+        accessorKey: "gpus_in_use",
+        accessorFn: (row) => row.gpus_in_use.length,
+        filterVariant: "range-slider",
+        filterFn: "betweenInclusive",
+        muiFilterSliderProps: {
+          min: 0,
+          max: data.length == 0 ? 0 : data.reduce((prev, current) => { return prev.gpus_in_use.length > current.gpus_in_use.length ? prev : current}).gpus_in_use.length,
+          size: 'small',
+        },
+        header: "GPUs in use"
+      },
+      {
+        accessorKey: "gpus_reserved",
+        accessorFn: (row) => row.gpus_reserved,
+        filterVariant: "range-slider",
+        filterFn: "betweenInclusive",
+        muiFilterSliderProps: {
+          min: 0,
+          max: data.length == 0 ? 0 : data.reduce((prev, current) => { return prev.gpus_reserved > current.gpus_reserved ? prev : current}).gpus_reserved,
+          size: 'small',
+        },
+        header: "GPUs reserved"
       },
       {
         accessorKey: "total_nodes",
@@ -59,8 +94,8 @@ const PartitionsTable = ({ data, maxHeightInViewportPercent }: Props) => {
         filterVariant: "range-slider",
         filterFn: "betweenInclusive",
         muiFilterSliderProps: {
-          min: 1,
-          max: data.reduce((prev, current) => { return prev.total_nodes > current.total_nodes ? prev : current}).total_nodes,
+          min: 0,
+          max: data.length == 0 ? 0 : data.reduce((prev, current) => { return prev.total_nodes > current.total_nodes ? prev : current}).total_nodes,
           size: 'small',
         },
       },
@@ -72,7 +107,7 @@ const PartitionsTable = ({ data, maxHeightInViewportPercent }: Props) => {
         filterFn: "betweenInclusive",
         muiFilterSliderProps: {
           min: 1,
-          max: data.reduce((prev, current) => { return prev.jobs_pending!.length > current.jobs_pending!.length ? prev : current}).jobs_pending!.length,
+          max: data.length == 0 ? 0 : data.reduce((prev, current) => { return prev.jobs_pending!.length > current.jobs_pending!.length ? prev : current}).jobs_pending!.length,
           size: 'small',
         },
         Cell: ({row}) => { return row.original.jobs_pending!.length }
@@ -85,7 +120,7 @@ const PartitionsTable = ({ data, maxHeightInViewportPercent }: Props) => {
         filterFn: "betweenInclusive",
         muiFilterSliderProps: {
           min: 0,
-          max: data.reduce((prev, current) => { return prev.jobs_running!.length > current.jobs_running!.length ? prev : current}).jobs_running!.length,
+          max: data.length == 0 ? 0 : data.reduce((prev, current) => { return prev.jobs_running!.length > current.jobs_running!.length ? prev : current}).jobs_running!.length,
           size: 'small',
         },
         Cell: ({row}) => { return row.original.jobs_running!.length }
@@ -100,7 +135,7 @@ const PartitionsTable = ({ data, maxHeightInViewportPercent }: Props) => {
         filterFn: "betweenInclusive",
         muiFilterSliderProps: {
           min: 0,
-          max: Math.ceil(delta_seconds_to_now(data.reduce(
+          max: data.length == 0 ? 0 : Math.ceil(delta_seconds_to_now(data.reduce(
                 (prev, current) => {
                   if(prev.pending_max_submit_time && current.pending_max_submit_time) {
                     return prev.pending_max_submit_time < current.pending_max_submit_time ? prev : current
@@ -133,7 +168,7 @@ const PartitionsTable = ({ data, maxHeightInViewportPercent }: Props) => {
         filterFn: "betweenInclusive",
         muiFilterSliderProps: {
           min: 0,
-          max: Math.ceil(ensure_value(
+          max: data.length == 0 ? 0 : Math.ceil(ensure_value(
                 data.reduce(
                     (prev, current) => {
                       if(prev.running_latest_wait_time && current.running_latest_wait_time) {

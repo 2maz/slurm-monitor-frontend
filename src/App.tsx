@@ -10,7 +10,6 @@ import SegmentIcon from "@mui/icons-material/Segment";
 import AccountTreeIcon from "@mui/icons-material/AccountTree";
 import DirectionsRunsTwoToneIcon from "@mui/icons-material/DirectionsRunTwoTone";
 import SettingsIcon from "@mui/icons-material/Settings";
-import MonitorHeartIcon from "@mui/icons-material/MonitorHeart";
 import AppsIcon from '@mui/icons-material/Apps';
 import QueryStatsIcon from '@mui/icons-material/QueryStats';
 import InventoryIcon from '@mui/icons-material/Inventory';
@@ -19,8 +18,6 @@ import CloudCircleIcon from '@mui/icons-material/CloudCircle';
 
 import JobsView, { CompletedJobsView } from "./components/JobsView";
 import PartitionsView from "./components/PartitionsView";
-import GPUStatusView from "./components/GPUStatusView";
-
 import { LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterLuxon } from "@mui/x-date-pickers/AdapterLuxon";
 import NodesView from "./components/NodesView";
@@ -31,7 +28,6 @@ import MLFlowSlurmMapper, {
   MLFlowSlurmRunInfo,
 } from "./services/slurm-monitor/mlflow";
 
-import useNodesInfo from "./hooks/useNodesInfos";
 import QueryView from "./components/QueryView";
 import BenchmarksView from "./components/BenchmarksView";
 
