@@ -45,8 +45,6 @@ function App() {
   const [view, setView] = useState<string>(
     window.sessionStorage.getItem("view") || "jobs"
   );
-  const { data: nodes_info } = useNodesInfo();
-
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
 
@@ -69,8 +67,6 @@ function App() {
   const handleClose = () => {
     setAnchorEl(null);
   };
-
-  const currentTime = new Date().toString();
 
   return (
     <>
@@ -114,11 +110,6 @@ function App() {
                   label="Jobs"
                   icon={<DirectionsRunsTwoToneIcon />}
                   onClick={() => selectView("jobs")}
-                />
-                <BottomNavigationAction
-                  label="GPUStatus"
-                  icon={<MonitorHeartIcon />}
-                  onClick={() => selectView("gpu_status")}
                 />
                 <BottomNavigationAction
                   label=""
@@ -181,34 +172,6 @@ function App() {
             )}
             {view && view == "partitions" && (
               <PartitionsView maxHeightInViewportPercent={75} />
-            )}
-            {view && view == "gpu_status" && (
-              <>
-                <h1>GPU Status: {currentTime}</h1>
-                <h3>Usage</h3>
-                <p>
-                  The following nodes statistics are updated every minute. If
-                  you cannot see data in the graph the nodes is likely down. In
-                  this case check the 'nodes' view.
-                </p>
-                <p>
-                  In order to identify the GPUs which your current job is using,
-                  you can double click on the job (in 'jobs' view). The
-                  associated GPU charts will be displayed there. Alternatively,
-                  you can identify the GPU logical ids from the gres_detail
-                  property.
-                </p>
-                {nodes_info && Object.entries(nodes_info).map(
-                    ([nodename, config]) =>
-                      config.cards && (
-                        <>
-                          <div key={nodename}>
-                            <GPUStatusView nodename={nodename} />
-                          </div>
-                        </>
-                      )
-                  )}
-              </>
             )}
             {view && view == "settings" && <SettingsView />}
             {false && view && view == "query" && <QueryView />}
