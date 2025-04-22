@@ -31,10 +31,27 @@ import MLFlowSlurmMapper, {
 import QueryView from "./components/QueryView";
 import BenchmarksView from "./components/BenchmarksView";
 
-import GithubLogo from "./assets/github-mark.png"
+import GithubLogo from "./assets/github-mark.png";
 import ClusterView from "./components/ClusterView";
 
+import { ErrorBoundary } from 'react-error-boundary';
+
 const theme = createTheme({});
+
+interface Props {
+  error: Error
+}
+
+function fallbackRender({ error } : Props) {
+  // Call resetErrorBoundary() to reset the error boundary and retry the render.
+
+  return (
+    <div role="alert">
+      <p>Ups. Sorry, but something went wrong:</p>
+      <pre style={{ color: "red" }}>{error.message}</pre>
+    </div>
+  );
+}
 
 function App() {
   /// State that remembers the currently selected view (one of partitions, nodes, jobs)
@@ -157,23 +174,47 @@ function App() {
                 </MenuItem>
               </Menu>
             </Paper>
-            {view && view == "cluster" && (
-              <ClusterView />
-            )}
-            {view && view == "jobs" && (
-              <JobsView maxHeightInViewportPercent={70} />
-            )}
-            {view && view == "nodes" && (
-              <NodesView maxHeightInViewportPercent={75} />
-            )}
-            {view && view == "partitions" && (
-              <PartitionsView maxHeightInViewportPercent={75} />
-            )}
-            {view && view == "settings" && <SettingsView />}
-            {false && view && view == "query" && <QueryView />}
-            { view && view == "inspect-completed-jobs" && <CompletedJobsView />
+            {view && view == "cluster" &&
+              <ErrorBoundary fallbackRender={fallbackRender}>
+                <ClusterView />
+              </ErrorBoundary>
             }
-            {false && view && view == "benchmarks" && <BenchmarksView />}
+            {view && view == "jobs" &&
+              <ErrorBoundary fallbackRender={fallbackRender}>
+                <JobsView maxHeightInViewportPercent={70} />
+              </ErrorBoundary>
+            }
+            {view && view == "nodes" &&
+              <ErrorBoundary fallbackRender={fallbackRender}>
+                <NodesView maxHeightInViewportPercent={75} />
+              </ErrorBoundary>
+            }
+            {view && view == "partitions" &&
+              <ErrorBoundary fallbackRender={fallbackRender}>
+                <PartitionsView maxHeightInViewportPercent={75} />
+              </ErrorBoundary>
+            }
+            {view && view == "settings" &&
+
+            <ErrorBoundary fallbackRender={fallbackRender}>
+              <SettingsView />
+            </ErrorBoundary>
+            }
+            {false && view && view == "query" &&
+              <ErrorBoundary fallbackRender={fallbackRender}>
+                <QueryView />
+              </ErrorBoundary>
+            }
+            { view && view == "inspect-completed-jobs" &&
+              <ErrorBoundary fallbackRender={fallbackRender}>
+                <CompletedJobsView />
+              </ErrorBoundary>
+            }
+            {false && view && view == "benchmarks" &&
+              <ErrorBoundary fallbackRender={fallbackRender}>
+                <BenchmarksView />
+              </ErrorBoundary>
+            }
           </Box>
         </ThemeProvider>
       </LocalizationProvider>
