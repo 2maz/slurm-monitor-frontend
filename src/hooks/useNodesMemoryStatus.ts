@@ -13,29 +13,25 @@ interface NodesMemoryStatus {
   [nodename: string]: MemoryStatus[]
 }
 
-interface NodesMemoryStatusTimeseriesResponse extends Response {
-  cpu_memory_status: NodesMemoryStatus
-}
-
 const useNodesMemoryStatus = (
     query_parameters: QueryParameters,
     refresh_interval_in_s: number = 60
 ) => {
 
-  const query = "/nodes/"+ query_parameters.nodename + "/cpu_memory_status";
+  const query = "/nodes/"+ query_parameters.nodename + "/memory/timeseries";
   const { endpoint } = useMonitorEndpoint(query, buildParameters(query_parameters));
 
   const fetchStatus = async () => {
-    const { request } = endpoint.get<NodesMemoryStatusTimeseriesResponse>();
+    const { request } = endpoint.get<NodesMemoryStatus>();
 
     return request
       .then<NodesMemoryStatus>(({ data }) => {
-        return data ? data.cpu_memory_status : {} as NodesMemoryStatus;
+        return data ? data : {} as NodesMemoryStatus;
       })
   };
 
   return useQuery<NodesMemoryStatus>({
-    queryKey: ["nodes", "cpu_memory_status", query_parameters],
+    queryKey: ["nodes", "memory/timeseries", query_parameters],
     queryFn: fetchStatus,
     refetchInterval: refresh_interval_in_s, // refresh every minute
   });

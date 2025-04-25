@@ -41,7 +41,7 @@ interface QueryParameters {
 }
 
 const useJobProcessesStatus = (query_parameters: QueryParameters, refresh_interval_in_s: number) => {
-    const query = "/jobs/"+ query_parameters.job_id + "/system_process_status";
+    const query = "/jobs/"+ query_parameters.job_id + "/process/timeseries";
 
     let parameters = {}
     if(query_parameters.start_time_in_s != undefined) {
@@ -66,7 +66,7 @@ const useJobProcessesStatus = (query_parameters: QueryParameters, refresh_interv
     };
 
     return useQuery<JobProcessStatus[], AxiosError>({
-        queryKey: ["job_processes", query_parameters],
+        queryKey: ["jobs","process/timeseries", query_parameters],
         queryFn: fetchStatus,
         refetchInterval: refresh_interval_in_s*1000, // refresh every minute
     });

@@ -37,7 +37,6 @@ const CPUStatusView = ({nodename, start_time_in_s, end_time_in_s, resolution_in_
   const elements : JSX.Element[] = []
   if(isSuccess) {
     Object.keys(nodes).map((node: string) => {
-      console.log(nodes[node]);
       elements.push(
             <div key={node + "cpu_status"}>
             <h4>Node: {nodename}</h4>

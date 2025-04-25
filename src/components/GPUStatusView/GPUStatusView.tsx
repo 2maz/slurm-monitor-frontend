@@ -35,7 +35,7 @@ const GPUStatusView = ({nodename, uuids, logical_ids, start_time_in_s, end_time_
     const elements : JSX.Element[] = [];
     // Examples: https://recharts.org/en-US/examples/HighlightAndZoomLineChart
     if(gpu_data_series) {
-        gpu_data_series[nodename].forEach(value => {
+        Object.values(gpu_data_series[nodename]).forEach(value => {
           const { uuid, local_index, data } = value
           let use = true;
 

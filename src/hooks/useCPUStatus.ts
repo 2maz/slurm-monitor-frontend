@@ -12,10 +12,6 @@ interface NodesCPUStatus {
   [nodename: string]: CPUStatus[]
 }
 
-interface NodesCPUStatusTimeseriesResponse extends Response {
-  cpu_memory_status: NodesCPUStatus;
-}
-
 export interface QueryParameters {
   nodename: string;
   start_time_in_s?: number;
@@ -52,19 +48,19 @@ const useCPUStatus = (
   refresh_interval_in_s: number = 60
 ) => {
   const { endpoint } = useMonitorEndpoint(
-        "/nodes/" + query_parameters.nodename + "/cpu_memory_status",
+        "/nodes/" + query_parameters.nodename + "/cpu/timeseries",
         buildParameters(query_parameters))
 
   const fetchStatus = async () => {
-    const { request } = endpoint.get<NodesCPUStatusTimeseriesResponse>();
+    const { request } = endpoint.get<NodesCPUStatus>();
 
     return request.then<NodesCPUStatus>(({ data }) => {
-      return data ? data.cpu_memory_status : ({} as NodesCPUStatus);
+      return data ? data : ({} as NodesCPUStatus);
     });
   };
 
   return useQuery<NodesCPUStatus, Error>({
-    queryKey: ["nodes", "cpu_memory_status", query_parameters],
+    queryKey: ["nodes", "cpu/timeseries", query_parameters],
     queryFn: fetchStatus,
     refetchInterval: refresh_interval_in_s * 1000, // refresh every minute
   });

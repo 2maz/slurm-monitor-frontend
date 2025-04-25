@@ -24,10 +24,6 @@ export interface GPUDataSeries {
   [node: string]: LocalGPUStatusDataSeries[]
 }
 
-interface GPUDataSeriesResponse extends Response {
-    gpu_status: GPUDataSeries
-}
-
 interface GPUStatusQueryParameters extends QueryParameters {
     logical_ids?: number[];
 }
@@ -35,7 +31,7 @@ const useGPUStatus = (
     query_parameters: GPUStatusQueryParameters,
     refresh_interval_in_s: number = 60
 ) => {
-  const query = "/nodes/"+ query_parameters.nodename + "/gpu_status"
+  const query = "/nodes/"+ query_parameters.nodename + "/gpu/timeseries"
   
   let parameters = buildParameters(query_parameters)
   if(query_parameters.logical_ids != undefined) {
@@ -45,16 +41,16 @@ const useGPUStatus = (
   const { endpoint } = useMonitorEndpoint(query, parameters);
 
   const fetchStatus = async () => {
-    const { request } = endpoint.get<GPUDataSeriesResponse>();
+    const { request } = endpoint.get<GPUDataSeries>();
 
     return request
       .then<GPUDataSeries>(({ data }) => {
-        return data ? data.gpu_status : {} as GPUDataSeries
+        return data ? data : {} as GPUDataSeries
       })
   };
 
   return useQuery<GPUDataSeries, Error>({
-    queryKey: ["gpu_status", query_parameters],
+    queryKey: ["nodes", "gpu/timeseries", query_parameters],
     queryFn: fetchStatus,
     refetchInterval: refresh_interval_in_s*1000, // refresh every minute
   });

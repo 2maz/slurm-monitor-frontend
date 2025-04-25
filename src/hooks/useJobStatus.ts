@@ -2,19 +2,15 @@ import { useQuery } from "@tanstack/react-query";
 import useMonitorEndpoint from "./useMonitorEndpoint";
 import Job from "../components/JobsView/Job";
 
-interface JobStatusResponse extends Response{
-  job_status: Job
-}
-  
 const useJobStatus = (job_id: number, refresh_interval_in_s: number = 60) => {
   const { endpoint } = useMonitorEndpoint("/job/" + job_id);
 
   const fetchStatus = async () => {
-    const { request } = endpoint.get<JobStatusResponse>();
+    const { request } = endpoint.get<Job>();
 
     return request
       .then(({ data }) => {
-        return data ? data.job_status : {} as Job;
+        return data ? data : {} as Job;
       })
   };
 
