@@ -40,10 +40,10 @@ const CPUJobStatusView = ({job_id, start_time_in_s, end_time_in_s, resolution_in
             <div key={index}>
               <h4>Node: {nodename}</h4>
               <div className="mx-5" key="{job_id}-accumulated" >
-                <LineChart width={300} height={250} data={node_data}>
-                  <Line yAxisId="1" type="monotone" dataKey="cpu_util" stroke="#8884d8"/>
-                  <Line yAxisId="1" type="monotone" dataKey="memory_util" stroke="#888400"/>
-                  <Line yAxisId="2" type="monotone" dataKey="pids" stroke="#008400"/>
+                <LineChart width={400} height={300} data={node_data}>
+                  <Line yAxisId="1" type="monotone" dataKey="cpu_util" name="CPU Utilization (%)" stroke="#8884d8"/>
+                  <Line yAxisId="1" type="monotone" dataKey="memory_util" name="Memory Utilization (%)" stroke="#888400"/>
+                  <Line yAxisId="2" type="monotone" dataKey="processes_avg" name="Average number of processes" stroke="#008400"/>
                   <CartesianGrid strokeDasharray="3 3"/>
                   <XAxis dataKey="time" tickFormatter={timestamp => DateTime.fromISO(timestamp as unknown as string, { zone: 'utc'}).toFormat("HH:mm")} />
                   <YAxis orientation="left" domain={[0, 100]} yAxisId="1"

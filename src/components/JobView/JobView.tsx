@@ -32,7 +32,7 @@ const JobView = ({ job_id, job_data, refresh_interval_in_s = 60 } : Props) => {
           </>
 
   let elements : JSX.Element[] = []
-  if(job_status.used_gpu_uuids || (job_status.sacct && job_status.sacct.AllocTRES.includes("gpu")))
+  if((job_status.used_gpu_uuids && job_status.used_gpu_uuids.length) || (job_status.sacct && job_status.sacct.AllocTRES.includes("gpu")))
   {
       elements = [...elements,
           <div key={"gpu-status"+job_id}>

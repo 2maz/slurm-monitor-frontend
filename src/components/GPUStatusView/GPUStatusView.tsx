@@ -51,10 +51,10 @@ const GPUStatusView = ({nodename, uuids, logical_ids, start_time_in_s, end_time_
             <div className="mx-5" key={nodename + 'gpu-' + local_index}>
               <h5 title={uuid}>{'gpu-' + local_index}</h5>
               <LineChart width={400} height={300} data={data}>
-                <Line yAxisId="1" type="monotone" dataKey="ce_util" stroke="#8884d8"/>
-                <Line yAxisId="1" type="monotone" dataKey="memory_util" stroke="#888400"/>
-                <Line yAxisId="2" type="monotone" dataKey="power" stroke="#ff8400"/>
-                <Line yAxisId="2" type="monotone" dataKey="temperature" stroke="#008400"/>
+                <Line yAxisId="1" type="monotone" dataKey="ce_util" name="Compute Utilization (%)" stroke="#8884d8"/>
+                <Line yAxisId="1" type="monotone" dataKey="memory_util" name="Memory Utilization (%)" stroke="#888400"/>
+                <Line yAxisId="2" type="monotone" dataKey="power" name="Power (W)" stroke="#ff8400"/>
+                <Line yAxisId="2" type="monotone" dataKey="temperature" name="Temperature  (°C)" stroke="#008400"/>
                 <CartesianGrid strokeDasharray="3 3"/>
                 <XAxis dataKey="time" tickFormatter={timestamp => DateTime.fromISO(timestamp as string, { zone: 'utc'}).toFormat("HH:mm")} />
                 <YAxis orientation="left" domain={[0,100]} yAxisId="1"

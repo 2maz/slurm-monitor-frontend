@@ -9,6 +9,7 @@ import {
 import { Backdrop, Box, Button, IconButton } from "@mui/material";
 import { usePartitionsStore } from "../../stores";
 import CloseIcon from '@mui/icons-material/Close';
+import { DateTime } from "luxon";
 
 interface Props {
   data: Partition[];
@@ -22,9 +23,15 @@ const ensure_value = (value: number | undefined) => {
   return 0
 }
 
-const delta_seconds_to_now = (timestamp: number | undefined) => {
+const delta_seconds_to_now = (timestamp: number | string | undefined) => {
   if(timestamp) {
-      const delta_seconds = (Date.now()/1000.0 - timestamp);
+      let epoch = 0
+      if(typeof timestamp == 'string') {
+        epoch = DateTime.fromISO(timestamp).toJSDate().getUTCSeconds()
+      } else {
+        epoch = timestamp
+      }
+      const delta_seconds = (Date.now()/1000.0 - epoch);
       return delta_seconds / 60
   }
   return 0
@@ -128,6 +135,9 @@ const PartitionsTable = ({ data, maxHeightInViewportPercent }: Props) => {
       {
         accessorKey: "pending_max_submit_time",
         accessorFn: (originalRow) => {
+          if(originalRow.jobs_pending?.length == 0) {
+            return 0
+          }
           return delta_seconds_to_now(originalRow.pending_max_submit_time) / 60 // in minutes
         },
         header: "Max wait in pending",
@@ -137,6 +147,9 @@ const PartitionsTable = ({ data, maxHeightInViewportPercent }: Props) => {
           min: 0,
           max: data.length == 0 ? 0 : Math.ceil(delta_seconds_to_now(data.reduce(
                 (prev, current) => {
+                  if(prev.jobs_pending?.length == 0) {
+                    return prev
+                  }
                   if(prev.pending_max_submit_time && current.pending_max_submit_time) {
                     return prev.pending_max_submit_time < current.pending_max_submit_time ? prev : current
                   } else if(prev.pending_max_submit_time) {
@@ -150,7 +163,7 @@ const PartitionsTable = ({ data, maxHeightInViewportPercent }: Props) => {
           size: 'small',
         },
         Cell: ({row}) => {
-          if(row.original.pending_max_submit_time) {
+          if(row.original.pending_max_submit_time && row.original.jobs_pending?.length != 0) {
               const delta_seconds = delta_seconds_to_now(row.original.pending_max_submit_time);
               return "" + Math.ceil(delta_seconds / 60) + " min"
           } else {
