@@ -36,8 +36,8 @@ const NodesView = ({maxHeightInViewportPercent, time} : Props) => {
       cores: value.cores_per_socket*value.sockets,
       architecture: value.architecture,
       gpu_count: value.cards ? value.cards.length : 0,
-      gpu_memory: value.cards?.[0].memory,
-      gpu_model: value.cards?.[0].model,
+      gpu_memory: value.cards?.[0]?.memory,
+      gpu_model: value.cards?.[0]?.model,
       id: value.node,
     }
   });
