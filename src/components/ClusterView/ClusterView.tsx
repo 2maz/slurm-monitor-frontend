@@ -27,22 +27,22 @@ const ClusterView = () => {
           <h2>GPU Status: {currentTime}</h2>
           <h3>Usage</h3>
           <p>
-            The following nodes statistics are updated every minute. If
+            The following nodes statistics are updated approximately every minute. If
             you cannot see data in the graph the nodes is likely down. In
             this case check the 'nodes' view.
           </p>
           <p>
             In order to identify the GPUs which your current job is using,
             you can double click on the job (in 'jobs' view). The
-            associated GPU charts will be displayed there. Alternatively,
-            you can identify the GPU logical ids from the gres_detail
-            property.
+            associated GPU charts will be displayed there.
+            If you hover of the GPU name it will show the uuid as tooltip.
+            Alternatively, you can identify the GPU uuid from the raw job details: 'used_gpu_uuids'.
           </p>
           <TimeWindowPicker
               startTime={startTime} setStartTime={setStartTime}
               endTime={endTime} setEndTime={setEndTime} />
 
-          {nodes_info && Object.entries(nodes_info).map(
+          {nodes_info && Object.entries(nodes_info).sort((a, b) => a[0].localeCompare(b[0])).map(
               ([nodename, config]) =>
                 config.cards && (
                   <>
