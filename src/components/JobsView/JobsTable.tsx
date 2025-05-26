@@ -87,20 +87,20 @@ const JobsTable = ({ data, sorting, maxHeightInViewportPercent, rowActions }: Pr
       },
      {
        accessorKey: "start_time",
-       accessorFn: (originalRow) => new Date(originalRow.start_time), // convert to date for sorting and filtering
+       accessorFn: (originalRow) => originalRow.start_time ? new Date(originalRow.start_time) : '', // convert to date for sorting and filtering
        header: "Start Time",
        filterVariant: "datetime-range",
        filterFn: "betweenInclusive",
        minSize: 50,
        grow: true,
-       Cell: ({ cell }) =>
+       Cell: ({ cell }) => cell.getValue() ?
         `${cell.getValue<Date>().toLocaleDateString()} ${cell
           .getValue<Date>()
-          .toLocaleTimeString()}`, // convert for display
+          .toLocaleTimeString()}` : '', // convert for display
      },
      {
        accessorKey: "submit_time",
-       accessorFn: (originalRow) => DateTime.fromISO(originalRow.start_time).toJSDate(),
+       accessorFn: (originalRow) => DateTime.fromISO(originalRow.submit_time).toJSDate(),
        header: "Submit Time",
        filterVariant: "datetime-range",
        minSize: 50,
@@ -112,15 +112,15 @@ const JobsTable = ({ data, sorting, maxHeightInViewportPercent, rowActions }: Pr
      },
      {
        accessorKey: "end_time",
-       accessorFn: (originalRow) => DateTime.fromISO(originalRow.start_time).toJSDate(),
+       accessorFn: (originalRow) => originalRow.end_time ? DateTime.fromISO(originalRow.end_time).toJSDate() : '',
        header: "End Time",
        filterVariant: "datetime-range",
        minSize: 50,
        grow: true,
-       Cell: ({ cell }) =>
+       Cell: ({ cell }) => cell.getValue() ?
         `${cell.getValue<Date>().toLocaleDateString()} ${cell
           .getValue<Date>()
-          .toLocaleTimeString()}`,
+          .toLocaleTimeString()}`: '',
      },
       //{
       //  accessorKey: "state_reason",
