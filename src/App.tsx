@@ -200,12 +200,12 @@ function App() {
               <SettingsView />
             </ErrorBoundary>
             }
-            {false && view && view == "query" &&
+            {view && view == "query" &&
               <ErrorBoundary fallbackRender={fallbackRender}>
                 <QueryView />
               </ErrorBoundary>
             }
-            { view && view == "inspect-completed-jobs" &&
+            {view && view == "inspect-completed-jobs" &&
               <ErrorBoundary fallbackRender={fallbackRender}>
                 <CompletedJobsView />
               </ErrorBoundary>
