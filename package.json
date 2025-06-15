@@ -21,7 +21,7 @@
     "@hookform/resolvers": "^5.0.1",
     "@mantine/core": "^7.17.4",
     "@mui/icons-material": "^7.1.0",
-    "@mui/lab": "^7.0.0-beta.10",
+    "@mui/lab": "^7.0.0-beta.13",
     "@mui/material": "^7.0.1",
     "@mui/x-data-grid": "^8.1.0",
     "@mui/x-date-pickers": "8.5",
