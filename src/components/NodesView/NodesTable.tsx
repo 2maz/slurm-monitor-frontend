@@ -139,7 +139,7 @@ const NodesTable = ({ data, maxHeightInViewportPercent }: Props) => {
       },
       {
         accessorKey: "gpu_memory",
-        accessorFn: (originalRow) => { return originalRow.gpu_memory ? originalRow.gpu_memory / 1024**3 : 0 },
+        accessorFn: (originalRow) => { return originalRow.gpu_memory ? Math.ceil(originalRow.gpu_memory / 1024) : 0 },
         header: "GPU Memory (MB)",
         filterVariant: 'range-slider',
         filterFn: 'betweenInclusive',
@@ -150,7 +150,7 @@ const NodesTable = ({ data, maxHeightInViewportPercent }: Props) => {
           size: 'small',
         },
         Cell: ({ row }) => {
-          return row.original.gpu_memory ? row.original.gpu_memory / 1024**2 : 0
+          return row.original.gpu_memory ? Math.ceil(row.original.gpu_memory / 1024) : 0
         }
       },
       {
