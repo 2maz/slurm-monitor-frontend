@@ -16,7 +16,7 @@ interface GPUStatus {
 
 interface LocalGPUStatusDataSeries {
   uuid: string
-  local_index?: number
+  index?: number
   data: GPUStatus[]
 }
 
