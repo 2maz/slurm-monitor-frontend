@@ -42,6 +42,10 @@ const NodesTable = ({ data, maxHeightInViewportPercent }: Props) => {
   const [startTime, setStartTime] = useState(DateTime.now().toSeconds() - 3600);
   const [endTime, setEndTime] = useState(DateTime.now().toSeconds());
 
+  if(!data || data.length == 0) {
+    return <>No data available</>;
+  }
+
   const columns = useMemo<MRT_ColumnDef<NodeInfo>[]>(
     () => [
       {
