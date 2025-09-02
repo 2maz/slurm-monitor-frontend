@@ -10,7 +10,7 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         package: ["slurm-monitor-frontend"]
-        node-version: [22]
+        node-version: [">=22.19"]
       fail-fast: false
     runs-on:  ${{ matrix.os }}
     steps:
