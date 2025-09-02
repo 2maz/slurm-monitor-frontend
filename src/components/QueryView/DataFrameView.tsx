@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
-import useDataFrameQuery from "../../hooks/useDataFrameQuery";
+import useDataFrameQuery, { Row } from "../../hooks/useDataFrameQuery";
 import { BarLoader } from "react-spinners";
 
 import { createListCollection, HStack } from "@chakra-ui/react";
-import { scaleSymlog } from 'd3-scale';
 
 import {
   SelectContent,
@@ -50,6 +49,8 @@ const DataFrameView = ({ query_name }: Props) => {
   if (error) return "Failed to load data";
 
   if (!data) return "Data is not available";
+
+  console.log(data)
 
   const availableColumns: { label: string; value: string }[] = [];
   Object.keys(data[0]).map((item) =>
@@ -187,7 +188,8 @@ const DataFrameView = ({ query_name }: Props) => {
       console.log("Column: ", yColumn, " does not exist")
       return;
     }
-    const sortedData = data.sort((a, b) => {
+
+    const sortedData = data.toSorted((a: Row, b: Row) => {
       if (typeof a[xColumn] === "number" && typeof b[xColumn] === "number") {
         return a[xColumn] - b[xColumn];
       }
@@ -214,7 +216,7 @@ const DataFrameView = ({ query_name }: Props) => {
               />
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis 
-                  scale={xScale === "log" ? scaleSymlog : xScale}
+                  scale={xScale}
                   type={typeof data[0][xColumn] === "number" ? "number" : "category"}
                   label={{
                     value: xColumn,
@@ -224,7 +226,7 @@ const DataFrameView = ({ query_name }: Props) => {
                   dataKey={xColumn}
               />
               <YAxis 
-                scale={yScale === "log" ? scaleSymlog : yScale}
+                scale={yScale}
                 type="number"
                 label={{
                   value: yColumn,

@@ -13,11 +13,11 @@ import useMonitorEndpoint from "./useMonitorEndpoint";
 //    avg_tasks: number;
 //}
 
-interface Row {
+export interface Row {
     [column_name: string]: number | string
 }
 
-interface DataFrame extends Array<Row> {}
+export type DataFrame = Array<Row>
 
 interface DataFrameResponse extends DataFrame, Response {
 }
@@ -29,7 +29,7 @@ const useDataFrameQuery = (query_name: string) => {
     const { request } = endpoint_nodes.get<DataFrameResponse>();
 
     return request
-      .then<DataFrame>(({ data }) => {
+      .then(({ data }) => {
         return data ? data : [] as DataFrame;
       })
   };
