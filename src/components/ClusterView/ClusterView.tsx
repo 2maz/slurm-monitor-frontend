@@ -4,6 +4,8 @@ import GPUStatusView from "../GPUStatusView";
 import TimeWindowPicker from "../TimeWindowPicker";
 import { DateTime } from "luxon";
 import { useState } from "react";
+import { createListCollection, SelectContent, SelectItem, SelectRoot, SelectTrigger, SelectValueText } from "@chakra-ui/react";
+import { Tooltip } from "../ui/tooltip";
 
 const ClusterView = () => {
   const appState = useAppState();
@@ -13,17 +15,43 @@ const ClusterView = () => {
 
   const currentTime = new Date().toString();
 
+  const availableClusters: { label: string; value: string }[] = [];
+  Object.entries(appState.backendSpecs).map(([key, { cluster_id }]) => availableClusters.push({ label: cluster_id, value: key }))
+  const collection = createListCollection({ items: availableClusters })
+
+  console.log(collection)
 
   return (
     <div>
         <h1>Cluster</h1>
-        <h3>Current cluster: {appState.currentBackendSpec().cluster_id}</h3>
-        <h3>Known clusters:</h3>
-        <ul>
-        {Object.entries(appState.backendSpecs).map(([key, { url, cluster_id }]) => <li key={key}>{cluster_id}: {url}</li> )}
-        </ul>
+        <div className="mx-3 my-5">
+              <h3>Selected cluster: {appState.currentBackendSpec().cluster_id}</h3>
+              <SelectRoot
+                collection={collection}
+                size="sm"
+                width="320px"
+                onValueChange={(event) => {
+                  console.log(event.value);
+                  appState.selectBackend(event.value[0]);
+                  console.log(appState.currentBackendSpec().cluster_id)
+                }}
+              >
 
-        <>
+                <Tooltip content="Select the cluster to the connect to" />
+                <SelectTrigger>
+                  <SelectValueText placeholder="Select cluster" />
+                </SelectTrigger>
+                <SelectContent>
+                  {collection.items.map((query) => (
+                    <SelectItem item={query} key={query.value}>
+                      {query.value}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </SelectRoot>
+        </div>
+
+        <div className="mx-3">
           <h2>GPU Status: {currentTime}</h2>
           <h3>Usage</h3>
           <p>
@@ -55,7 +83,7 @@ const ClusterView = () => {
                   </>
                 )
             )}
-        </>
+        </div>
     </div>
   )
 }

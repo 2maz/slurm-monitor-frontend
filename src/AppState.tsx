@@ -40,14 +40,14 @@ const useAppState = create<AppState>()(
       mlflowUrls: [],
       updateMlflowUrls: (newUrls: string[]) => set({mlflowUrls: newUrls}),
 
-      backendSpecs: { 'ex3': { url: DEFAULT_BACKEND_URL, cluster_id: 'ex3'}},
+      backendSpecs: { 'ex3.simula.no': { url: DEFAULT_BACKEND_URL, cluster_id: 'ex3.simula.no'}},
       addBackendSpec: (id: string, spec: BackendSpec) => set((store) => ({backendSpecs: {...store.backendSpecs, [id]: spec}})),
       removeBackendSpec: (id: string) => set((store) => {
         const {[id]: _ , ...newBackendSpecs} = store.backendSpecs;
         return {backendSpecs: newBackendSpecs}
       }),
 
-      currentBackend: 'ex3',
+      currentBackend: 'ex3.simula.no',
       currentBackendSpec: () => get().backendSpecs[get().currentBackend],
       selectBackend: (id: string) => set({ currentBackend: id }),
 
