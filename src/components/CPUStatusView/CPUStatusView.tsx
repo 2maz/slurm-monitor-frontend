@@ -44,8 +44,8 @@ const CPUStatusView = ({nodename, start_time_in_s, end_time_in_s, resolution_in_
             <h4>Node: {nodename}</h4>
             <div className="mx-5" key={nodename + "-accumulated"} >
               <LineChart width={300} height={250} data={nodes[node]}>
-                <Line yAxisId="1" type="monotone" dataKey="cpu_util" stroke="#8884d8"/>
-                <Line yAxisId="1" type="monotone" dataKey="cpu_avg" stroke="#008400"/>
+                <Line yAxisId="1" type="monotone" dataKey="cpu_util" name="cpu util (%)" stroke="#8884d8"/>
+                <Line yAxisId="1" type="monotone" dataKey="cpu_avg" name="cpu avg (%)" stroke="#008400"/>
                 <CartesianGrid strokeDasharray="3 3"/>
                 <XAxis dataKey="time" tickFormatter={timestamp => DateTime.fromISO(timestamp as string, { zone: 'utc'}).toFormat("HH:mm")} />
                 <YAxis orientation="left"

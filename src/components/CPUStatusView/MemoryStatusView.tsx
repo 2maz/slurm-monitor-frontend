@@ -35,9 +35,9 @@ const MemoryStatusView = ({nodename, start_time_in_s, end_time_in_s, resolution_
             <div key={"memory-"+node}><h4>Node: {node}</h4>
             <div className="mx-5" key="{process_id}-accumulated" >
               <LineChart width={300} height={250} data={filtered_data}>
-                <Line yAxisId="1" type="monotone" dataKey="memory_util" stroke="#8884d8"/>
-                <Line yAxisId="2" type="monotone" dataKey="memory_resident" stroke="#008400"/>
-                <Line yAxisId="2" type="monotone" dataKey="memory_virtual" stroke="#880000"/>
+                <Line yAxisId="1" type="monotone" dataKey="memory_util" name="memory util (%)" stroke="#8884d8"/>
+                <Line yAxisId="2" type="monotone" dataKey="memory_resident" name="memory resident (GB)" stroke="#008400"/>
+                <Line yAxisId="2" type="monotone" dataKey="memory_virtual" name="memory virtual (GB)" stroke="#880000"/>
                 <CartesianGrid strokeDasharray="3 3"/>
                 # timeformat here: 2025-03-18T08:00:00.123456
                 <XAxis dataKey="time" tickFormatter={timestamp => DateTime.fromISO(timestamp as string, { zone: 'utc'}).toFormat("HH:mm")} />
