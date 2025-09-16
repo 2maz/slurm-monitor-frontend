@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import useMonitorEndpoint from "./useMonitorEndpoint";
+import { AxiosError } from "axios";
 
 export interface CPUStatus {
   cpu_avg: number;
@@ -59,7 +60,7 @@ const useCPUStatus = (
     });
   };
 
-  return useQuery<NodesCPUStatus, Error>({
+  return useQuery<NodesCPUStatus, AxiosError>({
     queryKey: ["nodes", "cpu/timeseries", query_parameters],
     queryFn: fetchStatus,
     refetchInterval: refresh_interval_in_s * 1000, // refresh every minute
