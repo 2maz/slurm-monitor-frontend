@@ -19,8 +19,6 @@ const ClusterView = () => {
   Object.entries(appState.backendSpecs).map(([key, { cluster_id }]) => availableClusters.push({ label: cluster_id, value: key }))
   const collection = createListCollection({ items: availableClusters })
 
-  console.log(collection)
-
   return (
     <div>
         <h1>Cluster</h1>
@@ -31,9 +29,7 @@ const ClusterView = () => {
                 size="sm"
                 width="320px"
                 onValueChange={(event) => {
-                  console.log(event.value);
                   appState.selectBackend(event.value[0]);
-                  console.log(appState.currentBackendSpec().cluster_id)
                 }}
               >
 
