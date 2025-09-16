@@ -29,8 +29,10 @@ const CPUStatusView = ({nodename, start_time_in_s, end_time_in_s, resolution_in_
   if(nodes_info_error)
     return "Failed loading processes data for " + nodename
 
-  if(error)
-    return "Failed loading processes data for " + nodename
+  if(error) {
+    const error_info = error?.response?.data as { detail: string }
+    return "Failed loading processes data for " + nodename + " -- " + error_info.detail
+  }
 
   const cpuCount = nodes_info && nodes_info[nodename] ? nodes_info[nodename].cores_per_socket*nodes_info[nodename].sockets*nodes_info[nodename].threads_per_core : 1
 
