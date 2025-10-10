@@ -3,7 +3,7 @@ import { BarLoader } from 'react-spinners';
 import useGPUStatus from "../../hooks/useGPUStatus";
 import { DateTime } from 'luxon';
 import { JSX } from 'react';
-//https://srl-login3.ex3.simula.no:12001/api/v1/monitor/gpustatus?node=g001
+
 interface Props {
   nodename: string;
   uuids?: string[],
@@ -13,6 +13,7 @@ interface Props {
   resolution_in_s?: number,
   refresh_interval_in_s?: number;
 }
+
 const GPUStatusView = ({nodename, uuids, logical_ids, start_time_in_s, end_time_in_s, resolution_in_s, refresh_interval_in_s = 60} : Props) => {
   const { data : gpu_data_series, error, isLoading, isSuccess } = useGPUStatus({
     nodename: nodename,
