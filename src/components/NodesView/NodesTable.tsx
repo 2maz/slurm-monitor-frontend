@@ -18,10 +18,10 @@ import TimeWindowPicker from "../TimeWindowPicker";
 interface NodeInfo extends NodeDataInfo {
   partitions: string[];
   cores: number;
+  idle_cores: number;
   gpu_count: number;
   gpu_model?: string;
   gpu_memory?: number;
-  alloc_tres?: { cpu: number, gpu: number, memory: number };
   id: string;
 }
 interface Props {
@@ -276,29 +276,24 @@ const NodesTable = ({ data, maxHeightInViewportPercent }: Props) => {
       //  },
       //},
       {
-        accessorKey: "idle_cpus",
-        // for sorting and filtering
-        accessorFn: (row) => {
-          return row.alloc_tres ? Number(row.cores - row.alloc_tres?.cpu): row.cores
-        },
-        header: "Idle CPUs",
+        accessorKey: "idle_cores",
+        header: "Idle Cores",
         filterVariant: 'range-slider',
         filterFn: 'betweenInclusive',
         muiFilterSliderProps: {
           min: 0,
-          max: data.reduce((prev, current) => { return prev.idle_cpus > current.idle_cpus ? prev : current}).idle_cpus,
+          max: data.reduce((prev, current) => { return prev.idle_cores > current.idle_cores ? prev : current}).idle_cores,
           size: 'small'
         },
-      },
-      //  // for display
-      //  Cell: ({ row }) => {
-      //    const textColor = 0 == row.original.idle_cpus ? "text-danger" : "text-normal"
-      //    const titleText = 0 == row.original.idle_cpus ? "Currently no remaining cpus" : row.original.idle_cpus + " available CPUs"
-      //    return <div className={textColor} title={titleText}>
-      //        {row.original.idle_cpus}
-      //      </div>
-      //  },
-      // },
+      // for display
+        Cell: ({ row }) => {
+          const textColor = 0 == row.original.idle_cores ? "text-danger" : "text-normal"
+          const titleText = 0 == row.original.idle_cores ? "Currently no remaining cores" : row.original.idle_cores + " available Cores"
+          return <div className={textColor} title={titleText}>
+              {row.original.idle_cores}
+            </div>
+        },
+      }
     ],
     [data]
   );
@@ -340,7 +335,7 @@ const NodesTable = ({ data, maxHeightInViewportPercent }: Props) => {
         "cores",
         "cpu_model",
         "memory",
-        "idle_cpus",
+        "idle_cores",
         //"gres",
         "gpu_count",
         "gpu_reserved",

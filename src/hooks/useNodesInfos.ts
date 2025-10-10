@@ -16,6 +16,7 @@ interface GPUInfo {
   model: string,
   architecture: string;
   memory: number;
+  last_active: string;
 }
 
 export interface NodeDataInfo extends CPUInfo{
@@ -26,6 +27,7 @@ export interface NodeDataInfo extends CPUInfo{
   os_release: string;
   memory: number;
   topo_svg?: string | undefined;
+  alloc_tres: { cpu: number, memory: number, billing: number, gpu: number};
 
   cards: GPUInfo[];
 
