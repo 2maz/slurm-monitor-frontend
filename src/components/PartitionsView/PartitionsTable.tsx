@@ -239,6 +239,12 @@ const PartitionsTable = ({ data, maxHeightInViewportPercent }: Props) => {
     initialState: {
       density: "compact",
       showColumnFilters: hasEnabledFilters(),
+      sorting: [
+        {
+          id: 'name',
+          desc: false
+        }
+      ],
     },
     // disable when memo feature is used
     enableDensityToggle: true,
