@@ -33,7 +33,7 @@ const NodesView = ({maxHeightInViewportPercent, time} : Props) => {
   const prepared_data = Object.keys(nodes_info).map((key) => {
     const value = nodes_info[key];
     return { ...value,
-      cores: value.cores_per_socket*value.sockets,
+      cores: value.cores_per_socket*value.sockets*value.threads_per_core,
       architecture: value.architecture,
       gpu_count: value.cards ? value.cards.length : 0,
       gpu_memory: value.cards?.[0]?.memory,

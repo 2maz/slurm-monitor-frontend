@@ -21,6 +21,7 @@ interface NodeInfo extends NodeDataInfo {
   gpu_count: number;
   gpu_model?: string;
   gpu_memory?: number;
+  alloc_tres?: { cpu: number, gpu: number, memory: number };
   id: string;
 }
 interface Props {
@@ -168,24 +169,27 @@ const NodesTable = ({ data, maxHeightInViewportPercent }: Props) => {
         },
         header: "GPU Count",
       },
-      //{
-      //  accessorKey: "gres_used",
-      //  header: "Resources (Status)",
-      //  Cell: ({ row, cell }) => {
-      //    const free = freeResources(row.original);
-      //    if (!row.original.gres) return "";
-      //    const textColor = free > 0 ? "text-success" : "text-danger";
-      //    const titleText = free > 0 ? free + " GPUs are available" : "No GPU available";
-      //    return availableGPUs(row.original) <= 0 ? (
-      //      ""
-      //    ) : (
-      //      <div className={textColor} title={titleText}>
-      //        {cell.getValue<string>()} (unused: {free})
-      //      </div>
-      //    );
-      //  },
-      //  grow: 1
-      //},
+      {
+        accessorKey: "gpu_reserved",
+        header: "GPU Count (available / reserved)",
+        Cell: ({ row, cell }) => {
+          const total = row.original.gpu_count
+          const reserved = row.original.alloc_tres?.gpu
+          let free = total
+          if (reserved){
+            free = total - reserved
+          }
+          const textColor = free > 0 ? "text-success" : "text-danger";
+          const titleText = free > 0 ? free + " GPUs are available" : "No GPU available";
+
+          return  total == 0 ? '' : <div title={titleText}>
+              <text className={textColor} >
+                {cell.getValue<string>()} {free}
+              </text> / {reserved}
+            </div>
+
+        }
+      },
       {
         accessorKey: "partitions",
         header: "Partitions",
@@ -271,18 +275,21 @@ const NodesTable = ({ data, maxHeightInViewportPercent }: Props) => {
       //      </div>
       //  },
       //},
-      //{
-      //  accessorKey: "idle_cpus",
-      //  // for sorting and filtering
-      //  accessorFn: (originalRow) => { return Number(originalRow.idle_cpus) },
-      //  header: "Idle CPUs",
-      //  filterVariant: 'range-slider',
-      //  filterFn: 'betweenInclusive',
-      //  muiFilterSliderProps: {
-      //    min: 0,
-      //    max: data.reduce((prev, current) => { return prev.idle_cpus > current.idle_cpus ? prev : current}).idle_cpus,
-      //    size: 'small'
-      //  },
+      {
+        accessorKey: "idle_cpus",
+        // for sorting and filtering
+        accessorFn: (row) => {
+          return row.alloc_tres ? Number(row.cores - row.alloc_tres?.cpu): row.cores
+        },
+        header: "Idle CPUs",
+        filterVariant: 'range-slider',
+        filterFn: 'betweenInclusive',
+        muiFilterSliderProps: {
+          min: 0,
+          max: data.reduce((prev, current) => { return prev.idle_cpus > current.idle_cpus ? prev : current}).idle_cpus,
+          size: 'small'
+        },
+      },
       //  // for display
       //  Cell: ({ row }) => {
       //    const textColor = 0 == row.original.idle_cpus ? "text-danger" : "text-normal"
@@ -320,6 +327,12 @@ const NodesTable = ({ data, maxHeightInViewportPercent }: Props) => {
     initialState: {
       density: "compact",
       showColumnFilters: hasEnabledFilters(),
+      sorting: [
+        {
+          id: 'node',
+          desc: false
+        }
+      ],
       columnOrder: [
         "node",
         "architecture",
@@ -327,12 +340,12 @@ const NodesTable = ({ data, maxHeightInViewportPercent }: Props) => {
         "cores",
         "cpu_model",
         "memory",
-        //"idle_cpus",
+        "idle_cpus",
         //"gres",
         "gpu_count",
+        "gpu_reserved",
         "gpu_model",
         "gpu_memory",
-        //"gres_used",
         //"free_memory",
         "partitions",
         //"state",
