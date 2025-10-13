@@ -3,7 +3,7 @@ import useMonitorEndpoint from "./useMonitorEndpoint";
 import Job from "../components/JobsView/Job";
 
 const useJobStatus = (job_id: number, refresh_interval_in_s: number = 60) => {
-  const { endpoint } = useMonitorEndpoint("/job/" + job_id);
+  const { endpoint } = useMonitorEndpoint("/jobs/" + job_id);
 
   const fetchStatus = async () => {
     const { request } = endpoint.get<Job>();
