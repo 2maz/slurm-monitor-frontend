@@ -58,7 +58,7 @@ const useNodesInfo = (time?: Date) => {
   return useQuery<NodeInfos | undefined, Error>({
     queryKey: ["cluster", "nodes", "info"],
     queryFn: fetchNodeInfos,
-    refetchInterval: 1000*3600*24, // refresh daily
+    refetchInterval: 1000*24, // refresh daily
     retry: 3,
     retryDelay: 1000*3,
   });
