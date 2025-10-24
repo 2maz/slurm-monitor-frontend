@@ -61,7 +61,13 @@ const NodesTable = ({ data, maxHeightInViewportPercent }: Props) => {
         Cell: ({ row }) => {
           const elapsed_minutes = Math.floor((DateTime.now().toSeconds() - DateTime.fromISO(row.original.time).toSeconds()) / 60.0)
           const elapsed_hours = elapsed_minutes / 60
-          return elapsed_hours > 1 ? <Tooltip title={"No data received since " + Math.floor(elapsed_hours) + " hours"}><SensorsOffIcon color='warning' /></Tooltip> : <Tooltip title={"Probe active"}><SensorsIcon color='success' /></Tooltip>
+          if (elapsed_minutes < 5) {
+              return <Tooltip title={"Last seen " + elapsed_minutes + " min ago"}><SensorsIcon color='success' /></Tooltip>
+          } else if(elapsed_minutes < 60) {
+            return <Tooltip title={"No data received since " + Math.floor(elapsed_minutes) + " min"}><SensorsOffIcon color='warning' /></Tooltip>
+          } else if (elapsed_minutes > 60) {
+            return <Tooltip title={"No data received since " + Math.floor(elapsed_hours) + " h"}><SensorsOffIcon color='warning' /></Tooltip>
+          }
         },
         maxSize: 50,
         grow: false
