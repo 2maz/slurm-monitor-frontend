@@ -4,7 +4,7 @@ import {
   useMaterialReactTable,
 } from "material-react-table";
 import Button from "@mui/material/Button";
-import { Backdrop, Box, IconButton } from "@mui/material";
+import { Backdrop, Box, IconButton, Tooltip } from "@mui/material";
 import { useMemo, useState } from "react";
 import GPUStatusView from "../GPUStatusView";
 import CPUStatusView from "../CPUStatusView/CPUStatusView";
@@ -15,6 +15,10 @@ import { NodeDataInfo } from "../../hooks/useNodesInfos";
 import CloseIcon from '@mui/icons-material/Close';
 import { DateTime } from "luxon";
 import TimeWindowPicker from "../TimeWindowPicker";
+import SensorsIcon from '@mui/icons-material/Sensors';
+import SensorsOffIcon from '@mui/icons-material/SensorsOff';
+
+
 interface NodeInfo extends NodeDataInfo {
   partitions: string[];
   cores: number;
@@ -49,6 +53,19 @@ const NodesTable = ({ data, maxHeightInViewportPercent }: Props) => {
 
   const columns = useMemo<MRT_ColumnDef<NodeInfo>[]>(
     () => [
+      {
+        accessorKey: "time",
+        header: "",
+        enableResizing: false,
+        enableGrouping: false,
+        Cell: ({ row }) => {
+          const elapsed_minutes = Math.floor((DateTime.now().toSeconds() - DateTime.fromISO(row.original.time).toSeconds()) / 60.0)
+          const elapsed_hours = elapsed_minutes / 60
+          return elapsed_hours > 1 ? <Tooltip title={"No data received since " + Math.floor(elapsed_hours) + " hours"}><SensorsOffIcon color='warning' /></Tooltip> : <Tooltip title={"Probe active"}><SensorsIcon color='success' /></Tooltip>
+        },
+        maxSize: 50,
+        grow: false
+      },
       {
         accessorKey: "node",
         header: "Node Name",
@@ -329,6 +346,7 @@ const NodesTable = ({ data, maxHeightInViewportPercent }: Props) => {
         }
       ],
       columnOrder: [
+        "time",
         "node",
         "architecture",
         "cpus",

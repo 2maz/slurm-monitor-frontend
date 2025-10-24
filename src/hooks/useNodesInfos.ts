@@ -33,6 +33,7 @@ export interface NodeDataInfo extends CPUInfo{
 
   errors: string[];
   meta: MetaData;
+  time: string;
 }
 
 interface NodeInfos {
