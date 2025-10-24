@@ -210,7 +210,7 @@ function App() {
                 <CompletedJobsView />
               </ErrorBoundary>
             }
-            {false && view && view == "benchmarks" &&
+            {view && view == "benchmarks" &&
               <ErrorBoundary fallbackRender={fallbackRender}>
                 <BenchmarksView />
               </ErrorBoundary>
