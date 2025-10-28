@@ -80,7 +80,7 @@
     "simple-zustand-devtools": "^1.1.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.0",
-    "vite": "^6.3.5",
+    "vite": "^7.1.12",
     "vitest": "^3.0.9"
   }
 }
