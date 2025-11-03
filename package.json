@@ -54,7 +54,7 @@
     "recharts": "^3.3.0",
     "sass": "^1.93.2",
     "snippet": "^0.1.0",
-    "zod": "^3.25.56",
+    "zod": "^4.1.12",
     "zustand": "^5.0.7"
   },
   "devDependencies": {
