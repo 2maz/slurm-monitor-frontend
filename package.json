@@ -75,7 +75,7 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.23",
     "faker": "^6.6.6",
-    "jsdom": "^26.1.0",
+    "jsdom": "^27.1.0",
     "msw": "^2.11.6",
     "simple-zustand-devtools": "^1.1.0",
     "typescript": "^5.9.3",
