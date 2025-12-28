@@ -2,6 +2,8 @@ import axios, { AxiosInstance } from "axios";
 import Response from "../services/slurm-monitor/response";
 import useAppState from "../AppState";
 
+import keycloak, { auth_required } from "../auth";
+
 import { MONITOR_API_PREFIX } from "../services/slurm-monitor/backend.config";
 
 interface Params {
@@ -19,12 +21,29 @@ class SlurmMonitorEndpoint {
     this.params = params;
   }
 
-  get<T = Response>() {
+  async get<T = Response>() {
+    try {
+      if(auth_required()) {
+        await keycloak.updateToken(30);
+      }
+    } catch(error)
+    {
+      console.error('Failed to refresh token:', error)
+    }
+
     const controller = new AbortController();
     let args =  {}
 
     args = { ...args, "signal": controller.signal };
-    args = { ...args, "params": this.params }
+    args = { ...args, "params": this.params };
+
+    if(auth_required()) {
+      args = { ...args, "headers": {
+        accept: 'application/json',
+        authorization: `Bearer: ${keycloak.token}`
+        }
+      }
+    }
 
     const request = this.client.get<T>(this.endpoint, args);
     return { request, cancel: () => controller.abort() };

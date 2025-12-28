@@ -15,7 +15,7 @@ const useNodesLastSeen = (time?: Date) => {
   const { endpoint: endpoint_nodes } = useMonitorEndpoint("/nodes/last_probe_timestamp", params);
 
   const fetchNodesLastSeen = async () => {
-    const { request } = endpoint_nodes.get<NodesLastSeenResponse>();
+    const { request } = await endpoint_nodes.get<NodesLastSeenResponse>();
 
     return request
       .then(({ data }) => {

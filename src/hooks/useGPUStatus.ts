@@ -41,7 +41,7 @@ const useGPUStatus = (
   const { endpoint } = useMonitorEndpoint(query, parameters);
 
   const fetchStatus = async () => {
-    const { request } = endpoint.get<GPUDataSeries>();
+    const { request } = await endpoint.get<GPUDataSeries>();
 
     return request
       .then<GPUDataSeries>(({ data }) => {

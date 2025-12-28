@@ -6,7 +6,7 @@ const useNodesTopology = (node: string, output_format: string) => {
   const { endpoint } = useMonitorEndpoint("/nodes/" + node + "/topology?output_format="+output_format);
 
   const fetchNodesTopology = async () => {
-    const { request } = endpoint.get<string>();
+    const { request } = await endpoint.get<string>();
 
     return request
       .then((response) => {

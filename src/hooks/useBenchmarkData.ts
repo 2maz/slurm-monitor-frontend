@@ -19,7 +19,7 @@ const useBenchmarkData = (name: string = "lambdal", refresh_interval_in_s: numbe
   const { endpoint } = useMonitorEndpoint("/benchmarks/" + name )
 
   const fetchBenchmarkData = async () => {
-    const { request } = endpoint.get<BenchmarkData[]>();
+    const { request } = await endpoint.get<BenchmarkData[]>();
 
     return request
       .then(({data}) => {

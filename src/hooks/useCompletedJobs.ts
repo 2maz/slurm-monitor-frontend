@@ -28,7 +28,7 @@ const useCompletedJobs = (constraints: Constraints,
   const { endpoint } = useMonitorEndpoint("/jobs/query", {...constraints, limit: limit, states: 'COMPLETED' })
 
   const fetchJobs = async () => {
-    const { request } = endpoint.get<JobsResponse>();
+    const { request } = await endpoint.get<JobsResponse>();
 
     return request
       .then(({data}) => {

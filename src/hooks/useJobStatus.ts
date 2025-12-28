@@ -7,7 +7,7 @@ const useJobStatus = (job_id: number, refresh_interval_in_s: number = 60) => {
   const { endpoint } = useMonitorEndpoint("/jobs/" + job_id);
 
   const fetchStatus = async () => {
-    const { request } = endpoint.get<Job>();
+    const { request } = await endpoint.get<Job>();
 
     return request
       .then(({ data }) => {

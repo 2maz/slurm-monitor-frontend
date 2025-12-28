@@ -6,7 +6,7 @@ const usePartitions = () => {
   const { endpoint } = useMonitorEndpoint("/partitions");
 
   const fetchPartitions = async () => {
-    const { request } = endpoint.get<Partition[]>();
+    const { request } = await endpoint.get<Partition[]>();
 
     return request
       .then(({ data }) => {

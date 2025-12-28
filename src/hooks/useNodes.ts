@@ -10,7 +10,7 @@ const useNodes = () => {
   const { endpoint: endpoint_nodes } = useMonitorEndpoint("/nodes");
 
   const fetchNodes = async () => {
-    const { request } = endpoint_nodes.get<NodesResponse>();
+    const { request } = await endpoint_nodes.get<NodesResponse>();
 
     return request
       .then(({ data }) => {

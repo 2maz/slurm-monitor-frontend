@@ -9,7 +9,7 @@ const useAvailableQueries = () => {
   const { endpoint: endpoint_nodes } = useMonitorEndpoint("/queries")
 
   const fetchQueries = async () => {
-    const { request } = endpoint_nodes.get<QueriesResponse>();
+    const { request } = await endpoint_nodes.get<QueriesResponse>();
 
     return request
       .then<string[]>(({ data }) => {

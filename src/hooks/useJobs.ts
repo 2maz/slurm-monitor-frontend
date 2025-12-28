@@ -12,7 +12,7 @@ const useJobs = (refresh_interval_in_s: number) => {
 
 
   const fetchJobs = async () => {
-    const { request } = endpoint.get<JobsResponse>();
+    const { request } = await endpoint.get<JobsResponse>();
 
     return request
       .then(({data}) => {

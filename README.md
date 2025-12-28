@@ -29,10 +29,23 @@ Try to run the ui in development mode:
 ![nodes](./docs/images/view-nodes.png "Nodes View")
 
 
+## Setup
+
+Configure the RESTAPI endpoint and enable authentication
+```
+SLURM_MONITOR_RESTAPI_PORT=12000
+SLURM_MONITOR_RESTAPI_HOST=https://slurm-monitor.yourdomain.org
+
+SLURM_MONITOR_AUTH_REQUIRED=true
+SLURM_MONITOR_AUTH_URL=http://your-identity-provider.yourdomain.org
+SLURM_MONITOR_AUTH_REALM=slurm-monitor
+SLURM_MONITOR_AUTH_CLIENT_ID=slurm-monitor-client
+```
+
 
 # License
 
-Copyright (c) 2024-2025 Thomas Roehr, Simula Research Laboratory
+Copyright (c) 2024-2026 Thomas Roehr, Simula Research Laboratory
 
 This project is licensed under the terms of the [New BSD License](https://opensource.org/license/BSD-3-clause).
 You are free to use, modify, and distribute this work, subject to the

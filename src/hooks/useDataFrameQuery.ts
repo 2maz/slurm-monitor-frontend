@@ -26,7 +26,7 @@ const useDataFrameQuery = (query_name: string) => {
   const { endpoint : endpoint_nodes } = useMonitorEndpoint("/queries/" + query_name);
 
   const fetchDataFrame = async () => {
-    const { request } = endpoint_nodes.get<DataFrameResponse>();
+    const { request } = await endpoint_nodes.get<DataFrameResponse>();
 
     return request
       .then(({ data }) => {

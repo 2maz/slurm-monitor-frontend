@@ -57,7 +57,7 @@ const useJobProcessesStatus = (query_parameters: QueryParameters, refresh_interv
     const { endpoint } = useMonitorEndpoint(query, parameters);
 
     const fetchStatus = async () => {
-        const { request } = endpoint.get<JobProcessStatus[]>();
+        const { request } = await endpoint.get<JobProcessStatus[]>();
 
         return request
             .then<JobProcessStatus[]>(({ data }) => {

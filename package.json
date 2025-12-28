@@ -39,6 +39,7 @@
     "d3": "^7.9.0",
     "d3-array": "^3.2.4",
     "dayjs": "^1.11.11",
+    "keycloak-js": "^26.2.2",
     "luxon": "^3.7.2",
     "material-react-table": "^3.2.1",
     "next-themes": "^0.4.6",

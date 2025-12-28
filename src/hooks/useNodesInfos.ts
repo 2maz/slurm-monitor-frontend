@@ -48,7 +48,7 @@ const useNodesInfo = (time?: Date) => {
   const { endpoint : endpoint_nodes_info } = useMonitorEndpoint("/nodes/info", params);
 
   const fetchNodeInfos = async () => {
-    const { request } = endpoint_nodes_info.get<Record<string, NodeDataInfo>>();
+    const { request } = await endpoint_nodes_info.get<Record<string, NodeDataInfo>>();
 
     return request
       .then(({ data }) => {

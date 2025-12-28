@@ -53,7 +53,7 @@ const useCPUStatus = (
         buildParameters(query_parameters))
 
   const fetchStatus = async () => {
-    const { request } = endpoint.get<NodesCPUStatus>();
+    const { request } = await endpoint.get<NodesCPUStatus>();
 
     return request.then<NodesCPUStatus>(({ data }) => {
       return data ? data : ({} as NodesCPUStatus);

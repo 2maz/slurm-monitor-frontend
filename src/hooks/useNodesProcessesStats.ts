@@ -54,7 +54,7 @@ const useNodesProcessesStats = (query_parameters: QueryParameters, refresh_inter
     const { endpoint } = useMonitorEndpoint(query, parameters);
 
     const fetchStatus = async () => {
-        const { request } = endpoint.get<ProcessTimeseriesResponse>();
+        const { request } = await endpoint.get<ProcessTimeseriesResponse>();
 
         return request
             .then<NodesProcessesStats>(({ data }) => {

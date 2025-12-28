@@ -22,7 +22,7 @@ const useNodesMemoryStatus = (
   const { endpoint } = useMonitorEndpoint(query, buildParameters(query_parameters));
 
   const fetchStatus = async () => {
-    const { request } = endpoint.get<NodesMemoryStatus>();
+    const { request } = await endpoint.get<NodesMemoryStatus>();
 
     return request
       .then<NodesMemoryStatus>(({ data }) => {
