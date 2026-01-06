@@ -25,7 +25,7 @@ export interface Constraints {
 const useCompletedJobs = (constraints: Constraints,
    limit: number = 1000,
    refresh_interval_in_s: number = 5*60) => {
-  const { endpoint } = useMonitorEndpoint("/jobs/query", {...constraints, limit: limit, states: 'COMPLETED' })
+  const { endpoint } = useMonitorEndpoint("/query/jobs", {...constraints, limit: limit, states: 'COMPLETED' })
 
   const fetchJobs = async () => {
     const { request } = await endpoint.get<JobsResponse>();
