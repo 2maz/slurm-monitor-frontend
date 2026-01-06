@@ -5,6 +5,7 @@ import { BarLoader } from 'react-spinners';
 import useJobStatus from '../../hooks/useJobStatus';
 import { DateTime } from 'luxon';
 import { JSX } from 'react';
+import JobReportView from '../JobReportView';
 
 interface Props {
     job_id: number;
@@ -14,7 +15,6 @@ interface Props {
 
 const JobView = ({ job_id, job_data, refresh_interval_in_s = 60 } : Props) => {
   const { data : job_status, error, isLoading } = useJobStatus(job_id, refresh_interval_in_s)
-
   if(isLoading)
     return <>
            <h3>Job Id: {job_id}</h3>
@@ -68,6 +68,13 @@ const JobView = ({ job_id, job_data, refresh_interval_in_s = 60 } : Props) => {
           />
           </div>
       )]
+
+  elements = [...elements,(<div key={"job-report-" + job_id}>
+    <h3>Job Report</h3>
+    <JobReportView job_id={job_id} refresh_interval_in_s={refresh_interval_in_s}/>
+    </div>
+  )]
+
   elements = [...elements, (
     <div className="my-3">
       <h3>Job Details</h3>
