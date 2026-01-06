@@ -18,6 +18,7 @@ const usePartitions = () => {
     queryKey: ["partitions"],
     queryFn: fetchPartitions,
     staleTime: 3600*24*1000, // 1d
+    retryDelay: 60*1000, // 1min
   });
 
 }
