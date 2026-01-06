@@ -30,6 +30,21 @@ const getStringValues = (data: Job[], property_name: keyof Job): string[] => {
   ]).sort();
 };
 
+const formatDuration = (value: number) : string => {
+    if(value)
+    {
+      const days = Math.floor(value / (24*3600));
+      const hours = Math.floor((value % (24*3600)) / 3600 );
+      const minutes = Math.floor((value % 3600) / 60 );
+      const seconds = Math.floor(value % 60);
+
+      const pad = (num: number) => String(num).padStart(2, '0')
+
+      return `${pad(days)}-${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
+    }
+    return ''
+}
+
 const JobsTable = ({ data, sorting, maxHeightInViewportPercent, rowActions }: Props) => {
   const { columnFilters, setColumnFilters, visibility, setVisibility } = useJobsStore()
 
@@ -121,6 +136,38 @@ const JobsTable = ({ data, sorting, maxHeightInViewportPercent, rowActions }: Pr
         `${cell.getValue<Date>().toLocaleDateString()} ${cell
           .getValue<Date>()
           .toLocaleTimeString()}`: '',
+     },
+     {
+       accessorKey: "queue_time",
+       accessorFn: (originalRow) => {
+          let current_or_end_time = DateTime.now().toSeconds()
+          if(originalRow.start_time) {
+              current_or_end_time = DateTime.fromISO(originalRow.start_time).toSeconds()
+          }
+         return (current_or_end_time - DateTime.fromISO(originalRow.submit_time).toSeconds()).toFixed(2)
+       },
+       header: "Queue Time",
+       minSize: 50,
+       grow: true,
+       Cell: ({ cell }) => formatDuration(cell.getValue<number>()),
+     },
+     {
+       accessorKey: "duration",
+       accessorFn: (originalRow) => {
+          if(originalRow.start_time) {
+            let current_or_end_time = DateTime.now().toSeconds()
+            if(originalRow.end_time) {
+              current_or_end_time = DateTime.fromISO(originalRow.end_time).toSeconds()
+            }
+            return (current_or_end_time - DateTime.fromISO(originalRow.start_time).toSeconds()).toFixed(2)
+          }
+          return 0
+       },
+       header: "Duration ",
+       //filterVariant: "datetime-range",
+       minSize: 50,
+       grow: true,
+       Cell: ({ cell }) => formatDuration(cell.getValue<number>()),
      },
       //{
       //  accessorKey: "state_reason",
