@@ -35,6 +35,7 @@ import GithubLogo from "./assets/github-mark.png";
 import ClusterView from "./components/ClusterView";
 
 import { ErrorBoundary } from 'react-error-boundary';
+import UserAuthentication from "./components/UserAuthentication";
 
 const theme = createTheme({});
 
@@ -101,8 +102,11 @@ function App() {
 
       <LocalizationProvider dateAdapter={AdapterLuxon} adapterLocale="no">
         <ThemeProvider theme={theme}>
-          <Box sx={{ border: '0px'}}>
+          <Box sx={{ border: '0px', display: 'flex', flexDirection: 'column'}}>
             <Paper elevation={0}>
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mr: 10, mt: 2}}>
+                <UserAuthentication />
+              </Box>
               <BottomNavigation showLabels value={view}>
                 <BottomNavigationAction
                    label="Cluster"

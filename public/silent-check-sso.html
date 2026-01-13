@@ -1,0 +1,9 @@
+<!doctype html>
+<html>
+  <body>
+    <script>
+      // Notify the parent window with the full URL (including tokens in the fragment)
+      parent.postMessage(location.href, location.origin);
+    </script>
+  </body>
+</html>

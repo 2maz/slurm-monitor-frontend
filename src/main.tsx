@@ -5,35 +5,24 @@ import App from './App.tsx'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { UiProvider } from "./components/ui/Provider.tsx"
 
-import keycloak, { auth_required } from "./auth";
+import { ReactKeycloakProvider } from '@react-keycloak/web';
+import keycloak, { keycloakInitOptions, auth_required } from "./auth";
 
 const client = new QueryClient();
 
 if(auth_required())
 {
-  keycloak.init({
-    onLoad: 'login-required',
-    pkceMethod: 'S256',
-    checkLoginIframe: false
-  }).then((authenticated) => {
-    if(!authenticated) {
-      keycloak.login().catch((reason) => {
-        console.log("Login rejected: " + reason)
-      })
-    }
-
     ReactDOM.createRoot(document.getElementById('root')!).render(
+      <ReactKeycloakProvider authClient={keycloak} initOptions={keycloakInitOptions}>
       <React.StrictMode>
         <QueryClientProvider client={client}>
           <UiProvider>
-          <App />
+            <App />
           </UiProvider>
         </QueryClientProvider>
-      </React.StrictMode>,
+      </React.StrictMode>
+    </ReactKeycloakProvider>
     )
-  }).catch((error) => {
-    console.error("Keycloak initialization failed", error)
-  })
 } else {
     ReactDOM.createRoot(document.getElementById('root')!).render(
       <React.StrictMode>

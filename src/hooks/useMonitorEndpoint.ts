@@ -24,7 +24,9 @@ class SlurmMonitorEndpoint {
   async get<T = Response>() {
     try {
       if(auth_required()) {
-        await keycloak.updateToken(30);
+        if(keycloak.didInitialize) {
+          await keycloak.updateToken(30);
+        }
       }
     } catch(error)
     {
@@ -40,7 +42,7 @@ class SlurmMonitorEndpoint {
     if(auth_required()) {
       args = { ...args, "headers": {
         accept: 'application/json',
-        authorization: `Bearer: ${keycloak.token}`
+        Authorization: `Bearer ${keycloak.token}`
         }
       }
     }
@@ -53,6 +55,15 @@ class SlurmMonitorEndpoint {
 const useMonitorEndpoint = (endpoint: string, params?: Params) => {
   const { cluster_id, url: backendUrl } = useAppState().currentBackendSpec()
   const client = axios.create({ baseURL: backendUrl + MONITOR_API_PREFIX + "cluster/" + cluster_id + "/"})
+
+  return {
+    endpoint: new SlurmMonitorEndpoint(client, endpoint, params),
+  }
+}
+
+export const useMonitorBaseEndpoint = (endpoint: string, params?: Params) => {
+  const { url: backendUrl } = useAppState().currentBackendSpec()
+  const client = axios.create({ baseURL: backendUrl + MONITOR_API_PREFIX + "/"})
 
   return {
     endpoint: new SlurmMonitorEndpoint(client, endpoint, params),
