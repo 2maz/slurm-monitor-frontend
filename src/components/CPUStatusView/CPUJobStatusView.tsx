@@ -47,7 +47,7 @@ const CPUJobStatusView = ({job_id, start_time_in_s, end_time_in_s, resolution_in
             <div key={index}>
               <h4>Node: {nodename}</h4>
               <div className="mx-5" key="{job_id}-accumulated" >
-                <LineChart width={600} height={300} margin={{left: 50, right: 50}}data={node_data}>
+                <LineChart width={600} height={300} margin={{left: 50, right: 50}} data={node_data}>
                   <Line yAxisId="1" type="monotone" dataKey="cpu_util" name="CPU Utilization (%)" stroke="#8884d8"/>
                   <Line yAxisId="1" type="monotone" dataKey="memory_util" name="Memory Utilization (%)" stroke="#888400"/>
                   <Line yAxisId="2" type="monotone" dataKey="processes_avg" name="Average number of processes" stroke="#008400"/>
