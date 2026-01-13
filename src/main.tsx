@@ -13,15 +13,15 @@ const client = new QueryClient();
 if(auth_required())
 {
     ReactDOM.createRoot(document.getElementById('root')!).render(
-      <ReactKeycloakProvider authClient={keycloak} initOptions={keycloakInitOptions}>
       <React.StrictMode>
         <QueryClientProvider client={client}>
           <UiProvider>
+            <ReactKeycloakProvider authClient={keycloak} initOptions={keycloakInitOptions}>
             <App />
+            </ReactKeycloakProvider>
           </UiProvider>
         </QueryClientProvider>
       </React.StrictMode>
-    </ReactKeycloakProvider>
     )
 } else {
     ReactDOM.createRoot(document.getElementById('root')!).render(

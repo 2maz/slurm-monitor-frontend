@@ -36,6 +36,8 @@ import ClusterView from "./components/ClusterView";
 
 import { ErrorBoundary } from 'react-error-boundary';
 import UserAuthentication from "./components/UserAuthentication";
+import { useKeycloak } from "@react-keycloak/web";
+import { auth_required } from "./auth";
 
 const theme = createTheme({});
 
@@ -56,10 +58,13 @@ function fallbackRender({ error } : Props) {
 
 function App() {
   /// State that remembers the currently selected view (one of partitions, nodes, jobs)
+  const { keycloak, initialized } = useKeycloak()
+
   const [view, setView] = useState<string>(
     window.sessionStorage.getItem("view") || "jobs"
   );
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+
   const open = Boolean(anchorEl);
 
   const mlflowUrls = useAppState((state) => state.mlflowUrls);
@@ -81,6 +86,17 @@ function App() {
   const handleClose = () => {
     setAnchorEl(null);
   };
+
+  const missing_auth = (auth_required() && (!initialized || !keycloak.authenticated))
+  const authenticated = (auth_required() && initialized &&  keycloak.authenticated)
+
+  const enabledView = (name: string) => {
+    if(missing_auth) {
+      return false;
+    }
+    return view && view == name
+  }
+
 
   return (
     <>
@@ -104,9 +120,11 @@ function App() {
         <ThemeProvider theme={theme}>
           <Box sx={{ border: '0px', display: 'flex', flexDirection: 'column'}}>
             <Paper elevation={0}>
-              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mr: 10, mt: 2}}>
-                <UserAuthentication />
-              </Box>
+              {authenticated &&
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mr: 10, mt: 2}}>
+                  <UserAuthentication />
+                </Box>
+              }
               <BottomNavigation showLabels value={view}>
                 <BottomNavigationAction
                    label="Cluster"
@@ -178,43 +196,44 @@ function App() {
                 </MenuItem>
               </Menu>
             </Paper>
-            {view && view == "cluster" &&
+
+            {missing_auth && <div style={{ position: 'fixed', top: '25%', right: '50%'}}><UserAuthentication loginVariant="h4"/></div> }
+            {enabledView("cluster") &&
               <ErrorBoundary fallbackRender={fallbackRender}>
                 <ClusterView />
               </ErrorBoundary>
             }
-            {view && view == "jobs" &&
+            {enabledView("jobs") &&
               <ErrorBoundary fallbackRender={fallbackRender}>
                 <JobsView maxHeightInViewportPercent={70} />
               </ErrorBoundary>
             }
-            {view && view == "nodes" &&
+            {enabledView("nodes") &&
               <ErrorBoundary fallbackRender={fallbackRender}>
                 <NodesView maxHeightInViewportPercent={75} />
               </ErrorBoundary>
             }
-            {view && view == "partitions" &&
+            {enabledView("partitions") &&
               <ErrorBoundary fallbackRender={fallbackRender}>
                 <PartitionsView maxHeightInViewportPercent={75} />
               </ErrorBoundary>
             }
-            {view && view == "settings" &&
-
-            <ErrorBoundary fallbackRender={fallbackRender}>
-              <SettingsView />
-            </ErrorBoundary>
+            {enabledView("settings") &&
+              <ErrorBoundary fallbackRender={fallbackRender}>
+               <SettingsView />
+              </ErrorBoundary>
             }
-            {view && view == "query" &&
+            {enabledView("query") &&
               <ErrorBoundary fallbackRender={fallbackRender}>
                 <QueryView />
               </ErrorBoundary>
             }
-            {view && view == "inspect-completed-jobs" &&
+            {enabledView("inspect-completed-jobs") &&
               <ErrorBoundary fallbackRender={fallbackRender}>
                 <CompletedJobsView />
               </ErrorBoundary>
             }
-            {view && view == "benchmarks" &&
+            {enabledView("benchmarks") &&
               <ErrorBoundary fallbackRender={fallbackRender}>
                 <BenchmarksView />
               </ErrorBoundary>

@@ -1,10 +1,14 @@
-import { Button, Typography } from "@mui/material";
+import { Button, Typography, TypographyVariant } from "@mui/material";
 import LoginIcon from '@mui/icons-material/Login';
 import { redirect_uri } from "../../auth";
 
 import { useKeycloak } from '@react-keycloak/web';
 
-const UserAuthentication = () => {
+interface Props {
+    loginVariant?: TypographyVariant
+    logoutVariant?: TypographyVariant
+}
+const UserAuthentication = (props: Props = {}) => {
     const { keycloak, initialized } = useKeycloak()
 
     if(!initialized) {
@@ -29,14 +33,14 @@ const UserAuthentication = () => {
     if(keycloak.authenticated) {
         return <div>
             <Button startIcon={<LoginIcon />} color="primary" onClick={keycloakLogout} >
-            <Typography>{keycloak.tokenParsed?.preferred_username}</Typography>
+            <Typography variant={props.logoutVariant}>{keycloak.tokenParsed?.preferred_username}</Typography>
             </Button>
             </div>
     }
 
     return <div>
         <Button startIcon={<LoginIcon />} color="primary" onClick={keycloakLogin}>
-        Login
+        <Typography variant={props.loginVariant}>Login</Typography>
         </Button>
     </div>
 }

@@ -7,6 +7,8 @@ const SLURM_MONITOR_AUTH_REALM = import.meta.env.SLURM_MONITOR_AUTH_REALM as str
 const SLURM_MONITOR_AUTH_CLIENT_ID = import.meta.env.SLURM_MONITOR_AUTH_CLIENT_ID as string;
 const SLURM_MONITOR_AUTH_REDIRECT_URI = import.meta.env.SLURM_MONITOR_AUTH_REDIRECT_URI as string;
 
+export const SLURM_MONITOR_BASE_URL = import.meta.env.BASE_URL == "/" ? '/silent-check-sso.html' : `${import.meta.env.BASE_URL}/silent-check-sso.html`
+
 export const auth_required = () : boolean => {
     if(SLURM_MONITOR_AUTH_REQUIRED) {
         if(SLURM_MONITOR_AUTH_REQUIRED.toLowerCase() == "true") {
@@ -36,7 +38,7 @@ export const keycloakInitOptions = {
     onLoad: 'check-sso',
     flow: 'standard',
     pkceMethod: 'S256',
-    silentCheckSsoRedirectUri: `${window.location.origin}/silent-check-sso.html`,
+    silentCheckSsoRedirectUri: `${window.location.origin}`+SLURM_MONITOR_BASE_URL,
     checkLoginIframe: true,
     checkLoginIframeInterval: 30,
     enableLogging: true
