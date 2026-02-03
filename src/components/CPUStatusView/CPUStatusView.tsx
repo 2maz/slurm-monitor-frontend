@@ -4,7 +4,7 @@ import { BarLoader } from 'react-spinners';
 import useCPUStatus from '../../hooks/useCPUStatus';
 import { DateTime } from 'luxon';
 import useNodesInfo from '../../hooks/useNodesInfos';
-import { JSX } from 'react';
+import { JSX, memo } from 'react';
 
 interface Props {
   nodename: string;
@@ -14,7 +14,7 @@ interface Props {
   refresh_interval_in_s?: number;
 }
 
-const CPUStatusView = ({nodename, start_time_in_s, end_time_in_s, resolution_in_s, refresh_interval_in_s = 1000*60} : Props) => {
+const CPUStatusView = memo(({nodename, start_time_in_s, end_time_in_s, resolution_in_s, refresh_interval_in_s = 1000*60} : Props) => {
     const { data : nodes_info, error: nodes_info_error, isLoading: nodes_info_isLoading } = useNodesInfo()
     const {data: nodes, error, isLoading, isSuccess } = useCPUStatus({
       nodename: nodename,
@@ -68,6 +68,6 @@ const CPUStatusView = ({nodename, start_time_in_s, end_time_in_s, resolution_in_
     })
   }
   return (<>{elements}</>)
-}
+});
 
 export default CPUStatusView;

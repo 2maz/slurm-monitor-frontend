@@ -6,7 +6,7 @@ interface NodesLastSeenResponse {
   [name: string]: string;
 }
 
-const useNodesLastSeen = (time?: Date) => {
+const useNodesLastSeen = (time?: Date, refresh_interval_in_s: number = 20) => {
   let params = {}
   if(time) {
     params = { time_in_s: time.getTime() }
@@ -26,9 +26,9 @@ const useNodesLastSeen = (time?: Date) => {
   return useQuery<NodesLastSeenResponse, AxiosError>({
     queryKey: ["nodes", "last_probe"],
     queryFn: fetchNodesLastSeen,
-    refetchInterval: 5*1000, // refresh every 5 mins 
+    refetchInterval: refresh_interval_in_s*1000,
     retry: 3,
-    retryDelay: 1000*3,
+    retryDelay: 10*1000,
   });
 }
 

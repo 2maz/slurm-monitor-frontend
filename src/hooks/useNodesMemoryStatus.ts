@@ -1,4 +1,4 @@
-import { buildParameters, QueryParameters } from "./useCPUStatus";
+import { buildParameters, QueryParameters } from "./useMonitorEndpoint";
 import { useQuery } from "@tanstack/react-query";
 import useMonitorEndpoint from "./useMonitorEndpoint";
 

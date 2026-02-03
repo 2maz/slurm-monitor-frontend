@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import useMonitorEndpoint from "./useMonitorEndpoint";
+import { QueryParameters, buildParameters } from "./useMonitorEndpoint";
 import { AxiosError } from "axios";
 
 export interface CPUStatus {
@@ -12,37 +13,6 @@ export interface CPUStatus {
 interface NodesCPUStatus {
   [nodename: string]: CPUStatus[]
 }
-
-export interface QueryParameters {
-  nodename: string;
-  start_time_in_s?: number;
-  end_time_in_s?: number;
-  resolution_in_s?: number;
-}
-
-export const buildParameters = (query_parameters: QueryParameters) => {
-  let parameters = {};
-  if (query_parameters.start_time_in_s != undefined) {
-    parameters = {
-      ...parameters,
-      start_time_in_s: query_parameters.start_time_in_s,
-    };
-  }
-  if (query_parameters.end_time_in_s != undefined) {
-    parameters = {
-      ...parameters,
-      end_time_in_s: query_parameters.end_time_in_s,
-    };
-  }
-  if (query_parameters.resolution_in_s != undefined) {
-    parameters = {
-      ...parameters,
-      resolution_in_s: query_parameters.resolution_in_s,
-    };
-  }
-  return parameters;
-}
-
 
 const useCPUStatus = (
   query_parameters: QueryParameters,

@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import MetaData from "../components/ResponseMetaData";
 import useMonitorEndpoint from "./useMonitorEndpoint";
 
-interface CPUInfo {
+export interface CPUInfo {
   architecture: string;
   cpu_model: string;
   sockets: number;
@@ -10,7 +10,7 @@ interface CPUInfo {
   threads_per_core: number;
 }
 
-interface GPUInfo {
+export interface GPUInfo {
   uuid: string;
   manufacturer: string;
   model: string,
@@ -40,7 +40,7 @@ interface NodeInfos {
   [name: string]: NodeDataInfo;
 }
 
-const useNodesInfo = (time?: Date) => {
+const useNodesInfo = (time?: Date, refresh_interval_in_s: number = 60 ) => {
   let params = {}
   if(time) {
     params = { time_in_s: time.getTime() }
@@ -59,9 +59,9 @@ const useNodesInfo = (time?: Date) => {
   return useQuery<NodeInfos | undefined, Error>({
     queryKey: ["cluster", "nodes", "info"],
     queryFn: fetchNodeInfos,
-    refetchInterval: 1000*5,
+    refetchInterval: refresh_interval_in_s*1000,
     retry: 3,
-    retryDelay: 1000*3,
+    retryDelay: 10*1000,
   });
 
 };

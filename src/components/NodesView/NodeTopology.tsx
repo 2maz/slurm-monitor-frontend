@@ -1,5 +1,6 @@
 import { BarLoader } from "react-spinners";
 import useNodesTopology, { useNodesTopologyURL } from "../../hooks/useNodesTopology";
+import { memo } from 'react';
 
 interface Props {
     nodename: string;
@@ -33,7 +34,7 @@ const NodeTopologySVG = ({nodename} : Props) => {
   )
 }
 
-const NodeTopology = ({nodename, output_format} : Props) => {
+const NodeTopology = memo(({nodename, output_format} : Props) => {
   if(output_format == "png") {
     return <NodeTopologyPNG nodename={nodename} />
   } else if(output_format == 'svg') {
@@ -41,6 +42,6 @@ const NodeTopology = ({nodename, output_format} : Props) => {
   } else {
     return <>Unsupported topology format {output_format}</>
   }
-}
+});
 
 export default NodeTopology

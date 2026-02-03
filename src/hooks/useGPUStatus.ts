@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { buildParameters, QueryParameters } from "./useCPUStatus";
+import { buildParameters, QueryParameters } from "./useMonitorEndpoint";
 import useMonitorEndpoint from "./useMonitorEndpoint";
 
 interface GPUStatus {
@@ -14,7 +14,7 @@ interface GPUStatus {
     time: string,
 }
 
-interface LocalGPUStatusDataSeries {
+export interface LocalGPUStatusDataSeries {
   uuid: string
   index?: number
   data: GPUStatus[]

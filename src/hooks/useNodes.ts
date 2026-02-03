@@ -6,7 +6,9 @@ interface NodesResponse extends Response {
   nodes: Node[];
 }
 
-const useNodes = () => {
+const useNodes = (
+    refresh_interval_in_s: number = 60
+) => {
   const { endpoint: endpoint_nodes } = useMonitorEndpoint("/nodes");
 
   const fetchNodes = async () => {
@@ -21,9 +23,9 @@ const useNodes = () => {
   return useQuery<Node[], Error>({
     queryKey: ["nodes"],
     queryFn: fetchNodes,
-    refetchInterval: 30*1000, // refresh every 30 seconds
-    retry: 3,
-    retryDelay: 1000*3,
+    refetchInterval: refresh_interval_in_s*1000,
+    retry: 10,
+    retryDelay: 10*1000,
   });
 }
 
