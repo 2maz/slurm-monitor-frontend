@@ -38,6 +38,7 @@ import { ErrorBoundary } from 'react-error-boundary';
 import UserAuthentication from "./components/UserAuthentication";
 import { useKeycloak } from "@react-keycloak/web";
 import { auth_required } from "./auth";
+import Keycloak from "keycloak-js";
 
 const theme = createTheme({});
 
@@ -47,7 +48,6 @@ interface Props {
 
 function fallbackRender({ error } : Props) {
   // Call resetErrorBoundary() to reset the error boundary and retry the render.
-
   return (
     <div role="alert">
       <p>Ups. Sorry, but something went wrong:</p>
@@ -56,10 +56,20 @@ function fallbackRender({ error } : Props) {
   );
 }
 
-function App() {
+interface AppProps {
+  keycloak?: Keycloak
+  initialized?: boolean
+}
+
+export function SecuredApp() {
   /// State that remembers the currently selected view (one of partitions, nodes, jobs)
   const { keycloak, initialized } = useKeycloak()
 
+  return App({keycloak, initialized})
+}
+
+
+const App = ({keycloak, initialized} : AppProps) => {
   const [view, setView] = useState<string>(
     window.sessionStorage.getItem("view") || "jobs"
   );
@@ -87,8 +97,8 @@ function App() {
     setAnchorEl(null);
   };
 
-  const missing_auth = (auth_required() && (!initialized || !keycloak.authenticated))
-  const authenticated = (auth_required() && initialized &&  keycloak.authenticated)
+  const missing_auth = (auth_required() && (!initialized || !keycloak?.authenticated))
+  const authenticated = (auth_required() && initialized &&  keycloak?.authenticated)
 
   const enabledView = (name: string) => {
     if(missing_auth) {
@@ -96,7 +106,6 @@ function App() {
     }
     return view && view == name
   }
-
 
   return (
     <>
