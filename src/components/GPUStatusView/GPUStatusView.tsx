@@ -1,6 +1,6 @@
 import { LineChart, Line, Tooltip, XAxis, YAxis, Legend, CartesianGrid } from 'recharts';
 import { BarLoader } from 'react-spinners';
-import useGPUStatus, { GPUDataSeries, LocalGPUStatusDataSeries } from "../../hooks/useGPUStatus";
+import useGPUStatus, { LocalGPUStatusDataSeries } from "../../hooks/useGPUStatus";
 import useNodesInfos, { GPUInfo, NodeDataInfo } from "../../hooks/useNodesInfos";
 import { DateTime } from 'luxon';
 import { memo, JSX } from 'react';
@@ -82,7 +82,7 @@ const GPUStatusView = memo(({nodename, uuids, logical_ids, start_time_in_s, end_
     // Examples: https://recharts.org/en-US/examples/HighlightAndZoomLineChart
     if(gpu_data_series && node_info) {
         Object.values(gpu_data_series[nodename]).forEach(value => {
-          const { uuid, index: local_index, data } = value
+          const { uuid, index: local_index } = value
           const info : NodeDataInfo | undefined = node_info[nodename]
           const gpu_info = info.cards.filter(
             (value) => value.uuid == uuid
