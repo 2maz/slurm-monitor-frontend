@@ -1,6 +1,7 @@
 import NodesTable from "./NodesTable";
 import useNodesInfo from "../../hooks/useNodesInfos";
 import useNodesLastSeen from "../../hooks/useNodesLastSeen";
+import useNodesStates from "../../hooks/useNodesStates";
 import { DotLoader } from 'react-spinners';
 
 interface Props {
@@ -9,6 +10,7 @@ interface Props {
 }
 const NodesView = ({maxHeightInViewportPercent, time} : Props) => {
   const { data : nodes_info, error : error_nodes_info, isLoading : nodes_info_isLoading} = useNodesInfo(time);
+  const { data : nodes_states, error : error_nodes_states, isLoading : nodes_states_isLoading} = useNodesStates(time);
   const { data : nodes_last_seen, error : error_nodes_last_seen, isLoading : nodes_last_seen_isLoading} = useNodesLastSeen(time);
 
 
@@ -21,6 +23,14 @@ const NodesView = ({maxHeightInViewportPercent, time} : Props) => {
     )
 
   if(!nodes_last_seen || nodes_last_seen_isLoading)
+    return (
+      <div className="mx-5 flex flex-wrap justify-between">
+        <h1 className="centered">Nodes</h1>
+        <div className="d-flex justify-content-center align-self-center"><DotLoader/></div>
+      </div>
+    )
+
+  if(!nodes_states || nodes_states_isLoading)
     return (
       <div className="mx-5 flex flex-wrap justify-between">
         <h1 className="centered">Nodes</h1>
@@ -53,6 +63,24 @@ const NodesView = ({maxHeightInViewportPercent, time} : Props) => {
     );
   }
 
+  if(error_nodes_states) {
+    return (
+      <>
+        <h1 className="mx-5 centered">Nodes</h1>
+        {error_nodes_info && (
+          <>
+          <p className="text-danger">No nodes' states available: {error_nodes_states.message}</p>
+          </>
+        )}
+      </>
+    );
+  }
+
+  const nodes_states_dict: Record<string, string[]> = nodes_states.reduce((acc, nodeState) => {
+    acc[nodeState.node] = nodeState.states;
+    return acc;
+  }, {} as Record<string, string[]>);
+
   const prepared_data = Object.keys(nodes_info).map((key: string) => {
     const value = nodes_info[key];
 
@@ -65,6 +93,7 @@ const NodesView = ({maxHeightInViewportPercent, time} : Props) => {
       gpu_memory: value.cards?.[0]?.memory,
       gpu_model: value.cards?.[0]?.model,
       id: value.node,
+      states: nodes_states_dict[key] ? nodes_states_dict[key] : []
     }
   });
 

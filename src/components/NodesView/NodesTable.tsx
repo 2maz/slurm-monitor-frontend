@@ -23,6 +23,7 @@ interface NodeInfo extends NodeDataInfo {
   gpu_model?: string;
   gpu_memory?: number;
   id: string;
+  states: string[];
 }
 interface Props {
   data: NodeInfo[];
@@ -241,23 +242,6 @@ const NodesTable = ({ data, maxHeightInViewportPercent }: Props) => {
       //{ accessorKey: "next_state_after_reboot_flags: string[];
       //{ accessorKey: "address: string;
       //{ accessorKey: "hostname", header: "Hostname" },
-      //{
-      //  accessorKey: "state",
-      //  header: "State",
-      //  filterVariant: "multi-select",
-      //  filterSelectOptions: [
-      //    ...new Set(data.map((node: Node) => node.state)),
-      //  ].sort(),
-      //  Cell: ({ cell }) => {
-      //    if(cell.getValue() == "down")
-      //      return (
-      //      <div className="text-danger">
-      //        {cell.getValue<string>()} &#x26a0;
-      //      </div>
-      //    )
-      //    return cell.getValue<string>();
-      //  },
-      //},
       //{ accessorKey: "state_flags: string[];
       //{ accessorKey: "operating_system: string;
       //{ accessorKey: "owner: string;
@@ -313,6 +297,19 @@ const NodesTable = ({ data, maxHeightInViewportPercent }: Props) => {
               {row.original.idle_cores}
             </div>
         },
+      },
+      {
+        accessorKey: "states",
+        header: "States",
+        Cell: ({ row }) => {
+          return <a href="https://slurm.schedmd.com/sinfo.html#OPT_states" target="_blank" rel="noopener noreferrer">
+            {row.original.states?.join(", ")}
+          </a>;
+        },
+        filterVariant: "multi-select",
+        filterSelectOptions: [
+          ...new Set(data.map((node: NodeInfo) => node.states).flat()),
+        ].sort(),
       }
     ],
     [data]
@@ -362,7 +359,7 @@ const NodesTable = ({ data, maxHeightInViewportPercent }: Props) => {
         "gpu_memory",
         //"free_memory",
         "partitions",
-        //"state",
+        "states",
         "operating_system",
         //"alloc_memory",
         //"alloc_cpus",
