@@ -18,7 +18,7 @@
     "@chakra-ui/react": "^3.30.0",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
-    "@fontsource/roboto": "^5.2.8",
+    "@fontsource/roboto": "^5.2.9",
     "@hookform/resolvers": "^5.2.2",
     "@mantine/core": "^8.3.5",
     "@mui/icons-material": "^7.3.4",
