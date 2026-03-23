@@ -130,7 +130,7 @@ const App = ({keycloak, initialized} : AppProps) => {
           <Box sx={{ border: '0px', display: 'flex', flexDirection: 'column'}}>
             <Paper elevation={0}>
               {authenticated &&
-                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mr: 10, mt: 2}}>
+                <Box sx={{ float: 'right', justifyContent: 'flex-end', mr: 10, mt: 1}}>
                   <UserAuthentication />
                 </Box>
               }
