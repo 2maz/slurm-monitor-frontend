@@ -410,8 +410,8 @@ const NodesTable = ({ data, maxHeightInViewportPercent }: Props) => {
             <IconButton style={{ float: 'right'}} aria-label="close" onClick={() => {setBackdropToggle(!backdropToggle);}}>
               <CloseIcon />
             </IconButton>
-            <NodeDetails nodename={backdropId} data={data} />
           </Box>
+          <NodeDetails nodename={backdropId} data={data} />
         </div>
       </Backdrop>
     </div>
