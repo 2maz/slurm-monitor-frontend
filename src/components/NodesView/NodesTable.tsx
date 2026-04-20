@@ -14,6 +14,8 @@ import { DateTime } from "luxon";
 import SensorsIcon from '@mui/icons-material/Sensors';
 import SensorsOffIcon from '@mui/icons-material/SensorsOff';
 import NodeDetails from "./NodeDetails";
+import useAppState from "../../AppState";
+
 
 interface NodeInfo extends NodeDataInfo {
   partitions: string[];
@@ -44,6 +46,8 @@ const NodesTable = ({ data, maxHeightInViewportPercent }: Props) => {
 
   const [backdropToggle, setBackdropToggle] = useState(false);
   const [backdropId, setBackdropId] = useState("");
+  const appState = useAppState();
+
 
   if(!data || data.length == 0) {
     return <>No data available</>;
@@ -161,7 +165,10 @@ const NodesTable = ({ data, maxHeightInViewportPercent }: Props) => {
         filterSelectOptions: [
           ...new Set(data.map((node: NodeInfo) => node.gpu_model ? node.gpu_model : "")),
         ].sort(),
-        grow: 1
+        grow: 1,
+        Cell: ({ row }) => {
+          return row.original.gpu_model ? <a href={appState.currentBackendSpec().url+ "/api/v2/spec/gpu/" + row.original.gpu_model} target="_blank" rel="noopener noreferrer">{row.original.gpu_model}</a> : ""
+        }
       },
       {
         accessorKey: "gpu_memory",
