@@ -1,0 +1,13 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+  - family-names: Roehr
+    given-names: "Thomas M."
+    orcid: https://orcid.org/0000-0002-7715-7052
+title: "Slurm Monitor Frontend - A React-based frontend for the RESTAPI served by slurm-monitor"
+license: BSD-3-Clause
+license-url: https://github.com/2maz/slurm-monitor-frontend/blob/main/LICENSE
+version: 0.3.2
+doi: 10.5281/zenodo.19660571
+date-released: 2026-04-20
+url: "https://github.com/2maz/slurm-monitor-frontend"

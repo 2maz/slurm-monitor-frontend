@@ -1,4 +1,6 @@
-# Slurm Frontend
+[![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.196660571-blue.svg)](https://doi.org/10.5281/zenodo.19660571)
+
+# Slurm Monitor Frontend
 
 This package provides a React-based Frontend to visualize information about clusters that run SLURM.
 
@@ -68,7 +70,7 @@ SLURM_MONITOR_AUTH_CLIENT_ID=slurm-monitor-client
 
 # License
 
-Copyright (c) 2024-2026 Thomas Roehr, Simula Research Laboratory
+Copyright (c) 2024-2026 Thomas M. Roehr, Simula Research Laboratory
 
 This project is licensed under the terms of the [New BSD License](https://opensource.org/license/BSD-3-clause).
 You are free to use, modify, and distribute this work, subject to the
