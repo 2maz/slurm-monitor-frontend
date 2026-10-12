@@ -22,8 +22,12 @@ export type DataFrame = Array<Row>
 interface DataFrameResponse extends DataFrame, Response {
 }
 
-const useDataFrameQuery = (query_name: string) => {
-  const { endpoint : endpoint_nodes } = useMonitorEndpoint("/queries/" + query_name);
+const useDataFrameQuery = (
+  query_name: string,
+  params?: Record<string, string>,
+  enabled: boolean = true,
+) => {
+  const { endpoint : endpoint_nodes } = useMonitorEndpoint("/queries/" + query_name, params);
 
   const fetchDataFrame = async () => {
     const { request } = await endpoint_nodes.get<DataFrameResponse>();
@@ -35,9 +39,10 @@ const useDataFrameQuery = (query_name: string) => {
   };
 
   return useQuery<DataFrame, Error>({
-    queryKey: ["queries", query_name],
+    queryKey: ["queries", query_name, params],
     queryFn: fetchDataFrame,
     refetchInterval: 3600*1000, // refresh every hour
+    enabled,
   });
 }
 

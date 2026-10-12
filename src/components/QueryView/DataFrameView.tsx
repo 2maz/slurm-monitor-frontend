@@ -25,11 +25,51 @@ import {
 } from "recharts";
 import { ScaleType } from "recharts/types/util/types";
 
+const GPU_UTILIZATION_QUERY_NAME = "gpu-utilization";
+
+// Mirrors GPUUtilizationAggregationLevel / GPUUtilizationBucketLength / GPUUtilizationLength
+// in slurm_monitor/db/query.py - keep in sync with the backend enums.
+const gpuUtilizationLevels = createListCollection({
+  items: [
+    { label: "card", value: "card" },
+    { label: "model", value: "model" },
+    { label: "manufacturer", value: "manufacturer" },
+  ],
+});
+const gpuUtilizationBucketLengths = createListCollection({
+  items: [
+    { label: "15 minutes", value: "15 minutes" },
+    { label: "1 hour", value: "1 hour" },
+    { label: "1 day", value: "1 day" },
+    { label: "1 week", value: "1 week" },
+    { label: "1 month", value: "1 month" },
+  ],
+});
+const gpuUtilizationLengths = createListCollection({
+  items: [
+    { label: "15 minutes", value: "15 minutes" },
+    { label: "1 hour", value: "1 hour" },
+    { label: "1 day", value: "1 day" },
+    { label: "1 week", value: "1 week" },
+    { label: "1 month", value: "1 month" },
+    { label: "1 year", value: "1 year" },
+  ],
+});
+
 interface Props {
   query_name: string;
 }
 const DataFrameView = ({ query_name }: Props) => {
-  const { data, isLoading, error } = useDataFrameQuery(query_name);
+  const [gpuLevel, setGpuLevel] = useState("card");
+  const [gpuBucketLength, setGpuBucketLength] = useState("1 hour");
+  const [gpuLength, setGpuLength] = useState("1 day");
+
+  const isGpuUtilization = query_name === GPU_UTILIZATION_QUERY_NAME;
+  const queryParams = isGpuUtilization
+    ? { level: gpuLevel, bucket_length: gpuBucketLength, length: gpuLength }
+    : undefined;
+
+  const { data, isLoading, error } = useDataFrameQuery(query_name, queryParams);
   const [xColumn, setXColumn] = useState("");
   const [yColumn, setYColumn] = useState("");
 
@@ -84,6 +124,75 @@ const DataFrameView = ({ query_name }: Props) => {
   })
 
   const elements = [];
+
+  if (isGpuUtilization) {
+    elements.push(
+      <div key="gpu-utilization-params">
+        <HStack>
+          <SelectRoot
+            collection={gpuUtilizationLevels}
+            size="sm"
+            width="200px"
+            value={[gpuLevel]}
+            onValueChange={(event) => setGpuLevel(event.value[0])}
+          >
+            <SelectLabel>Aggregation level</SelectLabel>
+            <SelectTrigger>
+              <SelectValueText placeholder="Select level" />
+            </SelectTrigger>
+            <SelectContent>
+              {gpuUtilizationLevels.items.map((item) => (
+                <SelectItem item={item} key={item.value}>
+                  {item.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </SelectRoot>
+
+          <SelectRoot
+            collection={gpuUtilizationBucketLengths}
+            size="sm"
+            width="200px"
+            value={[gpuBucketLength]}
+            onValueChange={(event) => setGpuBucketLength(event.value[0])}
+          >
+            <SelectLabel>Bucket length</SelectLabel>
+            <SelectTrigger>
+              <SelectValueText placeholder="Select bucket length" />
+            </SelectTrigger>
+            <SelectContent>
+              {gpuUtilizationBucketLengths.items.map((item) => (
+                <SelectItem item={item} key={item.value}>
+                  {item.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </SelectRoot>
+
+          <SelectRoot
+            collection={gpuUtilizationLengths}
+            size="sm"
+            width="200px"
+            value={[gpuLength]}
+            onValueChange={(event) => setGpuLength(event.value[0])}
+          >
+            <SelectLabel>Time range</SelectLabel>
+            <SelectTrigger>
+              <SelectValueText placeholder="Select time range" />
+            </SelectTrigger>
+            <SelectContent>
+              {gpuUtilizationLengths.items.map((item) => (
+                <SelectItem item={item} key={item.value}>
+                  {item.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </SelectRoot>
+        </HStack>
+      </div>
+    );
+  }
+
   elements.push(
     <div key="inspect-results-{query_name}">
       <h3>Inspect results for: {query_name}</h3>
