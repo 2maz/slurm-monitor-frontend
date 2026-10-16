@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import useMonitorEndpoint from "./useMonitorEndpoint";
+import useAppState from "../AppState";
 
 //interface UserJobStat {
 //    user_id: number;
@@ -28,6 +29,7 @@ const useDataFrameQuery = (
   enabled: boolean = true,
 ) => {
   const { endpoint : endpoint_nodes } = useMonitorEndpoint("/queries/" + query_name, params);
+  const { cluster_id } = useAppState().currentBackendSpec();
 
   const fetchDataFrame = async () => {
     const { request } = await endpoint_nodes.get<DataFrameResponse>();
@@ -39,9 +41,10 @@ const useDataFrameQuery = (
   };
 
   return useQuery<DataFrame, Error>({
-    queryKey: ["queries", query_name, params],
+    queryKey: ["queries", cluster_id, query_name, params],
     queryFn: fetchDataFrame,
     refetchInterval: 3600*1000, // refresh every hour
+    retry: false, // queries can be slow, so show failures rather than retrying them
     enabled,
   });
 }

@@ -12,6 +12,7 @@ import {
 } from "../ui/select";
 import { useState } from "react";
 import DataFrameView from "./DataFrameView";
+import GpuUtilizationView, { GPU_UTILIZATION_QUERY_NAME } from "./GpuUtilizationView";
 
 const QueryView = () => {
   const [queryName, setQueryName] = useState<string[]>([]);
@@ -59,7 +60,12 @@ const QueryView = () => {
           ))}
         </SelectContent>
       </SelectRoot>
-      {queryName.length == 1 && <DataFrameView query_name={queryName[0]} />}
+      {queryName.length == 1 &&
+        (queryName[0] === GPU_UTILIZATION_QUERY_NAME ? (
+          <GpuUtilizationView />
+        ) : (
+          <DataFrameView query_name={queryName[0]} />
+        ))}
     </div>
   );
 };
