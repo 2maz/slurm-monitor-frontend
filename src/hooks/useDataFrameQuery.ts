@@ -23,11 +23,7 @@ export type DataFrame = Array<Row>
 interface DataFrameResponse extends DataFrame, Response {
 }
 
-const useDataFrameQuery = (
-  query_name: string,
-  params?: Record<string, string>,
-  enabled: boolean = true,
-) => {
+const useDataFrameQuery = (query_name: string, params?: Record<string, string>) => {
   const { endpoint : endpoint_nodes } = useMonitorEndpoint("/queries/" + query_name, params);
   const { cluster_id } = useAppState().currentBackendSpec();
 
@@ -45,7 +41,6 @@ const useDataFrameQuery = (
     queryFn: fetchDataFrame,
     refetchInterval: 3600*1000, // refresh every hour
     retry: false, // queries can be slow, so show failures rather than retrying them
-    enabled,
   });
 }
 

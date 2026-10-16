@@ -1,5 +1,5 @@
 import { memo, ReactNode, RefCallback, useCallback, useMemo, useRef, useState } from "react";
-import { DateTime, Duration, DurationLikeObject } from "luxon";
+import { DateTime, Duration, DurationLikeObject, DurationUnit } from "luxon";
 import { BarLoader } from "react-spinners";
 import { createListCollection, Field, HStack, Input, ListCollection, Switch } from "@chakra-ui/react";
 import useDataFrameQuery, { Row } from "../../hooks/useDataFrameQuery";
@@ -116,7 +116,7 @@ const DateInput = ({ label, value, min, max, onChange }: DateInputProps) => (
 );
 
 // Single-hue ramps (light = low, dark = high) for heatmap magnitude: blue by
-// default, amber for power. Validated with the dataviz skill's palette script.
+// default, amber for power. Both checked for colour-blind safety.
 const BLUE = ["#cde2fb", "#9ec5f4", "#6da7ec", "#3987e5", "#256abf", "#184f95", "#0d366b"];
 const AMBER = ["#ffeab1", "#ffcc5f", "#f5af20", "#df9201", "#bd7200", "#985704", "#743c01"];
 const rampFor = (metric: string) => (metric === "power" ? AMBER : BLUE);
@@ -125,11 +125,20 @@ const OFFLINE = "#f0efec";
 const NOT_REPORTED = "#a9a7a1";
 // Cells are at most this wide, so they are square unless there are many buckets.
 const CELL_SIZE = 20;
+// Columns are at most CELL_SIZE + 2px apart. When fitting the width makes them
+// closer than MIN_PITCH, the heatmap can scroll sideways instead.
+const MIN_PITCH = 12;
+// rough width of a 12px label character, for fitting axis labels
+const CHAR_WIDTH = 7;
+// rough tooltip height, for placing it below cells near the top
+const TOOLTIP_HEIGHT = 100;
+const SURFACE = "#fff";
+const BORDER = "#e4e3df";
 const TEXT_PRIMARY = "#1f1e1c";
 const TEXT_SECONDARY = "#52514e";
 const TOOLTIP_STYLE = {
-  background: "#fff",
-  border: "1px solid #e4e3df",
+  background: SURFACE,
+  border: `1px solid ${BORDER}`,
   borderRadius: 6,
   boxShadow: "0 4px 12px rgba(0, 0, 0, 0.12)",
   padding: "6px 10px",
@@ -139,20 +148,67 @@ const TOOLTIP_STYLE = {
 
 const toUtc = (ts: string) => DateTime.fromISO(ts, { zone: "utc" });
 const formatTime = (ts: string, format: string) => toUtc(ts).toFormat(format);
-// Per bucket length: the minor axis tick format, the major axis band (formats,
-// longest first, and calendar unit), the steps (in buckets) minor ticks may be spaced by, and the
-// tooltip format. Minor ticks count from the start of their band's calendar unit
-// (e.g. days 1, 8, 15 of a month), and formats leave out what the bucket makes
-// redundant (e.g. the hour of a day bucket).
-const AXES: Record<
-  string,
-  { minor: string; majors: string[]; majorUnit: "day" | "month" | "year"; steps: number[]; tooltip: string }
-> = {
-  "15 minutes": { minor: "HH:mm", majors: ["ccc dd.MM", "dd.MM", "d"], majorUnit: "day", steps: [1, 2, 4, 8, 16, 24], tooltip: "dd.MM.yyyy HH:mm" },
-  "1 hour": { minor: "HH", majors: ["ccc dd.MM", "dd.MM", "d"], majorUnit: "day", steps: [1, 2, 3, 6, 12], tooltip: "dd.MM.yyyy HH:mm" },
-  "1 day": { minor: "d", majors: ["MMMM yyyy", "MMM yyyy", "MMM"], majorUnit: "month", steps: [1, 2, 7, 14], tooltip: "ccc dd.MM.yyyy" },
-  "1 week": { minor: "d", majors: ["MMMM yyyy", "MMM yyyy", "MMM"], majorUnit: "month", steps: [1, 2], tooltip: "'Week of' dd.MM.yyyy" },
-  "1 month": { minor: "MMM", majors: ["yyyy", "yy"], majorUnit: "year", steps: [1, 3, 6], tooltip: "MMMM yyyy" },
+// Formats leave out what the bucket makes redundant, e.g. the hour of a day bucket.
+interface AxisFormat {
+  // the bucket length, in luxon units
+  unit: DurationUnit;
+  amount: number;
+  // minor ticks, which count from the start of their band's calendar unit (e.g. days 1, 8, 15)
+  minor: string;
+  // the steps, in buckets, minor ticks may be spaced by
+  steps: number[];
+  // major bands below the ticks: formats from longest to shortest, and their calendar unit
+  majors: string[];
+  majorUnit: "day" | "month" | "year";
+  tooltip: string;
+}
+
+const AXES: Record<string, AxisFormat> = {
+  "15 minutes": {
+    unit: "minutes",
+    amount: 15,
+    minor: "HH:mm",
+    steps: [1, 2, 4, 8, 16, 24],
+    majors: ["ccc dd.MM", "dd.MM", "d"],
+    majorUnit: "day",
+    tooltip: "dd.MM.yyyy HH:mm",
+  },
+  "1 hour": {
+    unit: "hours",
+    amount: 1,
+    minor: "HH",
+    steps: [1, 2, 3, 6, 12],
+    majors: ["ccc dd.MM", "dd.MM", "d"],
+    majorUnit: "day",
+    tooltip: "dd.MM.yyyy HH:mm",
+  },
+  "1 day": {
+    unit: "days",
+    amount: 1,
+    minor: "d",
+    steps: [1, 2, 7, 14],
+    majors: ["MMMM yyyy", "MMM yyyy", "MMM"],
+    majorUnit: "month",
+    tooltip: "ccc dd.MM.yyyy",
+  },
+  "1 week": {
+    unit: "weeks",
+    amount: 1,
+    minor: "d",
+    steps: [1, 2],
+    majors: ["MMMM yyyy", "MMM yyyy", "MMM"],
+    majorUnit: "month",
+    tooltip: "'Week of' dd.MM.yyyy",
+  },
+  "1 month": {
+    unit: "months",
+    amount: 1,
+    minor: "MMM",
+    steps: [1, 3, 6],
+    majors: ["yyyy", "yy"],
+    majorUnit: "year",
+    tooltip: "MMMM yyyy",
+  },
 };
 const toNumber = (value?: string | number | null) => (value === null || value === undefined ? undefined : Number(value));
 const ramp = (steps: string[], fraction: number) => steps[Math.min(steps.length - 1, Math.floor(fraction * steps.length))];
@@ -190,24 +246,19 @@ interface ChartProps {
   end?: string;
 }
 
-// Columns are at most CELL_SIZE + 2px apart. When fitting the width makes them
-// closer than MIN_PITCH, the heatmap can scroll sideways instead.
-const MIN_PITCH = 12;
-const SURFACE = "#fff";
-
-// An element's width, kept up to date as it resizes. A ref callback, so it
+// An element's size, kept up to date as it resizes. A ref callback, so it
 // follows the element when React replaces it.
-const useWidth = () => {
-  const [width, setWidth] = useState(0);
+const useSize = () => {
+  const [size, setSize] = useState({ width: 0, height: 0 });
   const element = useRef<HTMLDivElement | null>(null);
   const ref: RefCallback<HTMLDivElement> = useCallback((current: HTMLDivElement | null) => {
     element.current = current;
     if (!current) return;
-    const observer = new ResizeObserver(() => setWidth(current.clientWidth));
+    const observer = new ResizeObserver(() => setSize({ width: current.clientWidth, height: current.clientHeight }));
     observer.observe(current);
     return () => observer.disconnect();
   }, []);
-  return [ref, width, element] as const;
+  return [ref, size, element] as const;
 };
 
 // Marks a side the heatmap has more to scroll to: columns to the left or right,
@@ -361,24 +412,26 @@ interface AxisProps {
 // Minor ticks per column and major bands below them, laid out in the heatmap's
 // columns.
 const Axis = ({ periods, bucketLength, pitch, labelWidth }: AxisProps) => {
-  const { minor: minorFormat, majors, majorUnit, steps } = AXES[bucketLength];
+  const { unit, amount, minor: minorFormat, majors, majorUnit, steps } = AXES[bucketLength];
   const majorFormat = majors[0];
-  // The longest band label that fits its columns, at roughly 7px per character.
+  // The longest band label that fits its columns.
   // Month bands only show the year where it changes: on the first band and on January.
   const bandFormat = (period: string, span: number, first: boolean) => {
     const withYear = majorUnit !== "month" || first || toUtc(period).month === 1;
     const formats = withYear ? majors : ["MMMM", "MMM"];
-    return formats.find((format) => 7 * formatTime(period, format).length + 8 <= span * pitch) ?? formats[formats.length - 1];
+    return (
+      formats.find((format) => CHAR_WIDTH * formatTime(period, format).length + 8 <= span * pitch) ??
+      formats[formats.length - 1]
+    );
   };
-  const [[unit, amount]] = Object.entries(DURATIONS[bucketLength]) as [["minutes" | "hours" | "days" | "weeks" | "months", number]];
   // buckets since the start of the period's major unit, e.g. 6 for the 7th day of a month
   const calendarOffset = (period: string) => {
     const time = toUtc(period);
     return Math.floor(time.diff(time.startOf(majorUnit), unit).as(unit) / amount + 1e-9);
   };
-  // columns a minor tick label needs, at roughly 7px per character
+  // columns a minor tick label needs
   const labelLength = Math.max(...periods.map((period) => formatTime(period, minorFormat).length));
-  const fit = Math.ceil((7 * labelLength + 4) / pitch);
+  const fit = Math.ceil((CHAR_WIDTH * labelLength + 4) / pitch);
   const minorEvery = steps.find((step) => step >= fit) ?? fit;
   // Bands of consecutive periods with the same major label. A minor tick is shown
   // every minorEvery buckets of its calendar unit, unless it would run into the next band.
@@ -396,6 +449,9 @@ const Axis = ({ periods, bucketLength, pitch, labelWidth }: AxisProps) => {
     return calendarOffset(periods[i]) % minorEvery === 0 && index + fit <= band.span;
   };
 
+  // the label column covers ticks and bands scrolling sideways beneath it, like the cells
+  const mask = <div style={{ position: "sticky", left: 0, zIndex: 1, background: SURFACE }} />;
+
   return (
     <div
       style={{
@@ -404,11 +460,11 @@ const Axis = ({ periods, bucketLength, pitch, labelWidth }: AxisProps) => {
         columnGap: columnGapFor(pitch),
         rowGap: 2,
         width: "max-content",
-        borderTop: "1px solid #e4e3df",
+        borderTop: `1px solid ${BORDER}`,
         paddingTop: 2,
       }}
     >
-      <div />
+      {mask}
       {periods.map((period, i) => (
         <div
           key={period}
@@ -423,7 +479,7 @@ const Axis = ({ periods, bucketLength, pitch, labelWidth }: AxisProps) => {
           {showTick(i) ? formatTime(period, minorFormat) : ""}
         </div>
       ))}
-      <div />
+      {mask}
       {bands.map(({ period, span }, i) => (
         <div
           key={period}
@@ -433,12 +489,16 @@ const Axis = ({ periods, bucketLength, pitch, labelWidth }: AxisProps) => {
             paddingLeft: 4,
             color: TEXT_PRIMARY,
             whiteSpace: "nowrap",
-            overflow: "hidden",
+            // clip rather than hidden, which would stop the label sticking
+            overflow: "clip",
             textOverflow: "ellipsis",
             minWidth: 0,
           }}
         >
-          {formatTime(period, bandFormat(period, span, i === 0))}
+          {/* stays in view, beside the label column, while its band scrolls past */}
+          <span style={{ position: "sticky", left: labelWidth + 4, display: "inline-block" }}>
+            {formatTime(period, bandFormat(period, span, i === 0))}
+          </span>
         </div>
       ))}
     </div>
@@ -455,7 +515,7 @@ const CellTooltip = ({ cell, metric, bucketLength }: { cell: HTMLElement; metric
   const shift = (100 * x) / (cell.offsetParent as HTMLElement).scrollWidth;
   const line = { display: "flex", alignItems: "center", gap: 6 };
   // below the cell near the top, as the scroll container clips anything above it
-  const below = cell.offsetTop < 100;
+  const below = cell.offsetTop < TOOLTIP_HEIGHT;
   return (
     <>
       <div
@@ -517,22 +577,26 @@ const Heatmap = (props: ChartProps) => {
   const { data, metric, bucketLength, length, start, end } = props;
   const [cell, setCell] = useState<HTMLElement | null>(null);
   const [fitToWidth, setFitToWidth] = useState(true);
-  const [containerRef, containerWidth, container] = useWidth();
-  const [labelRef, labelWidth] = useWidth();
+  const [containerRef, { width: containerWidth }, container] = useSize();
+  const [labelRef, { width: labelWidth }] = useSize();
+  const [axisRef, { height: axisHeight }] = useSize();
   const axis = useRef<HTMLDivElement>(null);
   const [edges, setEdges] = useState({ atStart: true, atEnd: false });
-  // Whether the axis floats over rows: the end of the grid is behind it (roughly
-  // its height, 48px) or below the window, rather than above it or scrolled past.
+  // Whether the axis floats over rows: the end of the grid is behind it or below
+  // the window, rather than above it or scrolled past.
   const [floating, setFloating] = useState(false);
-  const gridEnd = useCallback((element: HTMLDivElement | null) => {
-    if (!element) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => setFloating(!entry.isIntersecting && entry.boundingClientRect.top > 0),
-      { rootMargin: "0px 0px -48px 0px" },
-    );
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
+  const gridEnd = useCallback(
+    (element: HTMLDivElement | null) => {
+      if (!element) return;
+      const observer = new IntersectionObserver(
+        ([entry]) => setFloating(!entry.isIntersecting && entry.boundingClientRect.top > 0),
+        { rootMargin: `0px 0px -${axisHeight}px 0px` },
+      );
+      observer.observe(element);
+      return () => observer.disconnect();
+    },
+    [axisHeight],
+  );
   const periods = useMemo(
     () => bucketStarts(String(data[0].period_start), bucketLength, length, start, end),
     [data, bucketLength, length, start, end],
@@ -582,11 +646,11 @@ const Heatmap = (props: ChartProps) => {
         {scrollShadow("right", 0, scrollable && !edges.atEnd)}
       </div>
       <div ref={gridEnd} style={{ height: 1 }} />
-      {/* Outside the scroll container, as sticky only follows the window from there:
-          floats at the bottom of the window while the rows run past it. */}
-      {/* above the sticky labels (2) that scroll beneath it, below the tooltip (4) */}
-      <div style={{ position: "sticky", bottom: 0, zIndex: 3, background: SURFACE }}>
-        {/* outside the axis' scroll container, which would clip it */}
+      {/* Floats at the bottom of the window while rows run past it, so it's outside the
+          scroll container (sticky only follows the window from there), above the sticky
+          labels (2) and below the tooltip (4). Its shadow is outside the axis' own scroll
+          container, which would clip it. */}
+      <div ref={axisRef} style={{ position: "sticky", bottom: 0, zIndex: 3, background: SURFACE }}>
         {scrollShadow("top", labelWidth, floating)}
         <div
           ref={axis}

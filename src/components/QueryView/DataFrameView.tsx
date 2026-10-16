@@ -84,7 +84,6 @@ const DataFrameView = ({ query_name }: Props) => {
   })
 
   const elements = [];
-
   elements.push(
     <div key="inspect-results-{query_name}">
       <h3>Inspect results for: {query_name}</h3>
