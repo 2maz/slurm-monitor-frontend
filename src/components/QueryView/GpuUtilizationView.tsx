@@ -1,7 +1,7 @@
-import { memo, useCallback, useMemo, useState } from "react";
+import { memo, ReactNode, RefCallback, useCallback, useMemo, useRef, useState } from "react";
 import { DateTime, Duration, DurationLikeObject } from "luxon";
 import { BarLoader } from "react-spinners";
-import { createListCollection, HStack, ListCollection, Switch } from "@chakra-ui/react";
+import { createListCollection, Field, HStack, Input, ListCollection, Switch } from "@chakra-ui/react";
 import useDataFrameQuery, { Row } from "../../hooks/useDataFrameQuery";
 import {
   SelectContent,
@@ -26,8 +26,10 @@ const options = (values: string[], isDisabled: (value: string) => boolean = () =
 // Mirrors GPUUtilizationAggregationLevel / GPUUtilizationBucketLength / GPUUtilizationLength
 // in slurm_monitor/db/query.py - keep in sync with the backend enums.
 const levels = options(["card", "model", "manufacturer"]);
-const bucketLengths = options(["15 minutes", "1 hour", "1 day", "1 week", "1 month"]);
+const BUCKET_LENGTHS = ["15 minutes", "1 hour", "1 day", "1 week", "1 month"];
 const LENGTHS = ["15 minutes", "1 hour", "1 day", "1 week", "1 month", "1 year"];
+// a custom range of whole UTC days, picked with date inputs
+const CUSTOM = "custom";
 const DURATIONS: Record<string, DurationLikeObject> = {
   "15 minutes": { minutes: 15 },
   "1 hour": { hours: 1 },
@@ -37,33 +39,42 @@ const DURATIONS: Record<string, DurationLikeObject> = {
   "1 year": { years: 1 },
 };
 const seconds = (value: string) => Duration.fromObject(DURATIONS[value]).as("seconds");
-// Caps the number of buckets (heatmap columns) to keep rendering fast,
-// e.g. 1 hour buckets go up to 1 week, 1 day buckets up to 1 year.
+// Caps the number of buckets (heatmap columns) to keep rendering fast, e.g. 1 hour
+// buckets go up to 1 week, 1 day buckets up to 1 year. The backend enforces it too.
 const MAX_BUCKETS = 400;
-const isValidLength = (bucketLength: string, length: string) => {
-  const buckets = seconds(length) / seconds(bucketLength);
+const isValidSpan = (bucketLength: string, spanSeconds: number) => {
+  const buckets = spanSeconds / seconds(bucketLength);
   return buckets >= 1 && buckets <= MAX_BUCKETS;
 };
 const UTILIZATION = "utilization";
+const GPUS = "gpus_reporting";
+// Metrics shown on a 0-100% color scale, with a box sized by time online:
+// the column holding each, and its legend label.
+const PERCENT_METRICS: Record<string, { column: string; label: string }> = {
+  [UTILIZATION]: { column: "avg_utilization_percent_while_online", label: "Utilization while online" },
+  power: { column: "power_percent_of_limit", label: "Power while online (% of limit)" },
+};
 const METRICS: Option[] = [
   { label: "Utilization & time online", value: UTILIZATION },
-  { label: "GPUs reporting", value: "gpus_reporting" },
+  { label: "Power & time online", value: "power" },
+  { label: "GPUs reporting", value: GPUS },
 ];
 // At card level every group is a single card, so GPUs reporting is always 1.
-const isValidMetric = (level: string, metric: string) => level !== "card" || metric !== "gpus_reporting";
+const isValidMetric = (level: string, metric: string) => level !== "card" || metric !== GPUS;
 
 interface ParamSelectProps {
   label: string;
   collection: ListCollection<Option>;
   value: string;
   onChange: (value: string) => void;
+  width?: string;
 }
 
-const ParamSelect = ({ label, collection, value, onChange }: ParamSelectProps) => (
+const ParamSelect = ({ label, collection, value, onChange, width = "180px" }: ParamSelectProps) => (
   <SelectRoot
     collection={collection}
     size="sm"
-    width="240px"
+    width={width}
     value={[value]}
     onValueChange={(event) => onChange(event.value[0])}
   >
@@ -81,9 +92,37 @@ const ParamSelect = ({ label, collection, value, onChange }: ParamSelectProps) =
   </SelectRoot>
 );
 
-// Single-hue ramp (light = low, dark = high) for heatmap magnitude.
-const SEQUENTIAL = ["#cde2fb", "#9ec5f4", "#6da7ec", "#3987e5", "#256abf", "#184f95", "#0d366b"];
+interface DateInputProps {
+  label: string;
+  value: string;
+  min?: string;
+  max?: string;
+  onChange: (value: string) => void;
+}
+
+// A UTC date (yyyy-MM-dd); cleared inputs are ignored, as a range needs both ends.
+const DateInput = ({ label, value, min, max, onChange }: DateInputProps) => (
+  <Field.Root width="150px">
+    <Field.Label>{label}</Field.Label>
+    <Input
+      type="date"
+      size="sm"
+      value={value}
+      min={min}
+      max={max}
+      onChange={(event) => event.target.value && onChange(event.target.value)}
+    />
+  </Field.Root>
+);
+
+// Single-hue ramps (light = low, dark = high) for heatmap magnitude: blue by
+// default, amber for power. Validated with the dataviz skill's palette script.
+const BLUE = ["#cde2fb", "#9ec5f4", "#6da7ec", "#3987e5", "#256abf", "#184f95", "#0d366b"];
+const AMBER = ["#ffeab1", "#ffcc5f", "#f5af20", "#df9201", "#bd7200", "#985704", "#743c01"];
+const rampFor = (metric: string) => (metric === "power" ? AMBER : BLUE);
 const OFFLINE = "#f0efec";
+// box color for cards that were online but don't report the metric (e.g. power)
+const NOT_REPORTED = "#a9a7a1";
 // Cells are at most this wide, so they are square unless there are many buckets.
 const CELL_SIZE = 20;
 const TEXT_PRIMARY = "#1f1e1c";
@@ -100,23 +139,23 @@ const TOOLTIP_STYLE = {
 
 const toUtc = (ts: string) => DateTime.fromISO(ts, { zone: "utc" });
 const formatTime = (ts: string, format: string) => toUtc(ts).toFormat(format);
-// Per bucket length: the minor axis tick format, the major axis band (format and
-// calendar unit), the steps (in buckets) minor ticks may be spaced by, and the
+// Per bucket length: the minor axis tick format, the major axis band (formats,
+// longest first, and calendar unit), the steps (in buckets) minor ticks may be spaced by, and the
 // tooltip format. Minor ticks count from the start of their band's calendar unit
 // (e.g. days 1, 8, 15 of a month), and formats leave out what the bucket makes
 // redundant (e.g. the hour of a day bucket).
 const AXES: Record<
   string,
-  { minor: string; major: string; majorUnit: "day" | "month" | "year"; steps: number[]; tooltip: string }
+  { minor: string; majors: string[]; majorUnit: "day" | "month" | "year"; steps: number[]; tooltip: string }
 > = {
-  "15 minutes": { minor: "HH:mm", major: "ccc dd.MM", majorUnit: "day", steps: [1, 2, 4, 8, 16, 24], tooltip: "dd.MM.yyyy HH:mm" },
-  "1 hour": { minor: "HH", major: "ccc dd.MM", majorUnit: "day", steps: [1, 2, 3, 6, 12], tooltip: "dd.MM.yyyy HH:mm" },
-  "1 day": { minor: "d", major: "MMMM yyyy", majorUnit: "month", steps: [1, 2, 7, 14], tooltip: "ccc dd.MM.yyyy" },
-  "1 week": { minor: "d", major: "MMMM yyyy", majorUnit: "month", steps: [1, 2], tooltip: "'Week of' dd.MM.yyyy" },
-  "1 month": { minor: "MMM", major: "yyyy", majorUnit: "year", steps: [1, 3, 6], tooltip: "MMMM yyyy" },
+  "15 minutes": { minor: "HH:mm", majors: ["ccc dd.MM", "dd.MM", "d"], majorUnit: "day", steps: [1, 2, 4, 8, 16, 24], tooltip: "dd.MM.yyyy HH:mm" },
+  "1 hour": { minor: "HH", majors: ["ccc dd.MM", "dd.MM", "d"], majorUnit: "day", steps: [1, 2, 3, 6, 12], tooltip: "dd.MM.yyyy HH:mm" },
+  "1 day": { minor: "d", majors: ["MMMM yyyy", "MMM yyyy", "MMM"], majorUnit: "month", steps: [1, 2, 7, 14], tooltip: "ccc dd.MM.yyyy" },
+  "1 week": { minor: "d", majors: ["MMMM yyyy", "MMM yyyy", "MMM"], majorUnit: "month", steps: [1, 2], tooltip: "'Week of' dd.MM.yyyy" },
+  "1 month": { minor: "MMM", majors: ["yyyy", "yy"], majorUnit: "year", steps: [1, 3, 6], tooltip: "MMMM yyyy" },
 };
 const toNumber = (value?: string | number | null) => (value === null || value === undefined ? undefined : Number(value));
-const ramp = (fraction: number) => SEQUENTIAL[Math.min(SEQUENTIAL.length - 1, Math.floor(fraction * SEQUENTIAL.length))];
+const ramp = (steps: string[], fraction: number) => steps[Math.min(steps.length - 1, Math.floor(fraction * steps.length))];
 // A cell with a centered box whose area is `percent` of the cell, on the offline color.
 const fill = (color: string, percent: number) => {
   const side = 100 * Math.sqrt(Math.min(percent, 100) / 100);
@@ -125,14 +164,16 @@ const fill = (color: string, percent: number) => {
 
 // All bucket starts in the time range, including those without data (e.g. downtime).
 // Steps from a bucket in the data so they line up with the backend's time_bucket.
-const bucketStarts = (first: string, bucketLength: string, length: string) => {
+// The range is a custom start-end, or else `length` up to now; never past now.
+const bucketStarts = (first: string, bucketLength: string, length: string, start?: string, end?: string) => {
   const step = DURATIONS[bucketLength];
   const now = DateTime.utc();
-  const from = now.minus(DURATIONS[length]);
-  let start = toUtc(first);
-  while (start > from) start = start.minus(step);
+  const to = end ? DateTime.min(toUtc(end), now) : now;
+  const from = start ? toUtc(start) : to.minus(DURATIONS[length]);
+  let period = toUtc(first);
+  while (period > from) period = period.minus(step);
   const periods = [];
-  for (; start <= now; start = start.plus(step)) periods.push(start.toISO()!);
+  for (; period < to; period = period.plus(step)) periods.push(period.toISO()!);
   return periods;
 };
 
@@ -145,24 +186,65 @@ interface ChartProps {
   showGroups: boolean;
   bucketLength: string;
   length: string;
+  start?: string;
+  end?: string;
 }
+
+// Columns are at most CELL_SIZE + 2px apart. When fitting the width makes them
+// closer than MIN_PITCH, the heatmap can scroll sideways instead.
+const MIN_PITCH = 12;
+const SURFACE = "#fff";
+
+// An element's width, kept up to date as it resizes. A ref callback, so it
+// follows the element when React replaces it.
+const useWidth = () => {
+  const [width, setWidth] = useState(0);
+  const element = useRef<HTMLDivElement | null>(null);
+  const ref: RefCallback<HTMLDivElement> = useCallback((current: HTMLDivElement | null) => {
+    element.current = current;
+    if (!current) return;
+    const observer = new ResizeObserver(() => setWidth(current.clientWidth));
+    observer.observe(current);
+    return () => observer.disconnect();
+  }, []);
+  return [ref, width, element] as const;
+};
+
+// Marks a side the heatmap has more to scroll to: columns to the left or right,
+// or rows beneath the floating axis ("top" of the axis).
+const scrollShadow = (side: "left" | "right" | "top", offset: number, visible: boolean) => (
+  <div
+    style={{
+      position: "absolute",
+      // the side shadows start below the scroll container's 2px top padding
+      ...(side === "top" ? { left: offset, right: 0, bottom: "100%", height: 16 } : { top: 2, bottom: 0, [side]: offset, width: 16 }),
+      background: `linear-gradient(to ${{ left: "right", right: "left", top: "top" }[side]}, rgba(0, 0, 0, 0.15), transparent)`,
+      opacity: visible ? 1 : 0,
+      transition: "opacity 150ms",
+      pointerEvents: "none",
+      zIndex: 1,
+    }}
+  />
+);
 
 const Swatch = ({ background }: { background: string }) => (
   <span style={{ background, width: 12, height: 12, borderRadius: 2, flexShrink: 0 }} />
 );
 
 const Legend = ({ metric, max }: { metric: string; max: number }) => (
-  <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 8 }}>
-    {metric === UTILIZATION ? "Utilization while online: 0%" : "GPUs reporting: 0"}
-    {SEQUENTIAL.map((step) => (
+  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+    {metric === GPUS ? "GPUs reporting: 0" : `${PERCENT_METRICS[metric].label}: 0%`}
+    {rampFor(metric).map((step) => (
       <span key={step} style={{ background: step, width: 24, height: 12 }} />
     ))}
-    {metric === UTILIZATION ? "100%" : max}
-    {metric === UTILIZATION && (
+    {metric === GPUS ? max : "100%"}
+    {metric !== GPUS && (
       <>
-        <span style={{ background: fill(SEQUENTIAL[3], 25), width: CELL_SIZE, height: CELL_SIZE, marginLeft: 16 }} />
-        <span style={{ background: fill(SEQUENTIAL[3], 100), width: CELL_SIZE, height: CELL_SIZE }} />
+        <span style={{ background: fill(rampFor(metric)[3], 25), width: CELL_SIZE, height: CELL_SIZE, marginLeft: 16 }} />
+        <span style={{ background: fill(rampFor(metric)[3], 100), width: CELL_SIZE, height: CELL_SIZE }} />
         box area = time online
+        <span style={{ background: fill(NOT_REPORTED, 100), width: 24, height: 12, marginLeft: 16 }} />
+        not reported
       </>
     )}
     <span style={{ background: OFFLINE, width: 24, height: 12, marginLeft: 16 }} />
@@ -170,8 +252,22 @@ const Legend = ({ metric, max }: { metric: string; max: number }) => (
   </div>
 );
 
-// One row per group, one cell per period. Utilization cells are colored by
-// utilization while online, with a centered box sized by time online. Memoized
+// narrow columns drop their gaps, so that a year of days still fits the width
+const columnGapFor = (pitch: number) => (pitch >= 6 ? 2 : pitch >= 3 ? 1 : 0);
+// the cell columns of the heatmap and its axis, after the label column
+const columnsFor = (count: number, pitch: number) => `repeat(${count}, ${pitch - columnGapFor(pitch)}px)`;
+
+interface GridProps extends ChartProps {
+  periods: string[];
+  max: number;
+  // distance between columns
+  pitch: number;
+  // measures the label column
+  labelRef: RefCallback<HTMLDivElement>;
+}
+
+// One row per group, one cell per period. Percentage metric cells are colored by
+// the metric while online, with a centered box sized by time online. Memoized
 // so hovering, which only re-renders the tooltip in Heatmap, doesn't re-render
 // every cell.
 const HeatmapGrid = memo(function HeatmapGrid({
@@ -181,32 +277,108 @@ const HeatmapGrid = memo(function HeatmapGrid({
   labels,
   headers,
   showGroups,
-  bucketLength,
-  length,
-}: ChartProps) {
-  const periods = useMemo(
-    () => bucketStarts(String(data[0].period_start), bucketLength, length),
-    [data, bucketLength, length],
+  periods,
+  max,
+  pitch,
+  labelRef,
+}: GridProps) {
+  // memoized so a new pitch (resizing, fit to width) only changes the columns
+  const cells = useMemo(() => {
+    const rows = new Map(data.map((row) => [`${row.gpu_group}|${toUtc(String(row.period_start)).toISO()}`, row]));
+    const cell = (group: string, period: string) => {
+      const row = rows.get(`${group}|${period}`);
+      const online = toNumber(row?.percent_time_online);
+      const gpus = toNumber(row?.gpus_reporting);
+      const percent = metric === GPUS ? undefined : toNumber(row?.[PERCENT_METRICS[metric].column]);
+      const value = metric === GPUS ? gpus : percent;
+      const color = value === undefined ? undefined : ramp(rampFor(metric), value / (metric === GPUS ? max : 100));
+      return (
+        <div
+          key={`${group}|${period}`}
+          data-group={group}
+          data-label={labels.get(group)}
+          data-period={period}
+          data-color={color}
+          data-percent={percent}
+          data-watts={row?.avg_power_watts ?? undefined}
+          data-limit={row?.avg_power_limit_watts ?? undefined}
+          data-online={online}
+          data-gpus={gpus}
+          style={{
+            background: online === undefined ? OFFLINE : fill(color ?? NOT_REPORTED, metric === GPUS ? 100 : online),
+            height: CELL_SIZE,
+          }}
+        />
+      );
+    };
+    // labels and headers stay in view when scrolling sideways, above the scroll shadows
+    const sticky = { position: "sticky", left: 0, background: SURFACE, zIndex: 2 } as const;
+    return groups.map((group, i) => [
+      headers.has(group) && (
+        // covers the scroll shadows, which only belong beside cell rows
+        <div
+          key={`header|${group}`}
+          style={{ gridColumn: "1 / -1", paddingTop: i ? 12 : 0, position: "relative", zIndex: 2, background: SURFACE }}
+        >
+          <span style={{ ...sticky, display: "inline-block", color: TEXT_PRIMARY, fontWeight: 600 }}>
+            {headers.get(group)}
+          </span>
+        </div>
+      ),
+      <div
+        key={group}
+        ref={i === 0 ? labelRef : undefined}
+        style={{ ...sticky, paddingRight: 8, whiteSpace: "nowrap", lineHeight: `${CELL_SIZE}px` }}
+      >
+        {showGroups ? group : labels.get(group)}
+      </div>,
+      ...periods.map((period) => cell(group, period)),
+    ]);
+  }, [data, metric, groups, labels, headers, showGroups, periods, max, labelRef]);
+
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: `max-content ${columnsFor(periods.length, pitch)}`,
+        columnGap: columnGapFor(pitch),
+        rowGap: 2,
+        width: "max-content",
+      }}
+    >
+      {cells}
+    </div>
   );
-  const max = Math.max(...data.map((row) => Number(row.gpus_reporting)));
-  // Distance between columns, measured from the first cell as it changes size
-  // (window resizes, range changes, wider labels), to space the minor ticks.
-  const [pitch, setPitch] = useState(0);
-  const measure = useCallback((cell: HTMLDivElement) => {
-    const observer = new ResizeObserver(() => setPitch(cell.offsetWidth + 2));
-    observer.observe(cell);
-    return () => observer.disconnect();
-  }, []);
-  const { minor: minorFormat, major: majorFormat, majorUnit, steps } = AXES[bucketLength];
+});
+
+interface AxisProps {
+  periods: string[];
+  bucketLength: string;
+  pitch: number;
+  labelWidth: number;
+}
+
+// Minor ticks per column and major bands below them, laid out in the heatmap's
+// columns.
+const Axis = ({ periods, bucketLength, pitch, labelWidth }: AxisProps) => {
+  const { minor: minorFormat, majors, majorUnit, steps } = AXES[bucketLength];
+  const majorFormat = majors[0];
+  // The longest band label that fits its columns, at roughly 7px per character.
+  // Month bands only show the year where it changes: on the first band and on January.
+  const bandFormat = (period: string, span: number, first: boolean) => {
+    const withYear = majorUnit !== "month" || first || toUtc(period).month === 1;
+    const formats = withYear ? majors : ["MMMM", "MMM"];
+    return formats.find((format) => 7 * formatTime(period, format).length + 8 <= span * pitch) ?? formats[formats.length - 1];
+  };
   const [[unit, amount]] = Object.entries(DURATIONS[bucketLength]) as [["minutes" | "hours" | "days" | "weeks" | "months", number]];
   // buckets since the start of the period's major unit, e.g. 6 for the 7th day of a month
   const calendarOffset = (period: string) => {
     const time = toUtc(period);
     return Math.floor(time.diff(time.startOf(majorUnit), unit).as(unit) / amount + 1e-9);
   };
-  // columns a minor tick label needs, at roughly 7px per character (none until measured)
+  // columns a minor tick label needs, at roughly 7px per character
   const labelLength = Math.max(...periods.map((period) => formatTime(period, minorFormat).length));
-  const fit = pitch ? Math.ceil((7 * labelLength + 4) / pitch) : Infinity;
+  const fit = Math.ceil((7 * labelLength + 4) / pitch);
   const minorEvery = steps.find((step) => step >= fit) ?? fit;
   // Bands of consecutive periods with the same major label. A minor tick is shown
   // every minorEvery buckets of its calendar unit, unless it would run into the next band.
@@ -224,108 +396,66 @@ const HeatmapGrid = memo(function HeatmapGrid({
     return calendarOffset(periods[i]) % minorEvery === 0 && index + fit <= band.span;
   };
 
-  // memoized so re-measuring the pitch only re-renders the axis
-  const cells = useMemo(() => {
-    const rows = new Map(data.map((row) => [`${row.gpu_group}|${toUtc(String(row.period_start)).toISO()}`, row]));
-    const cell = (group: string, period: string) => {
-      const row = rows.get(`${group}|${period}`);
-      const utilization = toNumber(row?.avg_utilization_percent_while_online);
-      const online = toNumber(row?.percent_time_online);
-      const gpus = toNumber(row?.gpus_reporting);
-      const color =
-        metric === UTILIZATION
-          ? utilization === undefined ? undefined : ramp(utilization / 100)
-          : gpus === undefined ? undefined : ramp(gpus / max);
-      const area = metric === UTILIZATION ? (online ?? 0) : 100;
-      return (
-        <div
-          key={`${group}|${period}`}
-          data-group={group}
-          data-label={labels.get(group)}
-          data-period={period}
-          data-color={color}
-          data-utilization={utilization}
-          data-online={online}
-          data-gpus={gpus}
-          style={{ background: color ? fill(color, area) : OFFLINE, height: CELL_SIZE }}
-          ref={group === groups[0] && period === periods[0] ? measure : undefined}
-        />
-      );
-    };
-    return groups.map((group, i) => [
-      headers.has(group) && (
-        <div
-          key={`header|${group}`}
-          style={{ gridColumn: "1 / -1", paddingTop: i ? 12 : 0, color: TEXT_PRIMARY, fontWeight: 600 }}
-        >
-          {headers.get(group)}
-        </div>
-      ),
-      <div key={group} style={{ paddingRight: 8, whiteSpace: "nowrap", lineHeight: `${CELL_SIZE}px` }}>
-        {showGroups ? group : labels.get(group)}
-      </div>,
-      ...periods.map((period) => cell(group, period)),
-    ]);
-  }, [data, metric, groups, labels, headers, showGroups, periods, max, measure]);
-
   return (
-    <div className="my-3" style={{ fontSize: 12, color: TEXT_SECONDARY }}>
-      <Legend metric={metric} max={max} />
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: `max-content repeat(${periods.length}, minmax(2px, ${CELL_SIZE}px))`,
-          gap: 2,
-        }}
-      >
-        {cells}
-        <div />
-        {periods.map((period, i) => (
-          <div
-            key={period}
-            // a bar under the labelled column, as wide as its cells
-            style={{
-              borderTop: `2px solid ${showTick(i) ? TEXT_PRIMARY : "transparent"}`,
-              paddingTop: 2,
-              whiteSpace: "nowrap",
-              minWidth: 0,
-            }}
-          >
-            {showTick(i) ? formatTime(period, minorFormat) : ""}
-          </div>
-        ))}
-        <div />
-        {bands.map(({ period, span }) => (
-          <div
-            key={period}
-            style={{
-              gridColumn: `span ${span}`,
-              borderLeft: `1px solid ${TEXT_SECONDARY}`,
-              paddingLeft: 4,
-              color: TEXT_PRIMARY,
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              minWidth: 0,
-            }}
-          >
-            {formatTime(period, majorFormat)}
-          </div>
-        ))}
-      </div>
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: `${labelWidth}px ${columnsFor(periods.length, pitch)}`,
+        columnGap: columnGapFor(pitch),
+        rowGap: 2,
+        width: "max-content",
+        borderTop: "1px solid #e4e3df",
+        paddingTop: 2,
+      }}
+    >
+      <div />
+      {periods.map((period, i) => (
+        <div
+          key={period}
+          // a bar under the labelled column, as wide as its cells
+          style={{
+            borderTop: `2px solid ${showTick(i) ? TEXT_PRIMARY : "transparent"}`,
+            paddingTop: 2,
+            whiteSpace: "nowrap",
+            minWidth: 0,
+          }}
+        >
+          {showTick(i) ? formatTime(period, minorFormat) : ""}
+        </div>
+      ))}
+      <div />
+      {bands.map(({ period, span }, i) => (
+        <div
+          key={period}
+          style={{
+            gridColumn: `span ${span}`,
+            borderLeft: `1px solid ${TEXT_SECONDARY}`,
+            paddingLeft: 4,
+            color: TEXT_PRIMARY,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            minWidth: 0,
+          }}
+        >
+          {formatTime(period, bandFormat(period, span, i === 0))}
+        </div>
+      ))}
     </div>
   );
-});
+};
 
 // Outlines the hovered cell and shows its exact values above it, shifted
 // horizontally by the cell's position so it stays within the heatmap.
 const CellTooltip = ({ cell, metric, bucketLength }: { cell: HTMLElement; metric: string; bucketLength: string }) => {
   // the cell may have been removed by a refetch while hovered
   if (!cell.offsetParent) return null;
-  const { group, label, period, color, utilization, online, gpus } = cell.dataset;
+  const { group, label, period, color, percent, watts, limit, online, gpus } = cell.dataset;
   const x = cell.offsetLeft + cell.offsetWidth / 2;
-  const shift = (100 * x) / (cell.offsetParent as HTMLElement).offsetWidth;
+  const shift = (100 * x) / (cell.offsetParent as HTMLElement).scrollWidth;
   const line = { display: "flex", alignItems: "center", gap: 6 };
+  // below the cell near the top, as the scroll container clips anything above it
+  const below = cell.offsetTop < 100;
   return (
     <>
       <div
@@ -337,6 +467,7 @@ const CellTooltip = ({ cell, metric, bucketLength }: { cell: HTMLElement; metric
           height: cell.offsetHeight + 4,
           border: `2px solid ${TEXT_PRIMARY}`,
           pointerEvents: "none",
+          zIndex: 4,
         }}
       />
       <div
@@ -344,11 +475,11 @@ const CellTooltip = ({ cell, metric, bucketLength }: { cell: HTMLElement; metric
           ...TOOLTIP_STYLE,
           position: "absolute",
           left: x,
-          top: cell.offsetTop - 6,
-          transform: `translate(-${shift}%, -100%)`,
+          top: below ? cell.offsetTop + cell.offsetHeight + 6 : cell.offsetTop - 6,
+          transform: `translate(-${shift}%, ${below ? 0 : -100}%)`,
           whiteSpace: "nowrap",
           pointerEvents: "none",
-          zIndex: 1,
+          zIndex: 4,
         }}
       >
         <div style={{ color: TEXT_SECONDARY }}>{formatTime(period!, AXES[bucketLength].tooltip)}</div>
@@ -359,14 +490,15 @@ const CellTooltip = ({ cell, metric, bucketLength }: { cell: HTMLElement; metric
             <Swatch background={OFFLINE} />
             Offline / no data
           </div>
-        ) : metric === UTILIZATION ? (
+        ) : metric !== GPUS ? (
           <>
             <div style={line}>
-              <Swatch background={color ?? OFFLINE} />
-              Utilization while online: <strong>{utilization === undefined ? "–" : `${utilization}%`}</strong>
+              <Swatch background={color ?? NOT_REPORTED} />
+              {PERCENT_METRICS[metric].label}: <strong>{percent === undefined ? "not reported" : `${percent}%`}</strong>
+              {metric === "power" && watts !== undefined && ` (${watts} W of ${limit} W)`}
             </div>
             <div style={line}>
-              <Swatch background={fill(color ?? TEXT_SECONDARY, Number(online))} />
+              <Swatch background={fill(color ?? NOT_REPORTED, Number(online))} />
               Time online: <strong>{online}%</strong>
             </div>
           </>
@@ -382,30 +514,128 @@ const CellTooltip = ({ cell, metric, bucketLength }: { cell: HTMLElement; metric
 };
 
 const Heatmap = (props: ChartProps) => {
+  const { data, metric, bucketLength, length, start, end } = props;
   const [cell, setCell] = useState<HTMLElement | null>(null);
+  const [fitToWidth, setFitToWidth] = useState(true);
+  const [containerRef, containerWidth, container] = useWidth();
+  const [labelRef, labelWidth] = useWidth();
+  const axis = useRef<HTMLDivElement>(null);
+  const [edges, setEdges] = useState({ atStart: true, atEnd: false });
+  // Whether the axis floats over rows: the end of the grid is behind it (roughly
+  // its height, 48px) or below the window, rather than above it or scrolled past.
+  const [floating, setFloating] = useState(false);
+  const gridEnd = useCallback((element: HTMLDivElement | null) => {
+    if (!element) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setFloating(!entry.isIntersecting && entry.boundingClientRect.top > 0),
+      { rootMargin: "0px 0px -48px 0px" },
+    );
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+  const periods = useMemo(
+    () => bucketStarts(String(data[0].period_start), bucketLength, length, start, end),
+    [data, bucketLength, length, start, end],
+  );
+  const max = Math.max(...data.map((row) => Number(row.gpus_reporting)));
+  // the pitch that fits the width (less a pixel against rounding, at least 1px); full size until measured
+  const fitPitch = containerWidth ? Math.max(1, (containerWidth - labelWidth - 1) / periods.length) : CELL_SIZE + 2;
+  const pitch = Math.min(CELL_SIZE + 2, fitToWidth ? fitPitch : Math.max(fitPitch, MIN_PITCH));
+  const scrollable = !fitToWidth && fitPitch < MIN_PITCH;
+  // The heatmap and the axis scroll together, whichever is scrolled; only the
+  // axis shows a scrollbar, as it stays at the bottom of the window.
+  const syncScroll = (from: HTMLDivElement, to: HTMLDivElement | null) => {
+    if (to && to.scrollLeft !== from.scrollLeft) to.scrollLeft = from.scrollLeft;
+    const atStart = from.scrollLeft <= 0;
+    const atEnd = from.scrollLeft + from.clientWidth >= from.scrollWidth - 1;
+    if (atStart !== edges.atStart || atEnd !== edges.atEnd) setEdges({ atStart, atEnd });
+  };
   return (
-    <div
-      style={{ position: "relative" }}
-      onMouseMove={(event) => {
-        const target = event.target as HTMLElement;
-        setCell(target.dataset.period ? target : null);
-      }}
-      onMouseLeave={() => setCell(null)}
-    >
-      <HeatmapGrid {...props} />
-      {cell && <CellTooltip cell={cell} metric={props.metric} bucketLength={props.bucketLength} />}
+    <div className="my-3" style={{ fontSize: 12, color: TEXT_SECONDARY }}>
+      <HStack gap={8} mb={2} wrap="wrap">
+        <Legend metric={metric} max={max} />
+        {fitPitch < MIN_PITCH && (
+          <Switch.Root size="sm" checked={fitToWidth} onCheckedChange={(event) => setFitToWidth(event.checked)}>
+            <Switch.HiddenInput />
+            <Switch.Control />
+            <Switch.Label>Fit to width</Switch.Label>
+          </Switch.Root>
+        )}
+      </HStack>
+      <div style={{ position: "relative" }}>
+        {/* the tooltip lives in the scroll container, so it scrolls along with the cells */}
+        <div
+          ref={containerRef}
+          // room for the hover outline of the first row
+          style={{ position: "relative", overflowX: "auto", overflowY: "hidden", scrollbarWidth: "none", paddingTop: 2 }}
+          onScroll={(event) => syncScroll(event.currentTarget, axis.current)}
+          onMouseMove={(event) => {
+            const target = event.target as HTMLElement;
+            setCell(target.dataset.period ? target : null);
+          }}
+          onMouseLeave={() => setCell(null)}
+        >
+          <HeatmapGrid {...props} periods={periods} max={max} pitch={pitch} labelRef={labelRef} />
+          {cell && <CellTooltip cell={cell} metric={metric} bucketLength={bucketLength} />}
+        </div>
+        {scrollShadow("left", labelWidth, scrollable && !edges.atStart)}
+        {scrollShadow("right", 0, scrollable && !edges.atEnd)}
+      </div>
+      <div ref={gridEnd} style={{ height: 1 }} />
+      {/* Outside the scroll container, as sticky only follows the window from there:
+          floats at the bottom of the window while the rows run past it. */}
+      {/* above the sticky labels (2) that scroll beneath it, below the tooltip (4) */}
+      <div style={{ position: "sticky", bottom: 0, zIndex: 3, background: SURFACE }}>
+        {/* outside the axis' scroll container, which would clip it */}
+        {scrollShadow("top", labelWidth, floating)}
+        <div
+          ref={axis}
+          style={{ overflowX: "auto", paddingBottom: 4 }}
+          onScroll={(event) => syncScroll(event.currentTarget, container.current)}
+        >
+          <Axis periods={periods} bucketLength={bucketLength} pitch={pitch} labelWidth={labelWidth} />
+        </div>
+      </div>
     </div>
   );
 };
 
-const GpuUtilizationView = () => {
+const GpuUtilizationView = ({ querySelect }: { querySelect: ReactNode }) => {
   const [level, setLevel] = useState("card");
   const [bucketLength, setBucketLength] = useState("1 hour");
   const [length, setLength] = useState("1 day");
   const [metric, setMetric] = useState(METRICS[0].value);
   const [showUuids, setShowUuids] = useState(false);
+  const today = DateTime.utc().toISODate();
+  const [range, setRange] = useState({ start: DateTime.utc().minus({ days: 7 }).toISODate(), end: today });
 
-  const lengths = options(LENGTHS, (value) => !isValidLength(bucketLength, value));
+  // a custom range includes its end day
+  const custom =
+    length === CUSTOM ? { start: toUtc(range.start).toISO()!, end: toUtc(range.end).plus({ days: 1 }).toISO()! } : undefined;
+  const customSeconds = (dates: typeof range) => toUtc(dates.end).plus({ days: 1 }).diff(toUtc(dates.start)).as("seconds");
+  // Presets are limited to what fits the bucket length; with a custom range,
+  // the bucket lengths are limited to what fits the range instead.
+  const lengths = createListCollection<Option>({
+    items: [
+      ...LENGTHS.map((value) => ({ label: value, value, disabled: !isValidSpan(bucketLength, seconds(value)) })),
+      { label: "Custom…", value: CUSTOM },
+    ],
+  });
+  const bucketLengths = options(BUCKET_LENGTHS, (value) => custom !== undefined && !isValidSpan(value, customSeconds(range)));
+  // the finest bucket length that fits a custom range, if the current one doesn't
+  const fitBucketLength = (dates: typeof range) => {
+    if (!isValidSpan(bucketLength, customSeconds(dates))) {
+      setBucketLength(BUCKET_LENGTHS.find((value) => isValidSpan(value, customSeconds(dates))) ?? bucketLength);
+    }
+  };
+  const changeLength = (value: string) => {
+    setLength(value);
+    if (value === CUSTOM) fitBucketLength(range);
+  };
+  const changeRange = (dates: typeof range) => {
+    setRange(dates);
+    fitBucketLength(dates);
+  };
   const metrics = createListCollection<Option>({
     items: METRICS.map((item) => ({ ...item, disabled: !isValidMetric(level, item.value) })),
   });
@@ -417,8 +647,8 @@ const GpuUtilizationView = () => {
   // nearest allowed range.
   const changeBucketLength = (value: string) => {
     setBucketLength(value);
-    if (!isValidLength(value, length)) {
-      const valid = LENGTHS.filter((l) => isValidLength(value, l));
+    if (length !== CUSTOM && !isValidSpan(value, seconds(length))) {
+      const valid = LENGTHS.filter((l) => isValidSpan(value, seconds(l)));
       setLength(seconds(length) > seconds(valid[valid.length - 1]) ? valid[valid.length - 1] : valid[0]);
     }
   };
@@ -426,15 +656,20 @@ const GpuUtilizationView = () => {
   const { data, isLoading, error } = useDataFrameQuery(GPU_UTILIZATION_QUERY_NAME, {
     level,
     bucket_length: bucketLength,
-    length,
+    ...(custom ?? { length }),
   });
 
-  const labels = new Map((data ?? []).map((row) => [String(row.gpu_group), String(row.gpu_label)]));
+  // models or manufacturers can be blank for cards without sysinfo
+  const labels = new Map((data ?? []).map((row) => [String(row.gpu_group), String(row.gpu_label || "unknown")]));
   // Groups are listed in sections: cards by model, models by manufacturer.
   const sections = new Map(
     (data ?? []).map((row) => [
       String(row.gpu_group),
-      level === "card" ? `${row.manufacturer} · ${row.model}` : level === "model" ? String(row.manufacturer) : "",
+      level === "card"
+        ? `${row.manufacturer || "unknown"} · ${row.model || "unknown model"}`
+        : level === "model"
+          ? String(row.manufacturer || "unknown")
+          : "",
     ]),
   );
   // labels compared numerically so that e.g. "GPU 2" sorts before "GPU 10"
@@ -455,7 +690,13 @@ const GpuUtilizationView = () => {
   }
 
   let chart;
-  if (isLoading) chart = <BarLoader />;
+  if (isLoading)
+    chart = (
+      <div className="my-3" style={{ color: TEXT_SECONDARY }}>
+        <BarLoader />
+        Loading - long time ranges can take up to half a minute
+      </div>
+    );
   else if (error) chart = "Failed to load data";
   else if (!data?.length) chart = "No data available for this time range";
   else
@@ -469,16 +710,25 @@ const GpuUtilizationView = () => {
         showGroups={level === "card" && showUuids}
         bucketLength={bucketLength}
         length={length}
+        start={custom?.start}
+        end={custom?.end}
       />
     );
 
   return (
-    <div className="my-5">
-      <HStack alignItems="end">
+    <div className="my-3">
+      <HStack alignItems="end" wrap="wrap">
+        {querySelect}
         <ParamSelect label="Aggregation level" collection={levels} value={level} onChange={changeLevel} />
         <ParamSelect label="Bucket length" collection={bucketLengths} value={bucketLength} onChange={changeBucketLength} />
-        <ParamSelect label="Time range" collection={lengths} value={length} onChange={setLength} />
-        <ParamSelect label="Metric" collection={metrics} value={metric} onChange={setMetric} />
+        <ParamSelect label="Time range" collection={lengths} value={length} onChange={changeLength} />
+        {custom && (
+          <>
+            <DateInput label="From" value={range.start} max={range.end} onChange={(start) => changeRange({ ...range, start })} />
+            <DateInput label="To" value={range.end} min={range.start} max={today} onChange={(end) => changeRange({ ...range, end })} />
+          </>
+        )}
+        <ParamSelect label="Metric" collection={metrics} value={metric} onChange={setMetric} width="240px" />
         {level === "card" && (
           <Switch.Root size="sm" mb={2} checked={showUuids} onCheckedChange={(event) => setShowUuids(event.checked)}>
             <Switch.HiddenInput />
