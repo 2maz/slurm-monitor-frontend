@@ -3,6 +3,7 @@ import { DateTime, Duration, DurationLikeObject, DurationUnit } from "luxon";
 import { BarLoader } from "react-spinners";
 import { Button, createListCollection, Field, HStack, Input, ListCollection, Switch } from "@chakra-ui/react";
 import useDataFrameQuery, { Row } from "../../hooks/useDataFrameQuery";
+import useAppState from "../../AppState";
 import {
   SelectContent,
   SelectItem,
@@ -130,7 +131,7 @@ const CELL_SIZE = 20;
 const MIN_PITCH = 12;
 // rough width of a 12px label character, for fitting axis labels
 const CHAR_WIDTH = 7;
-// rough tooltip height, for placing it below cells near the top
+// rough tooltip height, for placing it below cells near the top of the window
 const TOOLTIP_HEIGHT = 100;
 // vertical layout of the grid: section headers, with space above all but the first, and rows
 const HEADER_HEIGHT = 18;
@@ -138,6 +139,10 @@ const HEADER_GAP = 12;
 const ROW_GAP = 2;
 // space between the labels and the cells
 const LABEL_PADDING = 8;
+// Full size heatmaps can be split into columns side by side, as many as fit
+// with at least MIN_COLUMN_ROWS rows each, COLUMN_GAP apart.
+const MIN_COLUMN_ROWS = 4;
+const COLUMN_GAP = 32;
 // the axis: a border, ticks with their labels, and bands
 const TICKS_TOP = 3;
 const BANDS_TOP = 27;
@@ -442,6 +447,42 @@ const gridRows = (groups: string[], headers: Map<string, string>) => {
   return { rows, height: Math.max(0, y - ROW_GAP) };
 };
 
+// A column of the heatmap: its groups, and the section headers above them.
+interface Column {
+  groups: string[];
+  headers: Map<string, string>;
+}
+
+// Splits the groups into `count` columns of about equal height. A column starts
+// with a section where one starts close enough, else in the middle of one, whose
+// header it then repeats.
+const splitColumns = (groups: string[], headers: Map<string, string>, count: number): Column[] => {
+  // the top of each group, with its header, in a single column
+  const tops = [0];
+  groups.forEach((group, i) =>
+    tops.push(tops[i] + CELL_SIZE + ROW_GAP + (headers.has(group) ? HEADER_GAP + HEADER_HEIGHT + ROW_GAP : 0)),
+  );
+  const height = tops[groups.length];
+  const starts = [0];
+  for (let k = 1; k < count; k++) {
+    const target = (k * height) / count;
+    const distance = (i: number) => Math.abs(tops[i] - target);
+    // leaving at least one group for each of the columns after it
+    const candidates = groups.map((_, i) => i).filter((i) => i > starts[k - 1] && i <= groups.length - count + k);
+    const nearest = (indices: number[]) => indices.sort((a, b) => distance(a) - distance(b))[0] as number | undefined;
+    const section = nearest(candidates.filter((i) => headers.has(groups[i])));
+    starts.push(section !== undefined && distance(section) <= height / count / 4 ? section : nearest(candidates)!);
+  }
+  return starts.map((start, k) => {
+    let section = start;
+    while (section > 0 && !headers.has(groups[section])) section--;
+    const columnHeaders = new Map(headers);
+    if (headers.has(groups[section]) && section !== start)
+      columnHeaders.set(groups[start], `${headers.get(groups[section])} (cont.)`);
+    return { groups: groups.slice(start, starts[k + 1]), headers: columnHeaders };
+  });
+};
+
 interface GridProps extends ChartProps {
   periods: string[];
   max: number;
@@ -451,7 +492,35 @@ interface GridProps extends ChartProps {
   labelWidth: number;
   // receives the label column's width, measured once rendered and when web fonts load
   onLabelWidth?: (width: number) => void;
+  // gives each cell its values as a title, the browser's tooltip in a downloaded chart
+  titles?: boolean;
 }
+
+interface CellValues {
+  group: string;
+  label?: string;
+  period: string;
+  percent?: number;
+  watts?: string | number;
+  limit?: string | number;
+  online?: number;
+  gpus?: number;
+}
+
+// A cell's values as plain text lines, as its tooltip shows them.
+const cellTitle = (metric: string, bucketLength: string, cell: CellValues) => {
+  const { group, label, period, percent, watts, limit, online, gpus } = cell;
+  const lines = [formatTime(period, AXES[bucketLength].tooltip), label];
+  if (group !== label) lines.push(group);
+  if (online === undefined) lines.push("Offline / no data");
+  else if (metric === GPUS) lines.push(`GPUs reporting: ${gpus}`);
+  else {
+    const power = metric === "power" && watts !== undefined ? ` (${watts} W of ${limit} W)` : "";
+    lines.push(`${PERCENT_METRICS[metric].label}: ${percent === undefined ? "not reported" : `${percent}%`}${power}`);
+    lines.push(`Time online: ${online}%`);
+  }
+  return lines.join("\n");
+};
 
 // One row per group, one cell per period, as SVG. Percentage metric cells are
 // colored by the metric while online, with a centered box sized by time online.
@@ -464,11 +533,13 @@ const HeatmapGrid = memo(function HeatmapGrid({
   labels,
   headers,
   showGroups,
+  bucketLength,
   periods,
   max,
   pitch,
   labelWidth,
   onLabelWidth,
+  titles,
 }: GridProps) {
   const labelText = useRef<SVGGElement>(null);
   const { rows, height } = useMemo(() => gridRows(groups, headers), [groups, headers]);
@@ -493,19 +564,30 @@ const HeatmapGrid = memo(function HeatmapGrid({
         const percent = metric === GPUS ? undefined : toNumber(row?.[PERCENT_METRICS[metric].column]);
         const value = metric === GPUS ? gpus : percent;
         const color = value === undefined ? undefined : ramp(rampFor(metric), value / (metric === GPUS ? max : 100));
+        const values = {
+          group,
+          label: labels.get(group),
+          period,
+          percent,
+          watts: row?.avg_power_watts ?? undefined,
+          limit: row?.avg_power_limit_watts ?? undefined,
+          online,
+          gpus,
+        };
         return (
           <g
             key={`${group}|${period}`}
             data-group={group}
-            data-label={labels.get(group)}
+            data-label={values.label}
             data-period={period}
             data-color={color}
             data-percent={percent}
-            data-watts={row?.avg_power_watts ?? undefined}
-            data-limit={row?.avg_power_limit_watts ?? undefined}
+            data-watts={values.watts}
+            data-limit={values.limit}
             data-online={online}
             data-gpus={gpus}
           >
+            {titles && <title>{cellTitle(metric, bucketLength, values)}</title>}
             <CellBox
               x={columnX(i, labelWidth, pitch)}
               y={y}
@@ -518,7 +600,7 @@ const HeatmapGrid = memo(function HeatmapGrid({
         );
       }),
     );
-  }, [data, metric, rows, labels, periods, max, pitch, labelWidth]);
+  }, [data, metric, rows, labels, bucketLength, periods, max, pitch, labelWidth, titles]);
 
   return (
     <svg width={chartWidth(periods, labelWidth, pitch)} height={height} style={{ display: "block" }}>
@@ -638,30 +720,30 @@ const Axis = ({ periods, bucketLength, pitch, labelWidth }: AxisProps) => {
   );
 };
 
-// Outlines the hovered cell and shows its exact values above it, shifted
-// horizontally by the cell's position so it stays within the heatmap.
+// Outlines the hovered cell and shows its exact values above it (below when the
+// window has no room above), shifted horizontally by the cell's position so it
+// stays within the visible part of the heatmap.
 interface CellTooltipProps {
   cell: SVGGElement;
-  // the scroll container the tooltip is placed in
-  container: HTMLElement;
+  // the element the tooltip is placed in, around the scroll container, which would clip it
+  frame: HTMLElement;
   metric: string;
   bucketLength: string;
 }
 
-const CellTooltip = ({ cell, container, metric, bucketLength }: CellTooltipProps) => {
+const CellTooltip = ({ cell, frame, metric, bucketLength }: CellTooltipProps) => {
   // the cell may have been removed by a refetch while hovered
   if (!cell.isConnected) return null;
   const { group, label, period, color, percent, watts, limit, online, gpus } = cell.dataset;
-  // the cell's box within the scroll container's content
+  // the cell's box within the frame
   const box = cell.getBoundingClientRect();
-  const origin = container.getBoundingClientRect();
-  const left = box.left - origin.left + container.scrollLeft;
+  const origin = frame.getBoundingClientRect();
+  const left = box.left - origin.left;
   const top = box.top - origin.top;
   const x = left + box.width / 2;
-  const shift = (100 * x) / container.scrollWidth;
+  const shift = Math.min(100, Math.max(0, (100 * x) / frame.clientWidth));
   const line = { display: "flex", alignItems: "center", gap: 6 };
-  // below the cell near the top, as the scroll container clips anything above it
-  const below = top < TOOLTIP_HEIGHT;
+  const below = box.top < TOOLTIP_HEIGHT;
   return (
     <>
       <div
@@ -719,41 +801,49 @@ const CellTooltip = ({ cell, container, metric, bucketLength }: CellTooltipProps
   );
 };
 
-// The legend, grid and axis stacked in one standalone SVG, as drawn when
-// scrolled to the start.
-const ChartSvg = ({ font, ...props }: GridProps & { font: string }) => {
-  const { metric, max, groups, headers, periods, bucketLength, pitch, labelWidth } = props;
+interface ChartSvgProps extends GridProps {
+  font: string;
+  columns: Column[];
+}
+
+// The legend above the columns, each a grid with its axis, in one standalone SVG,
+// as drawn when scrolled to the start.
+const ChartSvg = ({ font, columns, ...props }: ChartSvgProps) => {
+  const { metric, max, periods, bucketLength, pitch, labelWidth } = props;
   const items = legendItems(metric, max);
   const gridTop = CELL_SIZE + 8;
-  const axisTop = gridTop + gridRows(groups, headers).height;
-  const width = Math.max(chartWidth(periods, labelWidth, pitch), legendLayout(items, font).width);
+  const heights = columns.map(({ groups, headers }) => gridRows(groups, headers).height);
+  const columnWidth = chartWidth(periods, labelWidth, pitch);
+  const width = Math.max(columns.length * (columnWidth + COLUMN_GAP) - COLUMN_GAP, legendLayout(items, font).width);
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
       width={width + 2 * EXPORT_PADDING}
-      height={axisTop + AXIS_HEIGHT + 2 * EXPORT_PADDING}
+      height={gridTop + Math.max(...heights) + AXIS_HEIGHT + 2 * EXPORT_PADDING}
       fontFamily={font}
       fontSize={12}
     >
       <rect width="100%" height="100%" fill={SURFACE} />
       <g transform={`translate(${EXPORT_PADDING}, ${EXPORT_PADDING})`}>
         <LegendSvg items={items} font={font} />
-        <g transform={`translate(0, ${gridTop})`}>
-          <HeatmapGrid {...props} />
-        </g>
-        <g transform={`translate(0, ${axisTop})`}>
-          <Axis periods={periods} bucketLength={bucketLength} pitch={pitch} labelWidth={labelWidth} />
-        </g>
+        {columns.map(({ groups, headers }, i) => (
+          <g key={i} transform={`translate(${i * (columnWidth + COLUMN_GAP)}, ${gridTop})`}>
+            <HeatmapGrid {...props} groups={groups} headers={headers} titles />
+            <g transform={`translate(0, ${heights[i]})`}>
+              <Axis periods={periods} bucketLength={bucketLength} pitch={pitch} labelWidth={labelWidth} />
+            </g>
+          </g>
+        ))}
       </g>
     </svg>
   );
 };
 
 /**
- * Renders the heatmap, with its legend and axis, as a standalone SVG document.
+ * Renders the heatmap, with its legend and axes, as a standalone SVG document.
  * Loads the renderer on first use.
  */
-const chartSvg = async (props: GridProps & { font: string }) => {
+const chartSvg = async (props: ChartSvgProps) => {
   const { renderToStaticMarkup } = await import("react-dom/server");
   return renderToStaticMarkup(<ChartSvg {...props} />);
 };
@@ -788,17 +878,12 @@ const saveFile = (blob: Blob, name: string) => {
   setTimeout(() => URL.revokeObjectURL(link.href));
 };
 
-const Heatmap = (props: ChartProps) => {
-  const { data, metric, bucketLength, length, start, end } = props;
-  const [cell, setCell] = useState<SVGGElement | null>(null);
-  const [fitToWidth, setFitToWidth] = useState(true);
-  const [labelWidth, setLabelWidth] = useState(0);
-  const [exportError, setExportError] = useState<string>();
-  const [containerRef, { width: containerWidth }, container] = useSize();
-  const [axisRef, { height: axisHeight }] = useSize();
-  const root = useRef<HTMLDivElement>(null);
-  const axis = useRef<HTMLDivElement>(null);
-  const [edges, setEdges] = useState({ atStart: true, atEnd: false });
+// Floats at the bottom of the window while rows of its grid run past it, so it's
+// outside any scroll container (sticky only follows the window from there), above
+// the sticky grid and below the tooltip (4). Its shadow is outside the axis' own
+// scroll container, which would clip it.
+const FloatingAxis = ({ labelWidth, children }: { labelWidth: number; children: ReactNode }) => {
+  const [axisRef, { height }] = useSize();
   // Whether the axis floats over rows: the end of the grid is behind it or below
   // the window, rather than above it or scrolled past.
   const [floating, setFloating] = useState(false);
@@ -807,22 +892,77 @@ const Heatmap = (props: ChartProps) => {
       if (!element) return;
       const observer = new IntersectionObserver(
         ([entry]) => setFloating(!entry.isIntersecting && entry.boundingClientRect.top > 0),
-        { rootMargin: `0px 0px -${axisHeight}px 0px` },
+        { rootMargin: `0px 0px -${height}px 0px` },
       );
       observer.observe(element);
       return () => observer.disconnect();
     },
-    [axisHeight],
+    [height],
   );
+  return (
+    <>
+      <div ref={gridEnd} style={{ height: 1 }} />
+      <div ref={axisRef} style={{ position: "sticky", bottom: 0, zIndex: 3, background: SURFACE }}>
+        {scrollShadow("top", labelWidth, floating)}
+        {children}
+      </div>
+    </>
+  );
+};
+
+interface HeatmapProps extends ChartProps {
+  // whether to split the rows into columns side by side, where they fit
+  multiColumn: boolean;
+  onMultiColumn: (multiColumn: boolean) => void;
+  // the start of downloads' file names, which add the time span
+  fileName: string;
+}
+
+const Heatmap = ({ multiColumn, onMultiColumn, fileName, ...props }: HeatmapProps) => {
+  const { data, metric, groups, headers, bucketLength, length, start, end } = props;
+  const [cell, setCell] = useState<SVGGElement | null>(null);
+  const [fitToWidth, setFitToWidth] = useState(true);
+  // each column's label width, as measured by its grid; all columns use the widest
+  const [labelWidths, setLabelWidths] = useState<number[]>([]);
+  const labelWidth = labelWidths.reduce((widest, width) => Math.max(widest, width), 0);
+  const [exportError, setExportError] = useState<string>();
+  const [rootRef, { width }, root] = useSize();
+  // state rather than a ref, as rendering the tooltip needs it
+  const [frame, setFrame] = useState<HTMLDivElement | null>(null);
+  const container = useRef<HTMLDivElement>(null);
+  const axis = useRef<HTMLDivElement>(null);
+  const [edges, setEdges] = useState({ atStart: true, atEnd: false });
   const periods = useMemo(
     () => bucketStarts(String(data[0].period_start), bucketLength, length, start, end),
     [data, bucketLength, length, start, end],
   );
   const max = Math.max(...data.map((row) => Number(row.gpus_reporting)));
   // the pitch that fits the width (less a pixel against rounding, at least 1px); full size until measured
-  const fitPitch = containerWidth ? Math.max(1, (containerWidth - labelWidth - 1) / periods.length) : CELL_SIZE + 2;
+  const fitPitch = width ? Math.max(1, (width - labelWidth - 1) / periods.length) : CELL_SIZE + 2;
   const pitch = Math.min(CELL_SIZE + 2, fitToWidth ? fitPitch : Math.max(fitPitch, MIN_PITCH));
   const scrollable = !fitToWidth && fitPitch < MIN_PITCH;
+  const columnCount = Math.min(
+    Math.floor((width + COLUMN_GAP) / (chartWidth(periods, labelWidth, CELL_SIZE + 2) + COLUMN_GAP)),
+    Math.floor(groups.length / MIN_COLUMN_ROWS),
+  );
+  const columns = useMemo(
+    () => (multiColumn && columnCount > 1 ? splitColumns(groups, headers, columnCount) : [{ groups, headers }]),
+    [multiColumn, columnCount, groups, headers],
+  );
+  // drops the widths of columns no longer shown
+  const count = columns.length;
+  const onLabelWidths = useMemo(
+    () =>
+      Array.from({ length: count }, (_, i) => (labelWidth: number) =>
+        setLabelWidths((widths) => {
+          if (widths.length <= count && widths[i] === labelWidth) return widths;
+          const next = widths.slice(0, count);
+          next[i] = labelWidth;
+          return next;
+        }),
+      ),
+    [count],
+  );
   // the sticky parts of the SVGs follow the scroll position
   const setScroll = (left: number) => root.current?.style.setProperty("--scroll", `${left}px`);
   // also when a new width or pitch moves it without a scroll event
@@ -834,6 +974,8 @@ const Heatmap = (props: ChartProps) => {
   const syncScroll = (from: HTMLDivElement, to: HTMLDivElement | null) => {
     if (to && to.scrollLeft !== from.scrollLeft) to.scrollLeft = from.scrollLeft;
     setScroll(from.scrollLeft);
+    // the tooltip doesn't scroll along with its cell, so it shows again on the next move
+    setCell(null);
     const atStart = from.scrollLeft <= 0;
     const atEnd = from.scrollLeft + from.clientWidth >= from.scrollWidth - 1;
     if (atStart !== edges.atStart || atEnd !== edges.atEnd) setEdges({ atStart, atEnd });
@@ -842,15 +984,39 @@ const Heatmap = (props: ChartProps) => {
     setExportError(undefined);
     try {
       const font = getComputedStyle(root.current!).fontFamily;
-      const svg = await chartSvg({ ...props, periods, max, pitch, labelWidth, font });
+      const svg = await chartSvg({ ...props, periods, max, pitch, labelWidth, font, columns });
       const blob = format === "svg" ? new Blob([svg], { type: "image/svg+xml" }) : await toPng(svg);
-      saveFile(blob, `gpu-${metric}-${bucketLength.replace(/\s+/g, "-")}.${format}`);
+      // in UTC, from the start of the first bucket to the end of the last
+      const time = (period: DateTime) => period.toFormat("yyyy-MM-dd'T'HHmm'Z'");
+      const from = time(toUtc(periods[0]));
+      const to = time(toUtc(periods[periods.length - 1]).plus(DURATIONS[bucketLength]));
+      saveFile(blob, `${fileName}_${from}_${to}.${format}`);
     } catch (error) {
       setExportError(error instanceof Error ? error.message : String(error));
     }
   };
+  const hover = {
+    onMouseMove: ({ target }: { target: EventTarget }) =>
+      setCell((target as Element).closest<SVGGElement>("[data-period]")),
+    onMouseLeave: () => setCell(null),
+  };
+  const grid = (column: Column, i: number) => (
+    <HeatmapGrid
+      {...props}
+      groups={column.groups}
+      headers={column.headers}
+      periods={periods}
+      max={max}
+      pitch={pitch}
+      labelWidth={labelWidth}
+      onLabelWidth={onLabelWidths[i]}
+    />
+  );
+  const axisSvg = <Axis periods={periods} bucketLength={bucketLength} pitch={pitch} labelWidth={labelWidth} />;
+  // outside any scroll container, which would clip it at the ends and below short heatmaps
+  const tooltip = cell && frame && <CellTooltip cell={cell} frame={frame} metric={metric} bucketLength={bucketLength} />;
   return (
-    <div ref={root} className="my-3" style={{ fontSize: 12, color: TEXT_SECONDARY }}>
+    <div ref={rootRef} className="my-3" style={{ fontSize: 12, color: TEXT_SECONDARY }}>
       <HStack gap={8} mb={2} wrap="wrap">
         <Legend items={legendItems(metric, max)} />
         {fitPitch < MIN_PITCH && (
@@ -858,6 +1024,13 @@ const Heatmap = (props: ChartProps) => {
             <Switch.HiddenInput />
             <Switch.Control />
             <Switch.Label>Fit to width</Switch.Label>
+          </Switch.Root>
+        )}
+        {columnCount > 1 && (
+          <Switch.Root size="sm" checked={multiColumn} onCheckedChange={(event) => onMultiColumn(event.checked)}>
+            <Switch.HiddenInput />
+            <Switch.Control />
+            <Switch.Label>Multiple columns</Switch.Label>
           </Switch.Root>
         )}
         <HStack gap={2}>
@@ -870,46 +1043,49 @@ const Heatmap = (props: ChartProps) => {
           {exportError}
         </HStack>
       </HStack>
-      <div style={{ position: "relative" }}>
-        {/* the tooltip lives in the scroll container, so it scrolls along with the cells */}
+      {count > 1 ? (
+        // full size columns, which fit without scrolling, each with its own axis
         <div
-          ref={containerRef}
-          // room for the hover outline of the first row
-          style={{ position: "relative", overflowX: "auto", overflowY: "hidden", scrollbarWidth: "none", paddingTop: 2 }}
-          onScroll={(event) => syncScroll(event.currentTarget, axis.current)}
-          onMouseMove={(event) => setCell((event.target as Element).closest<SVGGElement>("[data-period]"))}
-          onMouseLeave={() => setCell(null)}
+          ref={setFrame}
+          style={{ position: "relative", display: "flex", alignItems: "flex-start", gap: COLUMN_GAP }}
+          {...hover}
         >
-          <HeatmapGrid
-            {...props}
-            periods={periods}
-            max={max}
-            pitch={pitch}
-            labelWidth={labelWidth}
-            onLabelWidth={setLabelWidth}
-          />
-          {cell && container.current && (
-            <CellTooltip cell={cell} container={container.current} metric={metric} bucketLength={bucketLength} />
-          )}
+          {columns.map((column, i) => (
+            <div key={i}>
+              {grid(column, i)}
+              <FloatingAxis labelWidth={labelWidth}>
+                <div style={{ paddingBottom: 4 }}>{axisSvg}</div>
+              </FloatingAxis>
+            </div>
+          ))}
+          {tooltip}
         </div>
-        {scrollShadow("left", labelWidth, scrollable && !edges.atStart)}
-        {scrollShadow("right", 0, scrollable && !edges.atEnd)}
-      </div>
-      <div ref={gridEnd} style={{ height: 1 }} />
-      {/* Floats at the bottom of the window while rows run past it, so it's outside the
-          scroll container (sticky only follows the window from there), above the sticky
-          grid and below the tooltip (4). Its shadow is outside the axis' own scroll
-          container, which would clip it. */}
-      <div ref={axisRef} style={{ position: "sticky", bottom: 0, zIndex: 3, background: SURFACE }}>
-        {scrollShadow("top", labelWidth, floating)}
-        <div
-          ref={axis}
-          style={{ overflowX: "auto", paddingBottom: 4 }}
-          onScroll={(event) => syncScroll(event.currentTarget, container.current)}
-        >
-          <Axis periods={periods} bucketLength={bucketLength} pitch={pitch} labelWidth={labelWidth} />
-        </div>
-      </div>
+      ) : (
+        <>
+          <div ref={setFrame} style={{ position: "relative" }} {...hover}>
+            <div
+              ref={container}
+              // room for the hover outline of the first row
+              style={{ position: "relative", overflowX: "auto", overflowY: "hidden", scrollbarWidth: "none", paddingTop: 2 }}
+              onScroll={(event) => syncScroll(event.currentTarget, axis.current)}
+            >
+              {grid(columns[0], 0)}
+            </div>
+            {scrollShadow("left", labelWidth, scrollable && !edges.atStart)}
+            {scrollShadow("right", 0, scrollable && !edges.atEnd)}
+            {tooltip}
+          </div>
+          <FloatingAxis labelWidth={labelWidth}>
+            <div
+              ref={axis}
+              style={{ overflowX: "auto", paddingBottom: 4 }}
+              onScroll={(event) => syncScroll(event.currentTarget, container.current)}
+            >
+              {axisSvg}
+            </div>
+          </FloatingAxis>
+        </>
+      )}
     </div>
   );
 };
@@ -920,6 +1096,9 @@ const GpuUtilizationView = ({ querySelect }: { querySelect: ReactNode }) => {
   const [length, setLength] = useState("1 day");
   const [metric, setMetric] = useState(METRICS[0].value);
   const [showUuids, setShowUuids] = useState(false);
+  const { cluster_id } = useAppState().currentBackendSpec();
+  // here rather than in Heatmap, which is replaced while new data loads
+  const [multiColumn, setMultiColumn] = useState(false);
   const today = DateTime.utc().toISODate();
   const [range, setRange] = useState({ start: DateTime.utc().minus({ days: 7 }).toISODate(), end: today });
 
@@ -1026,6 +1205,10 @@ const GpuUtilizationView = ({ querySelect }: { querySelect: ReactNode }) => {
         length={length}
         start={custom?.start}
         end={custom?.end}
+        multiColumn={multiColumn}
+        onMultiColumn={setMultiColumn}
+        // e.g. ex3.simula.no_gpu-utilization_card_utilization_1-hour
+        fileName={[cluster_id, GPU_UTILIZATION_QUERY_NAME, level, metric, bucketLength.replace(/\s+/g, "-")].join("_")}
       />
     );
 
