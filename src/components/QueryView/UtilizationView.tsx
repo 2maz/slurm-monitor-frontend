@@ -86,6 +86,29 @@ const ParamSelect = ({ label, collection, value, onChange, width = "180px" }: Pa
   </SelectRoot>
 );
 
+interface OptionSwitchProps {
+  label: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  mb?: number;
+}
+
+// The root is a label, which Bootstrap's unlayered `label { display: inline-block }`
+// would take over from Chakra's layered styles, so its flex layout is set inline.
+const OptionSwitch = ({ label, checked, onChange, mb }: OptionSwitchProps) => (
+  <Switch.Root
+    size="sm"
+    mb={mb}
+    checked={checked}
+    onCheckedChange={(event) => onChange(event.checked)}
+    style={{ display: "inline-flex" }}
+  >
+    <Switch.HiddenInput />
+    <Switch.Control />
+    <Switch.Label>{label}</Switch.Label>
+  </Switch.Root>
+);
+
 interface DateInputProps {
   label: string;
   value: string;
@@ -1239,24 +1262,12 @@ const Heatmap = ({ multiColumn, onMultiColumn, fileName, axisTop, onAxisTop, ...
         {/* the options and downloads wrap below the legend together, rather than one by one */}
         <HStack gap={8}>
           {fitPitch < MIN_PITCH && (
-            <Switch.Root size="sm" checked={fitToWidth} onCheckedChange={(event) => setFitToWidth(event.checked)}>
-              <Switch.HiddenInput />
-              <Switch.Control />
-              <Switch.Label>Fit to width</Switch.Label>
-            </Switch.Root>
+            <OptionSwitch label="Fit to width" checked={fitToWidth} onChange={setFitToWidth} />
           )}
           {columnCount > 1 && (
-            <Switch.Root size="sm" checked={multiColumn} onCheckedChange={(event) => onMultiColumn(event.checked)}>
-              <Switch.HiddenInput />
-              <Switch.Control />
-              <Switch.Label>Multiple columns</Switch.Label>
-            </Switch.Root>
+            <OptionSwitch label="Multiple columns" checked={multiColumn} onChange={onMultiColumn} />
           )}
-          <Switch.Root size="sm" checked={axisTop} onCheckedChange={(event) => onAxisTop(event.checked)}>
-            <Switch.HiddenInput />
-            <Switch.Control />
-            <Switch.Label>Axis on top</Switch.Label>
-          </Switch.Root>
+          <OptionSwitch label="Axis on top" checked={axisTop} onChange={onAxisTop} />
           <HStack gap={2}>
             <Button size="xs" variant="outline" onClick={() => void download("svg")}>
               Download SVG
@@ -1473,11 +1484,7 @@ const UtilizationView = ({ queryName, querySelect }: UtilizationViewProps) => {
         )}
         <ParamSelect label="Metric" collection={metrics} value={metric} onChange={setMetric} width="240px" />
         {kind.showGroupsLabel && level === kind.unitLevel && (
-          <Switch.Root size="sm" mb={2} checked={showGroups} onCheckedChange={(event) => setShowGroups(event.checked)}>
-            <Switch.HiddenInput />
-            <Switch.Control />
-            <Switch.Label>{kind.showGroupsLabel}</Switch.Label>
-          </Switch.Root>
+          <OptionSwitch label={kind.showGroupsLabel} checked={showGroups} onChange={setShowGroups} mb={2} />
         )}
         <InfoButton>{kind.info}</InfoButton>
       </HStack>
