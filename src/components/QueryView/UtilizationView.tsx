@@ -1257,10 +1257,10 @@ const Heatmap = ({ multiColumn, onMultiColumn, fileName, axisTop, onAxisTop, ...
   );
   return (
     <div ref={rootRef} className="my-3" style={{ fontSize: 12, color: TEXT_SECONDARY }}>
-      <HStack gap={8} mb={2} wrap="wrap">
+      <HStack gap={6} mb={2} wrap="wrap">
         <Legend items={legendItems(kind, metric, max)} />
         {/* the options and downloads wrap below the legend together, rather than one by one */}
-        <HStack gap={8}>
+        <HStack gap={4}>
           {fitPitch < MIN_PITCH && (
             <OptionSwitch label="Fit to width" checked={fitToWidth} onChange={setFitToWidth} />
           )}
