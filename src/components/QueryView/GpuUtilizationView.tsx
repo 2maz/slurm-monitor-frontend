@@ -629,7 +629,8 @@ const HeatmapGrid = memo(function HeatmapGrid({
                 y={header + HEADER_HEIGHT / 2}
                 dominantBaseline="central"
                 fill={TEXT_PRIMARY}
-                fontWeight={600}
+                // a style, as Chakra's `* { font: inherit }` overrides the fontWeight attribute
+                style={{ fontWeight: 700 }}
               >
                 {headers.get(group)}
               </text>
