@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import GpuUtilizationView from "../src/components/QueryView/GpuUtilizationView";
+import GpuUtilizationView from "../src/components/QueryView/UtilizationView";
 import { ChakraProvider } from "@chakra-ui/react";
 import { system } from "../src/components/ui/theme";
 

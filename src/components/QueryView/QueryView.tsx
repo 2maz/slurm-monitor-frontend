@@ -13,7 +13,7 @@ import {
 } from "../ui/select";
 import { useState } from "react";
 import DataFrameView from "./DataFrameView";
-import GpuUtilizationView, { GPU_UTILIZATION_QUERY_NAME } from "./GpuUtilizationView";
+import GpuUtilizationView, { GPU_UTILIZATION_QUERY_NAME } from "./UtilizationView";
 
 const QueryView = () => {
   const [queryName, setQueryName] = useState<string[]>([]);
