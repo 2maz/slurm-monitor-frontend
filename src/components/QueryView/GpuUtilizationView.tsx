@@ -1,7 +1,7 @@
-import { memo, ReactNode, RefCallback, useCallback, useMemo, useRef, useState } from "react";
+import { memo, ReactNode, RefCallback, useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { DateTime, Duration, DurationLikeObject, DurationUnit } from "luxon";
 import { BarLoader } from "react-spinners";
-import { createListCollection, Field, HStack, Input, ListCollection, Switch } from "@chakra-ui/react";
+import { Button, createListCollection, Field, HStack, Input, ListCollection, Switch } from "@chakra-ui/react";
 import useDataFrameQuery, { Row } from "../../hooks/useDataFrameQuery";
 import {
   SelectContent,
@@ -132,6 +132,26 @@ const MIN_PITCH = 12;
 const CHAR_WIDTH = 7;
 // rough tooltip height, for placing it below cells near the top
 const TOOLTIP_HEIGHT = 100;
+// vertical layout of the grid: section headers, with space above all but the first, and rows
+const HEADER_HEIGHT = 18;
+const HEADER_GAP = 12;
+const ROW_GAP = 2;
+// space between the labels and the cells
+const LABEL_PADDING = 8;
+// the axis: a border, ticks with their labels, and bands
+const TICKS_TOP = 3;
+const BANDS_TOP = 27;
+const BAND_HEIGHT = 18;
+const AXIS_HEIGHT = BANDS_TOP + BAND_HEIGHT;
+// space between legend entries, and between groups of them
+const LEGEND_GAP = 4;
+const LEGEND_SPACING = 16;
+// margin around a downloaded chart
+const EXPORT_PADDING = 16;
+// Moves the sticky parts of the SVGs (labels, the axis mask and band labels) along
+// with the --scroll position the heatmap sets; 0 in a downloaded chart.
+const SCROLL = "var(--scroll, 0px)";
+const STICKY = { transform: `translateX(${SCROLL})` };
 const SURFACE = "#fff";
 const BORDER = "#e4e3df";
 const TEXT_PRIMARY = "#1f1e1c";
@@ -212,9 +232,11 @@ const AXES: Record<string, AxisFormat> = {
 };
 const toNumber = (value?: string | number | null) => (value === null || value === undefined ? undefined : Number(value));
 const ramp = (steps: string[], fraction: number) => steps[Math.min(steps.length - 1, Math.floor(fraction * steps.length))];
+// The side of a box whose area is `percent` of its cell, as a fraction of the cell's side.
+const boxSide = (percent: number) => Math.sqrt(Math.min(percent, 100) / 100);
 // A cell with a centered box whose area is `percent` of the cell, on the offline color.
 const fill = (color: string, percent: number) => {
-  const side = 100 * Math.sqrt(Math.min(percent, 100) / 100);
+  const side = 100 * boxSide(percent);
   return `linear-gradient(${color}, ${color}) center / ${side}% ${side}% no-repeat, ${OFFLINE}`;
 };
 
@@ -282,45 +304,159 @@ const Swatch = ({ background }: { background: string }) => (
   <span style={{ background, width: 12, height: 12, borderRadius: 2, flexShrink: 0 }} />
 );
 
-const Legend = ({ metric, max }: { metric: string; max: number }) => (
-  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-    {metric === GPUS ? "GPUs reporting: 0" : `${PERCENT_METRICS[metric].label}: 0%`}
-    {rampFor(metric).map((step) => (
-      <span key={step} style={{ background: step, width: 24, height: 12 }} />
-    ))}
-    {metric === GPUS ? max : "100%"}
-    {metric !== GPUS && (
-      <>
-        <span style={{ background: fill(rampFor(metric)[3], 25), width: CELL_SIZE, height: CELL_SIZE, marginLeft: 16 }} />
-        <span style={{ background: fill(rampFor(metric)[3], 100), width: CELL_SIZE, height: CELL_SIZE }} />
-        box area = time online
-        <span style={{ background: fill(NOT_REPORTED, 100), width: 24, height: 12, marginLeft: 16 }} />
-        not reported
-      </>
+// An entry of the legend: a label, or a swatch whose box covers `percent` of it
+// (100 by default), sized like a cell or like a ramp step, with extra space
+// before it when it starts a group of entries.
+type LegendItem = { text: string } | { color: string; percent?: number; cell?: boolean; spaced?: boolean };
+
+const legendItems = (metric: string, max: number): LegendItem[] => {
+  const steps = rampFor(metric);
+  return [
+    { text: metric === GPUS ? "GPUs reporting: 0" : `${PERCENT_METRICS[metric].label}: 0%` },
+    ...steps.map((color) => ({ color })),
+    { text: metric === GPUS ? String(max) : "100%" },
+    ...(metric === GPUS
+      ? []
+      : [
+          { color: steps[3], percent: 25, cell: true, spaced: true },
+          { color: steps[3], cell: true },
+          { text: "box area = time online" },
+          { color: NOT_REPORTED, spaced: true },
+          { text: "not reported" },
+        ]),
+    { color: OFFLINE, spaced: true },
+    { text: "offline / no data" },
+  ];
+};
+
+const swatchSize = (item: { cell?: boolean }) => (item.cell ? [CELL_SIZE, CELL_SIZE] : [24, 12]);
+
+const Legend = ({ items }: { items: LegendItem[] }) => (
+  <div style={{ display: "flex", alignItems: "center", gap: LEGEND_GAP }}>
+    {items.map((item, i) =>
+      "text" in item ? (
+        <span key={i}>{item.text}</span>
+      ) : (
+        <span
+          key={i}
+          style={{
+            background: fill(item.color, item.percent ?? 100),
+            width: swatchSize(item)[0],
+            height: swatchSize(item)[1],
+            marginLeft: item.spaced ? LEGEND_SPACING : undefined,
+          }}
+        />
+      ),
     )}
-    <span style={{ background: OFFLINE, width: 24, height: 12, marginLeft: 16 }} />
-    offline / no data
   </div>
 );
 
+// A label's width at 12px, measured on a canvas; estimated where there is none (tests).
+const textWidth = (text: string, font: string) => {
+  const context = document.createElement("canvas").getContext("2d");
+  if (!context) return CHAR_WIDTH * text.length;
+  context.font = `12px ${font}`;
+  return context.measureText(text).width;
+};
+
+// Where each legend entry starts, in a row laid out like `Legend`, and the row's width.
+const legendLayout = (items: LegendItem[], font: string) => {
+  let x = 0;
+  const starts = items.map((item) => {
+    if (!("text" in item) && item.spaced) x += LEGEND_SPACING;
+    const start = x;
+    x += ("text" in item ? textWidth(item.text, font) : swatchSize(item)[0]) + LEGEND_GAP;
+    return start;
+  });
+  return { starts, width: x - LEGEND_GAP };
+};
+
+interface CellBoxProps {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  color: string;
+  percent: number;
+}
+
+// A cell of the offline color with a centered box of `color` covering `percent` of it.
+const CellBox = ({ x, y, width, height, color, percent }: CellBoxProps) => {
+  const side = boxSide(percent);
+  return (
+    <>
+      {side < 1 && <rect x={x} y={y} width={width} height={height} fill={OFFLINE} />}
+      {side > 0 && (
+        <rect
+          x={x + (width * (1 - side)) / 2}
+          y={y + (height * (1 - side)) / 2}
+          width={width * side}
+          height={height * side}
+          fill={color}
+        />
+      )}
+    </>
+  );
+};
+
+// The legend as SVG, for a downloaded chart.
+const LegendSvg = ({ items, font }: { items: LegendItem[]; font: string }) => {
+  const { starts } = legendLayout(items, font);
+  return (
+    <g>
+      {items.map((item, i) => {
+        if ("text" in item)
+          return (
+            <text key={i} x={starts[i]} y={CELL_SIZE / 2} dominantBaseline="central" fill={TEXT_SECONDARY}>
+              {item.text}
+            </text>
+          );
+        const [width, height] = swatchSize(item);
+        const y = (CELL_SIZE - height) / 2;
+        return <CellBox key={i} x={starts[i]} y={y} width={width} height={height} color={item.color} percent={item.percent ?? 100} />;
+      })}
+    </g>
+  );
+};
+
 // narrow columns drop their gaps, so that a year of days still fits the width
 const columnGapFor = (pitch: number) => (pitch >= 6 ? 2 : pitch >= 3 ? 1 : 0);
-// the cell columns of the heatmap and its axis, after the label column
-const columnsFor = (count: number, pitch: number) => `repeat(${count}, ${pitch - columnGapFor(pitch)}px)`;
+// where the i-th column of cells starts, after the label column
+const columnX = (i: number, labelWidth: number, pitch: number) => labelWidth + columnGapFor(pitch) + i * pitch;
+const chartWidth = (periods: string[], labelWidth: number, pitch: number) => labelWidth + periods.length * pitch;
+
+// The top of each group's section header (if any) and row in the grid, and the grid's height.
+const gridRows = (groups: string[], headers: Map<string, string>) => {
+  let y = 0;
+  const rows = groups.map((group, i) => {
+    let header;
+    if (headers.has(group)) {
+      if (i) y += HEADER_GAP;
+      header = y;
+      y += HEADER_HEIGHT + ROW_GAP;
+    }
+    const row = { group, header, y };
+    y += CELL_SIZE + ROW_GAP;
+    return row;
+  });
+  return { rows, height: Math.max(0, y - ROW_GAP) };
+};
 
 interface GridProps extends ChartProps {
   periods: string[];
   max: number;
   // distance between columns
   pitch: number;
-  // measures the label column
-  labelRef: RefCallback<HTMLDivElement>;
+  // width of the label column, including the padding before the cells
+  labelWidth: number;
+  // receives the label column's width, measured once rendered and when web fonts load
+  onLabelWidth?: (width: number) => void;
 }
 
-// One row per group, one cell per period. Percentage metric cells are colored by
-// the metric while online, with a centered box sized by time online. Memoized
-// so hovering, which only re-renders the tooltip in Heatmap, doesn't re-render
-// every cell.
+// One row per group, one cell per period, as SVG. Percentage metric cells are
+// colored by the metric while online, with a centered box sized by time online.
+// Memoized so hovering, which only re-renders the tooltip in Heatmap, doesn't
+// re-render every cell.
 const HeatmapGrid = memo(function HeatmapGrid({
   data,
   metric,
@@ -331,74 +467,88 @@ const HeatmapGrid = memo(function HeatmapGrid({
   periods,
   max,
   pitch,
-  labelRef,
+  labelWidth,
+  onLabelWidth,
 }: GridProps) {
-  // memoized so a new pitch (resizing, fit to width) only changes the columns
+  const labelText = useRef<SVGGElement>(null);
+  const { rows, height } = useMemo(() => gridRows(groups, headers), [groups, headers]);
+
+  useLayoutEffect(() => {
+    const element = labelText.current;
+    // getBBox is missing where nothing is laid out (tests)
+    if (!onLabelWidth || !element?.getBBox) return;
+    const measure = () => onLabelWidth(element.getBBox().width + LABEL_PADDING);
+    measure();
+    void document.fonts?.ready.then(measure);
+  }, [rows, labels, showGroups, onLabelWidth]);
+
   const cells = useMemo(() => {
-    const rows = new Map(data.map((row) => [`${row.gpu_group}|${toUtc(String(row.period_start)).toISO()}`, row]));
-    const cell = (group: string, period: string) => {
-      const row = rows.get(`${group}|${period}`);
-      const online = toNumber(row?.percent_time_online);
-      const gpus = toNumber(row?.gpus_reporting);
-      const percent = metric === GPUS ? undefined : toNumber(row?.[PERCENT_METRICS[metric].column]);
-      const value = metric === GPUS ? gpus : percent;
-      const color = value === undefined ? undefined : ramp(rampFor(metric), value / (metric === GPUS ? max : 100));
-      return (
-        <div
-          key={`${group}|${period}`}
-          data-group={group}
-          data-label={labels.get(group)}
-          data-period={period}
-          data-color={color}
-          data-percent={percent}
-          data-watts={row?.avg_power_watts ?? undefined}
-          data-limit={row?.avg_power_limit_watts ?? undefined}
-          data-online={online}
-          data-gpus={gpus}
-          style={{
-            background: online === undefined ? OFFLINE : fill(color ?? NOT_REPORTED, metric === GPUS ? 100 : online),
-            height: CELL_SIZE,
-          }}
-        />
-      );
-    };
-    // labels and headers stay in view when scrolling sideways, above the scroll shadows
-    const sticky = { position: "sticky", left: 0, background: SURFACE, zIndex: 2 } as const;
-    return groups.map((group, i) => [
-      headers.has(group) && (
-        // covers the scroll shadows, which only belong beside cell rows
-        <div
-          key={`header|${group}`}
-          style={{ gridColumn: "1 / -1", paddingTop: i ? 12 : 0, position: "relative", zIndex: 2, background: SURFACE }}
-        >
-          <span style={{ ...sticky, display: "inline-block", color: TEXT_PRIMARY, fontWeight: 600 }}>
-            {headers.get(group)}
-          </span>
-        </div>
-      ),
-      <div
-        key={group}
-        ref={i === 0 ? labelRef : undefined}
-        style={{ ...sticky, paddingRight: 8, whiteSpace: "nowrap", lineHeight: `${CELL_SIZE}px` }}
-      >
-        {showGroups ? group : labels.get(group)}
-      </div>,
-      ...periods.map((period) => cell(group, period)),
-    ]);
-  }, [data, metric, groups, labels, headers, showGroups, periods, max, labelRef]);
+    const byKey = new Map(data.map((row) => [`${row.gpu_group}|${toUtc(String(row.period_start)).toISO()}`, row]));
+    const width = pitch - columnGapFor(pitch);
+    return rows.map(({ group, y }) =>
+      periods.map((period, i) => {
+        const row = byKey.get(`${group}|${period}`);
+        const online = toNumber(row?.percent_time_online);
+        const gpus = toNumber(row?.gpus_reporting);
+        const percent = metric === GPUS ? undefined : toNumber(row?.[PERCENT_METRICS[metric].column]);
+        const value = metric === GPUS ? gpus : percent;
+        const color = value === undefined ? undefined : ramp(rampFor(metric), value / (metric === GPUS ? max : 100));
+        return (
+          <g
+            key={`${group}|${period}`}
+            data-group={group}
+            data-label={labels.get(group)}
+            data-period={period}
+            data-color={color}
+            data-percent={percent}
+            data-watts={row?.avg_power_watts ?? undefined}
+            data-limit={row?.avg_power_limit_watts ?? undefined}
+            data-online={online}
+            data-gpus={gpus}
+          >
+            <CellBox
+              x={columnX(i, labelWidth, pitch)}
+              y={y}
+              width={width}
+              height={CELL_SIZE}
+              color={color ?? NOT_REPORTED}
+              percent={online === undefined ? 0 : metric === GPUS ? 100 : online}
+            />
+          </g>
+        );
+      }),
+    );
+  }, [data, metric, rows, labels, periods, max, pitch, labelWidth]);
 
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: `max-content ${columnsFor(periods.length, pitch)}`,
-        columnGap: columnGapFor(pitch),
-        rowGap: 2,
-        width: "max-content",
-      }}
-    >
-      {cells}
-    </div>
+    <svg width={chartWidth(periods, labelWidth, pitch)} height={height} style={{ display: "block" }}>
+      <g shapeRendering="crispEdges">{cells}</g>
+      {/* labels and headers stay in view when scrolling sideways, covering the cells beneath */}
+      <g style={STICKY}>
+        <rect width={labelWidth} height={height} fill={SURFACE} />
+        <g ref={labelText} fill={TEXT_SECONDARY}>
+          {rows.map(({ group, y }) => (
+            <text key={group} y={y + CELL_SIZE / 2} dominantBaseline="central">
+              {showGroups ? group : labels.get(group)}
+            </text>
+          ))}
+        </g>
+        {rows.map(
+          ({ group, header }) =>
+            header !== undefined && (
+              <text
+                key={group}
+                y={header + HEADER_HEIGHT / 2}
+                dominantBaseline="central"
+                fill={TEXT_PRIMARY}
+                fontWeight={600}
+              >
+                {headers.get(group)}
+              </text>
+            ),
+        )}
+      </g>
+    </svg>
   );
 });
 
@@ -409,8 +559,8 @@ interface AxisProps {
   labelWidth: number;
 }
 
-// Minor ticks per column and major bands below them, laid out in the heatmap's
-// columns.
+// Minor ticks per column and major bands below them, as SVG aligned with the
+// heatmap's columns.
 const Axis = ({ periods, bucketLength, pitch, labelWidth }: AxisProps) => {
   const { unit, amount, minor: minorFormat, majors, majorUnit, steps } = AXES[bucketLength];
   const majorFormat = majors[0];
@@ -435,96 +585,92 @@ const Axis = ({ periods, bucketLength, pitch, labelWidth }: AxisProps) => {
   const minorEvery = steps.find((step) => step >= fit) ?? fit;
   // Bands of consecutive periods with the same major label. A minor tick is shown
   // every minorEvery buckets of its calendar unit, unless it would run into the next band.
-  const bands: { period: string; span: number }[] = [];
-  const ticks = periods.map((period) => {
+  const bands: { period: string; span: number; start: number }[] = [];
+  const ticks = periods.map((period, i) => {
     const band = bands[bands.length - 1];
     if (band && formatTime(band.period, majorFormat) === formatTime(period, majorFormat)) {
       return { band, index: band.span++ };
     }
-    bands.push({ period, span: 1 });
+    bands.push({ period, span: 1, start: i });
     return { band: bands[bands.length - 1], index: 0 };
   });
   const showTick = (i: number) => {
     const { band, index } = ticks[i];
     return calendarOffset(periods[i]) % minorEvery === 0 && index + fit <= band.span;
   };
-
-  // the label column covers ticks and bands scrolling sideways beneath it, like the cells
-  const mask = <div style={{ position: "sticky", left: 0, zIndex: 1, background: SURFACE }} />;
+  const x = (i: number) => columnX(i, labelWidth, pitch);
+  const width = chartWidth(periods, labelWidth, pitch);
+  const gap = columnGapFor(pitch);
 
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: `${labelWidth}px ${columnsFor(periods.length, pitch)}`,
-        columnGap: columnGapFor(pitch),
-        rowGap: 2,
-        width: "max-content",
-        borderTop: `1px solid ${BORDER}`,
-        paddingTop: 2,
-      }}
-    >
-      {mask}
-      {periods.map((period, i) => (
-        <div
-          key={period}
-          // a bar under the labelled column, as wide as its cells
-          style={{
-            borderTop: `2px solid ${showTick(i) ? TEXT_PRIMARY : "transparent"}`,
-            paddingTop: 2,
-            whiteSpace: "nowrap",
-            minWidth: 0,
-          }}
-        >
-          {showTick(i) ? formatTime(period, minorFormat) : ""}
-        </div>
-      ))}
-      {mask}
-      {bands.map(({ period, span }, i) => (
-        <div
-          key={period}
-          style={{
-            gridColumn: `span ${span}`,
-            borderLeft: `1px solid ${TEXT_SECONDARY}`,
-            paddingLeft: 4,
-            color: TEXT_PRIMARY,
-            whiteSpace: "nowrap",
-            // clip rather than hidden, which would stop the label sticking
-            overflow: "clip",
-            textOverflow: "ellipsis",
-            minWidth: 0,
-          }}
-        >
-          {/* stays in view, beside the label column, while its band scrolls past */}
-          <span style={{ position: "sticky", left: labelWidth + 4, display: "inline-block" }}>
-            {formatTime(period, bandFormat(period, span, i === 0))}
-          </span>
-        </div>
-      ))}
-    </div>
+    <svg width={width} height={AXIS_HEIGHT} style={{ display: "block" }}>
+      <line x2={width} y1={0.5} y2={0.5} stroke={BORDER} />
+      {periods.map(
+        (period, i) =>
+          showTick(i) && (
+            // a bar over the labelled column, as wide as its cells
+            <g key={period}>
+              <rect x={x(i)} y={TICKS_TOP} width={pitch - gap} height={2} fill={TEXT_PRIMARY} />
+              <text x={x(i)} y={TICKS_TOP + 13} dominantBaseline="central" fill={TEXT_SECONDARY}>
+                {formatTime(period, minorFormat)}
+              </text>
+            </g>
+          ),
+      )}
+      {bands.map(({ period, span, start }, i) => {
+        const label = formatTime(period, bandFormat(period, span, i === 0));
+        const bandWidth = span * pitch - gap;
+        // stays in view, beside the label column, while its band scrolls past
+        const stick = `translateX(clamp(0px, calc(${SCROLL} + ${labelWidth - x(start)}px), ${bandWidth - 8 - CHAR_WIDTH * label.length}px))`;
+        return (
+          // a nested svg clips the label to its band
+          <svg key={period} x={x(start)} y={BANDS_TOP} width={bandWidth} height={BAND_HEIGHT}>
+            <line x1={0.5} x2={0.5} y2={BAND_HEIGHT} stroke={TEXT_SECONDARY} />
+            <text x={4} y={BAND_HEIGHT / 2} dominantBaseline="central" fill={TEXT_PRIMARY} style={{ transform: stick }}>
+              {label}
+            </text>
+          </svg>
+        );
+      })}
+      {/* the label column covers ticks and bands scrolling sideways beneath it, like the cells */}
+      <rect y={1} width={labelWidth} height={AXIS_HEIGHT - 1} fill={SURFACE} style={STICKY} />
+    </svg>
   );
 };
 
 // Outlines the hovered cell and shows its exact values above it, shifted
 // horizontally by the cell's position so it stays within the heatmap.
-const CellTooltip = ({ cell, metric, bucketLength }: { cell: HTMLElement; metric: string; bucketLength: string }) => {
+interface CellTooltipProps {
+  cell: SVGGElement;
+  // the scroll container the tooltip is placed in
+  container: HTMLElement;
+  metric: string;
+  bucketLength: string;
+}
+
+const CellTooltip = ({ cell, container, metric, bucketLength }: CellTooltipProps) => {
   // the cell may have been removed by a refetch while hovered
-  if (!cell.offsetParent) return null;
+  if (!cell.isConnected) return null;
   const { group, label, period, color, percent, watts, limit, online, gpus } = cell.dataset;
-  const x = cell.offsetLeft + cell.offsetWidth / 2;
-  const shift = (100 * x) / (cell.offsetParent as HTMLElement).scrollWidth;
+  // the cell's box within the scroll container's content
+  const box = cell.getBoundingClientRect();
+  const origin = container.getBoundingClientRect();
+  const left = box.left - origin.left + container.scrollLeft;
+  const top = box.top - origin.top;
+  const x = left + box.width / 2;
+  const shift = (100 * x) / container.scrollWidth;
   const line = { display: "flex", alignItems: "center", gap: 6 };
   // below the cell near the top, as the scroll container clips anything above it
-  const below = cell.offsetTop < TOOLTIP_HEIGHT;
+  const below = top < TOOLTIP_HEIGHT;
   return (
     <>
       <div
         style={{
           position: "absolute",
-          left: cell.offsetLeft - 2,
-          top: cell.offsetTop - 2,
-          width: cell.offsetWidth + 4,
-          height: cell.offsetHeight + 4,
+          left: left - 2,
+          top: top - 2,
+          width: box.width + 4,
+          height: box.height + 4,
           border: `2px solid ${TEXT_PRIMARY}`,
           pointerEvents: "none",
           zIndex: 4,
@@ -535,7 +681,7 @@ const CellTooltip = ({ cell, metric, bucketLength }: { cell: HTMLElement; metric
           ...TOOLTIP_STYLE,
           position: "absolute",
           left: x,
-          top: below ? cell.offsetTop + cell.offsetHeight + 6 : cell.offsetTop - 6,
+          top: below ? top + box.height + 6 : top - 6,
           transform: `translate(-${shift}%, ${below ? 0 : -100}%)`,
           whiteSpace: "nowrap",
           pointerEvents: "none",
@@ -573,13 +719,84 @@ const CellTooltip = ({ cell, metric, bucketLength }: { cell: HTMLElement; metric
   );
 };
 
+// The legend, grid and axis stacked in one standalone SVG, as drawn when
+// scrolled to the start.
+const ChartSvg = ({ font, ...props }: GridProps & { font: string }) => {
+  const { metric, max, groups, headers, periods, bucketLength, pitch, labelWidth } = props;
+  const items = legendItems(metric, max);
+  const gridTop = CELL_SIZE + 8;
+  const axisTop = gridTop + gridRows(groups, headers).height;
+  const width = Math.max(chartWidth(periods, labelWidth, pitch), legendLayout(items, font).width);
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={width + 2 * EXPORT_PADDING}
+      height={axisTop + AXIS_HEIGHT + 2 * EXPORT_PADDING}
+      fontFamily={font}
+      fontSize={12}
+    >
+      <rect width="100%" height="100%" fill={SURFACE} />
+      <g transform={`translate(${EXPORT_PADDING}, ${EXPORT_PADDING})`}>
+        <LegendSvg items={items} font={font} />
+        <g transform={`translate(0, ${gridTop})`}>
+          <HeatmapGrid {...props} />
+        </g>
+        <g transform={`translate(0, ${axisTop})`}>
+          <Axis periods={periods} bucketLength={bucketLength} pitch={pitch} labelWidth={labelWidth} />
+        </g>
+      </g>
+    </svg>
+  );
+};
+
+/**
+ * Renders the heatmap, with its legend and axis, as a standalone SVG document.
+ * Loads the renderer on first use.
+ */
+const chartSvg = async (props: GridProps & { font: string }) => {
+  const { renderToStaticMarkup } = await import("react-dom/server");
+  return renderToStaticMarkup(<ChartSvg {...props} />);
+};
+
+// Rasterizes an SVG document at `scale` times its size.
+const toPng = (svg: string, scale = 2) =>
+  new Promise<Blob>((resolve, reject) => {
+    const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
+    const image = new Image();
+    image.onload = () => {
+      URL.revokeObjectURL(url);
+      const canvas = document.createElement("canvas");
+      canvas.width = image.width * scale;
+      canvas.height = image.height * scale;
+      canvas.getContext("2d")?.drawImage(image, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("Too large for a PNG, try SVG"))), "image/png");
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Failed to render the PNG"));
+    };
+    image.src = url;
+  });
+
+// Offers a file for download.
+const saveFile = (blob: Blob, name: string) => {
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = name;
+  link.click();
+  // once the download has started
+  setTimeout(() => URL.revokeObjectURL(link.href));
+};
+
 const Heatmap = (props: ChartProps) => {
   const { data, metric, bucketLength, length, start, end } = props;
-  const [cell, setCell] = useState<HTMLElement | null>(null);
+  const [cell, setCell] = useState<SVGGElement | null>(null);
   const [fitToWidth, setFitToWidth] = useState(true);
+  const [labelWidth, setLabelWidth] = useState(0);
+  const [exportError, setExportError] = useState<string>();
   const [containerRef, { width: containerWidth }, container] = useSize();
-  const [labelRef, { width: labelWidth }] = useSize();
   const [axisRef, { height: axisHeight }] = useSize();
+  const root = useRef<HTMLDivElement>(null);
   const axis = useRef<HTMLDivElement>(null);
   const [edges, setEdges] = useState({ atStart: true, atEnd: false });
   // Whether the axis floats over rows: the end of the grid is behind it or below
@@ -606,18 +823,36 @@ const Heatmap = (props: ChartProps) => {
   const fitPitch = containerWidth ? Math.max(1, (containerWidth - labelWidth - 1) / periods.length) : CELL_SIZE + 2;
   const pitch = Math.min(CELL_SIZE + 2, fitToWidth ? fitPitch : Math.max(fitPitch, MIN_PITCH));
   const scrollable = !fitToWidth && fitPitch < MIN_PITCH;
+  // the sticky parts of the SVGs follow the scroll position
+  const setScroll = (left: number) => root.current?.style.setProperty("--scroll", `${left}px`);
+  // also when a new width or pitch moves it without a scroll event
+  useLayoutEffect(() => {
+    setScroll(container.current?.scrollLeft ?? 0);
+  });
   // The heatmap and the axis scroll together, whichever is scrolled; only the
   // axis shows a scrollbar, as it stays at the bottom of the window.
   const syncScroll = (from: HTMLDivElement, to: HTMLDivElement | null) => {
     if (to && to.scrollLeft !== from.scrollLeft) to.scrollLeft = from.scrollLeft;
+    setScroll(from.scrollLeft);
     const atStart = from.scrollLeft <= 0;
     const atEnd = from.scrollLeft + from.clientWidth >= from.scrollWidth - 1;
     if (atStart !== edges.atStart || atEnd !== edges.atEnd) setEdges({ atStart, atEnd });
   };
+  const download = async (format: "svg" | "png") => {
+    setExportError(undefined);
+    try {
+      const font = getComputedStyle(root.current!).fontFamily;
+      const svg = await chartSvg({ ...props, periods, max, pitch, labelWidth, font });
+      const blob = format === "svg" ? new Blob([svg], { type: "image/svg+xml" }) : await toPng(svg);
+      saveFile(blob, `gpu-${metric}-${bucketLength.replace(/\s+/g, "-")}.${format}`);
+    } catch (error) {
+      setExportError(error instanceof Error ? error.message : String(error));
+    }
+  };
   return (
-    <div className="my-3" style={{ fontSize: 12, color: TEXT_SECONDARY }}>
+    <div ref={root} className="my-3" style={{ fontSize: 12, color: TEXT_SECONDARY }}>
       <HStack gap={8} mb={2} wrap="wrap">
-        <Legend metric={metric} max={max} />
+        <Legend items={legendItems(metric, max)} />
         {fitPitch < MIN_PITCH && (
           <Switch.Root size="sm" checked={fitToWidth} onCheckedChange={(event) => setFitToWidth(event.checked)}>
             <Switch.HiddenInput />
@@ -625,6 +860,15 @@ const Heatmap = (props: ChartProps) => {
             <Switch.Label>Fit to width</Switch.Label>
           </Switch.Root>
         )}
+        <HStack gap={2}>
+          <Button size="xs" variant="outline" onClick={() => void download("svg")}>
+            Download SVG
+          </Button>
+          <Button size="xs" variant="outline" onClick={() => void download("png")}>
+            Download PNG
+          </Button>
+          {exportError}
+        </HStack>
       </HStack>
       <div style={{ position: "relative" }}>
         {/* the tooltip lives in the scroll container, so it scrolls along with the cells */}
@@ -633,14 +877,20 @@ const Heatmap = (props: ChartProps) => {
           // room for the hover outline of the first row
           style={{ position: "relative", overflowX: "auto", overflowY: "hidden", scrollbarWidth: "none", paddingTop: 2 }}
           onScroll={(event) => syncScroll(event.currentTarget, axis.current)}
-          onMouseMove={(event) => {
-            const target = event.target as HTMLElement;
-            setCell(target.dataset.period ? target : null);
-          }}
+          onMouseMove={(event) => setCell((event.target as Element).closest<SVGGElement>("[data-period]"))}
           onMouseLeave={() => setCell(null)}
         >
-          <HeatmapGrid {...props} periods={periods} max={max} pitch={pitch} labelRef={labelRef} />
-          {cell && <CellTooltip cell={cell} metric={metric} bucketLength={bucketLength} />}
+          <HeatmapGrid
+            {...props}
+            periods={periods}
+            max={max}
+            pitch={pitch}
+            labelWidth={labelWidth}
+            onLabelWidth={setLabelWidth}
+          />
+          {cell && container.current && (
+            <CellTooltip cell={cell} container={container.current} metric={metric} bucketLength={bucketLength} />
+          )}
         </div>
         {scrollShadow("left", labelWidth, scrollable && !edges.atStart)}
         {scrollShadow("right", 0, scrollable && !edges.atEnd)}
@@ -648,7 +898,7 @@ const Heatmap = (props: ChartProps) => {
       <div ref={gridEnd} style={{ height: 1 }} />
       {/* Floats at the bottom of the window while rows run past it, so it's outside the
           scroll container (sticky only follows the window from there), above the sticky
-          labels (2) and below the tooltip (4). Its shadow is outside the axis' own scroll
+          grid and below the tooltip (4). Its shadow is outside the axis' own scroll
           container, which would clip it. */}
       <div ref={axisRef} style={{ position: "sticky", bottom: 0, zIndex: 3, background: SURFACE }}>
         {scrollShadow("top", labelWidth, floating)}
