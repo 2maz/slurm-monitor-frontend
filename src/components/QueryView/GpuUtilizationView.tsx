@@ -148,6 +148,8 @@ const TICKS_TOP = 3;
 const BANDS_TOP = 27;
 const BAND_HEIGHT = 18;
 const AXIS_HEIGHT = BANDS_TOP + BAND_HEIGHT;
+// space above an axis on top, and between it and the first header or row
+const TOP_AXIS_SPACE = 8;
 // space between legend entries, and between groups of them
 const LEGEND_GAP = 4;
 const LEGEND_SPACING = 16;
@@ -289,14 +291,18 @@ const useSize = () => {
 };
 
 // Marks a side the heatmap has more to scroll to: columns to the left or right,
-// or rows beneath the floating axis ("top" of the axis).
-const scrollShadow = (side: "left" | "right" | "top", offset: number, visible: boolean) => (
+// or rows beneath the floating axis ("top" of an axis at the bottom, "bottom" of one on top).
+const scrollShadow = (side: "left" | "right" | "top" | "bottom", offset: number, visible: boolean) => (
   <div
     style={{
       position: "absolute",
       // the side shadows start below the scroll container's 2px top padding
-      ...(side === "top" ? { left: offset, right: 0, bottom: "100%", height: 16 } : { top: 2, bottom: 0, [side]: offset, width: 16 }),
-      background: `linear-gradient(to ${{ left: "right", right: "left", top: "top" }[side]}, rgba(0, 0, 0, 0.15), transparent)`,
+      ...(side === "top"
+        ? { left: offset, right: 0, bottom: "100%", height: 16 }
+        : side === "bottom"
+          ? { left: offset, right: 0, top: "100%", height: 16 }
+          : { top: 2, bottom: 0, [side]: offset, width: 16 }),
+      background: `linear-gradient(to ${{ left: "right", right: "left", top: "top", bottom: "bottom" }[side]}, rgba(0, 0, 0, 0.15), transparent)`,
       opacity: visible ? 1 : 0,
       transition: "opacity 150ms",
       pointerEvents: "none",
@@ -639,11 +645,13 @@ interface AxisProps {
   bucketLength: string;
   pitch: number;
   labelWidth: number;
+  // above the heatmap: mirrored, so the ticks and the border are next to the cells
+  top?: boolean;
 }
 
-// Minor ticks per column and major bands below them, as SVG aligned with the
-// heatmap's columns.
-const Axis = ({ periods, bucketLength, pitch, labelWidth }: AxisProps) => {
+// Minor ticks per column and major bands below them (above them on top), as SVG
+// aligned with the heatmap's columns.
+const Axis = ({ periods, bucketLength, pitch, labelWidth, top }: AxisProps) => {
   const { unit, amount, minor: minorFormat, majors, majorUnit, steps } = AXES[bucketLength];
   const majorFormat = majors[0];
   // The longest band label that fits its columns.
@@ -683,17 +691,19 @@ const Axis = ({ periods, bucketLength, pitch, labelWidth }: AxisProps) => {
   const x = (i: number) => columnX(i, labelWidth, pitch);
   const width = chartWidth(periods, labelWidth, pitch);
   const gap = columnGapFor(pitch);
+  // the top of something `height` high, `y` from the edge next to the cells
+  const fromCells = (y: number, height = 0) => (top ? AXIS_HEIGHT - y - height : y);
 
   return (
     <svg width={width} height={AXIS_HEIGHT} style={{ display: "block" }}>
-      <line x2={width} y1={0.5} y2={0.5} stroke={BORDER} />
+      <line x2={width} y1={fromCells(0.5)} y2={fromCells(0.5)} stroke={BORDER} />
       {periods.map(
         (period, i) =>
           showTick(i) && (
             // a bar over the labelled column, as wide as its cells
             <g key={period}>
-              <rect x={x(i)} y={TICKS_TOP} width={pitch - gap} height={2} fill={TEXT_PRIMARY} />
-              <text x={x(i)} y={TICKS_TOP + 13} dominantBaseline="central" fill={TEXT_SECONDARY}>
+              <rect x={x(i)} y={fromCells(TICKS_TOP, 2)} width={pitch - gap} height={2} fill={TEXT_PRIMARY} />
+              <text x={x(i)} y={fromCells(TICKS_TOP + 13)} dominantBaseline="central" fill={TEXT_SECONDARY}>
                 {formatTime(period, minorFormat)}
               </text>
             </g>
@@ -706,7 +716,7 @@ const Axis = ({ periods, bucketLength, pitch, labelWidth }: AxisProps) => {
         const stick = `translateX(clamp(0px, calc(${SCROLL} + ${labelWidth - x(start)}px), ${bandWidth - 8 - CHAR_WIDTH * label.length}px))`;
         return (
           // a nested svg clips the label to its band
-          <svg key={period} x={x(start)} y={BANDS_TOP} width={bandWidth} height={BAND_HEIGHT}>
+          <svg key={period} x={x(start)} y={fromCells(BANDS_TOP, BAND_HEIGHT)} width={bandWidth} height={BAND_HEIGHT}>
             <line x1={0.5} x2={0.5} y2={BAND_HEIGHT} stroke={TEXT_SECONDARY} />
             <text x={4} y={BAND_HEIGHT / 2} dominantBaseline="central" fill={TEXT_PRIMARY} style={{ transform: stick }}>
               {label}
@@ -715,7 +725,7 @@ const Axis = ({ periods, bucketLength, pitch, labelWidth }: AxisProps) => {
         );
       })}
       {/* the label column covers ticks and bands scrolling sideways beneath it, like the cells */}
-      <rect y={1} width={labelWidth} height={AXIS_HEIGHT - 1} fill={SURFACE} style={STICKY} />
+      <rect y={fromCells(1, AXIS_HEIGHT - 1)} width={labelWidth} height={AXIS_HEIGHT - 1} fill={SURFACE} style={STICKY} />
     </svg>
   );
 };
@@ -804,14 +814,17 @@ const CellTooltip = ({ cell, frame, metric, bucketLength }: CellTooltipProps) =>
 interface ChartSvgProps extends GridProps {
   font: string;
   columns: Column[];
+  axisTop: boolean;
 }
 
 // The legend above the columns, each a grid with its axis, in one standalone SVG,
 // as drawn when scrolled to the start.
-const ChartSvg = ({ font, columns, ...props }: ChartSvgProps) => {
+const ChartSvg = ({ font, columns, axisTop, ...props }: ChartSvgProps) => {
   const { metric, max, periods, bucketLength, pitch, labelWidth } = props;
   const items = legendItems(metric, max);
   const gridTop = CELL_SIZE + 8;
+  // the axis, with the space below it on top as on screen
+  const axisSpace = AXIS_HEIGHT + (axisTop ? 4 + TOP_AXIS_SPACE : 0);
   const heights = columns.map(({ groups, headers }) => gridRows(groups, headers).height);
   const columnWidth = chartWidth(periods, labelWidth, pitch);
   const width = Math.max(columns.length * (columnWidth + COLUMN_GAP) - COLUMN_GAP, legendLayout(items, font).width);
@@ -819,7 +832,7 @@ const ChartSvg = ({ font, columns, ...props }: ChartSvgProps) => {
     <svg
       xmlns="http://www.w3.org/2000/svg"
       width={width + 2 * EXPORT_PADDING}
-      height={gridTop + Math.max(...heights) + AXIS_HEIGHT + 2 * EXPORT_PADDING}
+      height={gridTop + Math.max(...heights) + axisSpace + 2 * EXPORT_PADDING}
       fontFamily={font}
       fontSize={12}
     >
@@ -828,9 +841,11 @@ const ChartSvg = ({ font, columns, ...props }: ChartSvgProps) => {
         <LegendSvg items={items} font={font} />
         {columns.map(({ groups, headers }, i) => (
           <g key={i} transform={`translate(${i * (columnWidth + COLUMN_GAP)}, ${gridTop})`}>
-            <HeatmapGrid {...props} groups={groups} headers={headers} titles />
-            <g transform={`translate(0, ${heights[i]})`}>
-              <Axis periods={periods} bucketLength={bucketLength} pitch={pitch} labelWidth={labelWidth} />
+            <g transform={`translate(0, ${axisTop ? axisSpace : 0})`}>
+              <HeatmapGrid {...props} groups={groups} headers={headers} titles />
+            </g>
+            <g transform={`translate(0, ${axisTop ? 0 : heights[i]})`}>
+              <Axis periods={periods} bucketLength={bucketLength} pitch={pitch} labelWidth={labelWidth} top={axisTop} />
             </g>
           </g>
         ))}
@@ -878,32 +893,50 @@ const saveFile = (blob: Blob, name: string) => {
   setTimeout(() => URL.revokeObjectURL(link.href));
 };
 
-// Floats at the bottom of the window while rows of its grid run past it, so it's
-// outside any scroll container (sticky only follows the window from there), above
-// the sticky grid and below the tooltip (4). Its shadow is outside the axis' own
-// scroll container, which would clip it.
-const FloatingAxis = ({ labelWidth, children }: { labelWidth: number; children: ReactNode }) => {
+interface FloatingAxisProps {
+  labelWidth: number;
+  // above its grid, rather than below
+  top: boolean;
+  children: ReactNode;
+}
+
+// Floats at the top or bottom of the window while rows of its grid run past it, so
+// it's outside any scroll container (sticky only follows the window from there),
+// above the sticky grid and below the tooltip (4). Its shadow is outside the axis'
+// own scroll container, which would clip it.
+const FloatingAxis = ({ labelWidth, top, children }: FloatingAxisProps) => {
   const [axisRef, { height }] = useSize();
-  // Whether the axis floats over rows: the end of the grid is behind it or below
-  // the window, rather than above it or scrolled past.
+  // Whether the axis floats over rows. Below the grid: the end of the grid is behind
+  // it or below the window, rather than above it or scrolled past. On top: where
+  // the axis would be is scrolled above the window.
   const [floating, setFloating] = useState(false);
-  const gridEnd = useCallback(
+  // just before the axis: the end of the grid below it, or where the axis would be on top
+  const before = useCallback(
     (element: HTMLDivElement | null) => {
       if (!element) return;
       const observer = new IntersectionObserver(
-        ([entry]) => setFloating(!entry.isIntersecting && entry.boundingClientRect.top > 0),
-        { rootMargin: `0px 0px -${height}px 0px` },
+        ([entry]) => setFloating(!entry.isIntersecting && (top ? entry.boundingClientRect.top < 0 : entry.boundingClientRect.top > 0)),
+        { rootMargin: top ? "0px" : `0px 0px -${height}px 0px` },
       );
       observer.observe(element);
       return () => observer.disconnect();
     },
-    [height],
+    [height, top],
   );
   return (
     <>
-      <div ref={gridEnd} style={{ height: 1 }} />
-      <div ref={axisRef} style={{ position: "sticky", bottom: 0, zIndex: 3, background: SURFACE }}>
-        {scrollShadow("top", labelWidth, floating)}
+      <div ref={before} style={{ height: 1 }} />
+      <div
+        ref={axisRef}
+        style={{
+          position: "sticky",
+          [top ? "top" : "bottom"]: 0,
+          zIndex: 3,
+          background: SURFACE,
+          ...(top && { paddingTop: TOP_AXIS_SPACE, paddingBottom: TOP_AXIS_SPACE }),
+        }}
+      >
+        {scrollShadow(top ? "bottom" : "top", labelWidth, floating)}
         {children}
       </div>
     </>
@@ -916,9 +949,12 @@ interface HeatmapProps extends ChartProps {
   onMultiColumn: (multiColumn: boolean) => void;
   // the start of downloads' file names, which add the time span
   fileName: string;
+  // whether the time axis is above the rows, rather than below
+  axisTop: boolean;
+  onAxisTop: (axisTop: boolean) => void;
 }
 
-const Heatmap = ({ multiColumn, onMultiColumn, fileName, ...props }: HeatmapProps) => {
+const Heatmap = ({ multiColumn, onMultiColumn, fileName, axisTop, onAxisTop, ...props }: HeatmapProps) => {
   const { data, metric, groups, headers, bucketLength, length, start, end } = props;
   const [cell, setCell] = useState<SVGGElement | null>(null);
   const [fitToWidth, setFitToWidth] = useState(true);
@@ -970,7 +1006,7 @@ const Heatmap = ({ multiColumn, onMultiColumn, fileName, ...props }: HeatmapProp
     setScroll(container.current?.scrollLeft ?? 0);
   });
   // The heatmap and the axis scroll together, whichever is scrolled; only the
-  // axis shows a scrollbar, as it stays at the bottom of the window.
+  // axis shows a scrollbar, as it stays in the window.
   const syncScroll = (from: HTMLDivElement, to: HTMLDivElement | null) => {
     if (to && to.scrollLeft !== from.scrollLeft) to.scrollLeft = from.scrollLeft;
     setScroll(from.scrollLeft);
@@ -984,7 +1020,7 @@ const Heatmap = ({ multiColumn, onMultiColumn, fileName, ...props }: HeatmapProp
     setExportError(undefined);
     try {
       const font = getComputedStyle(root.current!).fontFamily;
-      const svg = await chartSvg({ ...props, periods, max, pitch, labelWidth, font, columns });
+      const svg = await chartSvg({ ...props, periods, max, pitch, labelWidth, font, columns, axisTop });
       const blob = format === "svg" ? new Blob([svg], { type: "image/svg+xml" }) : await toPng(svg);
       // in UTC, from the start of the first bucket to the end of the last
       const time = (period: DateTime) => period.toFormat("yyyy-MM-dd'T'HHmm'Z'");
@@ -1012,7 +1048,25 @@ const Heatmap = ({ multiColumn, onMultiColumn, fileName, ...props }: HeatmapProp
       onLabelWidth={onLabelWidths[i]}
     />
   );
-  const axisSvg = <Axis periods={periods} bucketLength={bucketLength} pitch={pitch} labelWidth={labelWidth} />;
+  const axisSvg = (
+    <Axis periods={periods} bucketLength={bucketLength} pitch={pitch} labelWidth={labelWidth} top={axisTop} />
+  );
+  const columnAxis = (
+    <FloatingAxis labelWidth={labelWidth} top={axisTop}>
+      <div style={{ paddingBottom: 4 }}>{axisSvg}</div>
+    </FloatingAxis>
+  );
+  const singleAxis = (
+    <FloatingAxis labelWidth={labelWidth} top={axisTop}>
+      <div
+        ref={axis}
+        style={{ overflowX: "auto", paddingBottom: 4 }}
+        onScroll={(event) => syncScroll(event.currentTarget, container.current)}
+      >
+        {axisSvg}
+      </div>
+    </FloatingAxis>
+  );
   // outside any scroll container, which would clip it at the ends and below short heatmaps
   const tooltip = cell && frame && <CellTooltip cell={cell} frame={frame} metric={metric} bucketLength={bucketLength} />;
   return (
@@ -1033,6 +1087,11 @@ const Heatmap = ({ multiColumn, onMultiColumn, fileName, ...props }: HeatmapProp
             <Switch.Label>Multiple columns</Switch.Label>
           </Switch.Root>
         )}
+        <Switch.Root size="sm" checked={axisTop} onCheckedChange={(event) => onAxisTop(event.checked)}>
+          <Switch.HiddenInput />
+          <Switch.Control />
+          <Switch.Label>Axis on top</Switch.Label>
+        </Switch.Root>
         <HStack gap={2}>
           <Button size="xs" variant="outline" onClick={() => void download("svg")}>
             Download SVG
@@ -1052,16 +1111,16 @@ const Heatmap = ({ multiColumn, onMultiColumn, fileName, ...props }: HeatmapProp
         >
           {columns.map((column, i) => (
             <div key={i}>
+              {axisTop && columnAxis}
               {grid(column, i)}
-              <FloatingAxis labelWidth={labelWidth}>
-                <div style={{ paddingBottom: 4 }}>{axisSvg}</div>
-              </FloatingAxis>
+              {!axisTop && columnAxis}
             </div>
           ))}
           {tooltip}
         </div>
       ) : (
         <>
+          {axisTop && singleAxis}
           <div ref={setFrame} style={{ position: "relative" }} {...hover}>
             <div
               ref={container}
@@ -1075,15 +1134,7 @@ const Heatmap = ({ multiColumn, onMultiColumn, fileName, ...props }: HeatmapProp
             {scrollShadow("right", 0, scrollable && !edges.atEnd)}
             {tooltip}
           </div>
-          <FloatingAxis labelWidth={labelWidth}>
-            <div
-              ref={axis}
-              style={{ overflowX: "auto", paddingBottom: 4 }}
-              onScroll={(event) => syncScroll(event.currentTarget, container.current)}
-            >
-              {axisSvg}
-            </div>
-          </FloatingAxis>
+          {!axisTop && singleAxis}
         </>
       )}
     </div>
@@ -1099,6 +1150,7 @@ const GpuUtilizationView = ({ querySelect }: { querySelect: ReactNode }) => {
   const { cluster_id } = useAppState().currentBackendSpec();
   // here rather than in Heatmap, which is replaced while new data loads
   const [multiColumn, setMultiColumn] = useState(false);
+  const [axisTop, setAxisTop] = useState(true);
   const today = DateTime.utc().toISODate();
   const [range, setRange] = useState({ start: DateTime.utc().minus({ days: 7 }).toISODate(), end: today });
 
@@ -1207,6 +1259,8 @@ const GpuUtilizationView = ({ querySelect }: { querySelect: ReactNode }) => {
         end={custom?.end}
         multiColumn={multiColumn}
         onMultiColumn={setMultiColumn}
+        axisTop={axisTop}
+        onAxisTop={setAxisTop}
         // e.g. ex3.simula.no_gpu-utilization_card_utilization_1-hour
         fileName={[cluster_id, GPU_UTILIZATION_QUERY_NAME, level, metric, bucketLength.replace(/\s+/g, "-")].join("_")}
       />
