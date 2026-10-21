@@ -471,19 +471,17 @@ const useSize = () => {
   return [ref, size, element] as const;
 };
 
-// Marks a side the heatmap has more to scroll to: columns to the left or right,
-// or rows beneath the floating axis ("top" of an axis at the bottom, "bottom" of one on top).
-const scrollShadow = (side: "left" | "right" | "top" | "bottom", offset: number, visible: boolean) => (
+// Marks a side the heatmap has more columns to scroll to.
+const scrollShadow = (side: "left" | "right", offset: number, visible: boolean) => (
   <div
     style={{
       position: "absolute",
-      // the side shadows start below the scroll container's 2px top padding
-      ...(side === "top"
-        ? { left: offset, right: 0, bottom: "100%", height: 16 }
-        : side === "bottom"
-          ? { left: offset, right: 0, top: "100%", height: 16 }
-          : { top: 2, bottom: 0, [side]: offset, width: 16 }),
-      background: `linear-gradient(to ${{ left: "right", right: "left", top: "top", bottom: "bottom" }[side]}, rgba(0, 0, 0, 0.15), transparent)`,
+      // below the scroll container's 2px top padding
+      top: 2,
+      bottom: 0,
+      [side]: offset,
+      width: 16,
+      background: `linear-gradient(to ${side === "left" ? "right" : "left"}, rgba(0, 0, 0, 0.15), transparent)`,
       opacity: visible ? 1 : 0,
       transition: "opacity 150ms",
       pointerEvents: "none",
@@ -1078,7 +1076,6 @@ const saveFile = (blob: Blob, name: string) => {
 };
 
 interface FloatingAxisProps {
-  labelWidth: number;
   // above its grid, rather than below
   top: boolean;
   children: ReactNode;
@@ -1088,7 +1085,7 @@ interface FloatingAxisProps {
 // it's outside any scroll container (sticky only follows the window from there),
 // above the sticky grid and below the tooltip (4). Its shadow is outside the axis'
 // own scroll container, which would clip it.
-const FloatingAxis = ({ labelWidth, top, children }: FloatingAxisProps) => {
+const FloatingAxis = ({ top, children }: FloatingAxisProps) => {
   const [axisRef, { height }] = useSize();
   // Whether the axis floats over rows. Below the grid: the end of the grid is behind
   // it or below the window, rather than above it or scrolled past. On top: where
@@ -1118,9 +1115,12 @@ const FloatingAxis = ({ labelWidth, top, children }: FloatingAxisProps) => {
           zIndex: 3,
           background: SURFACE,
           ...(top && { paddingTop: TOP_AXIS_SPACE, paddingBottom: TOP_AXIS_SPACE }),
+          // Marks the rows running beneath it. A box shadow rather than an element hanging
+          // out of the axis, which Chrome could leave painted over the first header.
+          boxShadow: floating ? `0 ${top ? 8 : -8}px 8px -8px rgba(0, 0, 0, 0.3)` : "none",
+          transition: "box-shadow 150ms",
         }}
       >
-        {scrollShadow(top ? "bottom" : "top", labelWidth, floating)}
         {children}
       </div>
     </>
@@ -1236,12 +1236,12 @@ const Heatmap = ({ multiColumn, onMultiColumn, fileName, axisTop, onAxisTop, ...
     <Axis periods={periods} bucketLength={bucketLength} pitch={pitch} labelWidth={labelWidth} top={axisTop} />
   );
   const columnAxis = (
-    <FloatingAxis labelWidth={labelWidth} top={axisTop}>
+    <FloatingAxis top={axisTop}>
       <div style={{ paddingBottom: 4 }}>{axisSvg}</div>
     </FloatingAxis>
   );
   const singleAxis = (
-    <FloatingAxis labelWidth={labelWidth} top={axisTop}>
+    <FloatingAxis top={axisTop}>
       <div
         ref={axis}
         style={{ overflowX: "auto", paddingBottom: 4 }}
