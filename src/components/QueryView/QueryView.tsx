@@ -11,14 +11,16 @@ import {
   SelectTrigger,
   SelectValueText,
 } from "../ui/select";
-import { useState } from "react";
+import useUrlParam, { setUrlParams } from "../../hooks/useUrlParam";
 import DataFrameView from "./DataFrameView";
 import UtilizationView, { CPU_UTILIZATION_QUERY_NAME, GPU_UTILIZATION_QUERY_NAME } from "./UtilizationView";
 
 const UTILIZATION_QUERIES = [GPU_UTILIZATION_QUERY_NAME, CPU_UTILIZATION_QUERY_NAME];
 
 const QueryView = () => {
-  const [queryName, setQueryName] = useState<string[]>([]);
+  // in the URL, like the settings of the utilization views
+  const [query, setQuery] = useUrlParam("query", "");
+  const queryName = query ? [query] : [];
 
   const { data: queries } = useAvailableQueries();
 
@@ -46,7 +48,9 @@ const QueryView = () => {
       // controlled, as the select remounts when moving into a utilization view
       value={queryName}
       onValueChange={(event) => {
-        setQueryName(event.value);
+        // drops the previous query's settings from the URL, so the new one starts from its defaults
+        setUrlParams({}, { only: ["view", "cluster"] });
+        setQuery(event.value[0] ?? "");
       }}
     >
       <SelectLabel>Query</SelectLabel>
