@@ -13,7 +13,9 @@ import {
 } from "../ui/select";
 import { useState } from "react";
 import DataFrameView from "./DataFrameView";
-import GpuUtilizationView, { GPU_UTILIZATION_QUERY_NAME } from "./UtilizationView";
+import UtilizationView, { CPU_UTILIZATION_QUERY_NAME, GPU_UTILIZATION_QUERY_NAME } from "./UtilizationView";
+
+const UTILIZATION_QUERIES = [GPU_UTILIZATION_QUERY_NAME, CPU_UTILIZATION_QUERY_NAME];
 
 const QueryView = () => {
   const [queryName, setQueryName] = useState<string[]>([]);
@@ -41,7 +43,7 @@ const QueryView = () => {
       collection={collection}
       size="sm"
       width="240px"
-      // controlled, as the select remounts when moving into the GPU utilization view
+      // controlled, as the select remounts when moving into a utilization view
       value={queryName}
       onValueChange={(event) => {
         setQueryName(event.value);
@@ -66,9 +68,10 @@ const QueryView = () => {
       <Tooltip title="This is an experimental view - Work in Progress">
         <h2>Usage Statistics <WarningAmberIcon className="mx-2"/> </h2>
       </Tooltip>
-      {/* the GPU utilization view puts the query select in a row with its own controls */}
-      {queryName[0] === GPU_UTILIZATION_QUERY_NAME ? (
-        <GpuUtilizationView querySelect={querySelect} />
+      {/* the utilization views put the query select in a row with their own controls */}
+      {UTILIZATION_QUERIES.includes(queryName[0]) ? (
+        // keyed, so that switching between them starts over with the new view's defaults
+        <UtilizationView key={queryName[0]} queryName={queryName[0]} querySelect={querySelect} />
       ) : (
         <>
           {querySelect}
