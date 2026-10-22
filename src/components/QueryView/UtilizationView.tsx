@@ -16,6 +16,7 @@ import {
 import { LuInfo } from "react-icons/lu";
 import useDataFrameQuery, { Row } from "../../hooks/useDataFrameQuery";
 import useAppState from "../../AppState";
+import useUrlParam, { useUrlFlag } from "../../hooks/useUrlParam";
 import {
   SelectContent,
   SelectItem,
@@ -441,6 +442,16 @@ const bucketStarts = (first: string, bucketLength: string, length: string, start
   for (; period < to; period = period.plus(step)) periods.push(period.toISO()!);
   return periods;
 };
+
+// A custom range of whole UTC days as written in the URL, from..to (both included),
+// e.g. 2026-10-01..2026-10-21; undefined unless both are dates, in order, up to today.
+const parseDates = (value: string) => {
+  const [start, end] = value.split("..");
+  const isDate = (date?: string): date is string => /^\d{4}-\d{2}-\d{2}$/.test(date ?? "") && toUtc(date!).isValid;
+  if (!isDate(start) || !isDate(end) || start > end || end > DateTime.utc().toISODate()) return undefined;
+  return { start, end };
+};
+const formatDates = ({ start, end }: { start: string; end: string }) => `${start}..${end}`;
 
 interface ChartProps {
   kind: UtilizationKind;
@@ -1348,22 +1359,36 @@ interface UtilizationViewProps {
 
 const UtilizationView = ({ queryName, querySelect }: UtilizationViewProps) => {
   const kind = UTILIZATION_KINDS[queryName];
-  const [level, setLevel] = useState(kind.levels[0]);
-  const [bucketLength, setBucketLength] = useState("1 hour");
-  const [length, setLength] = useState("1 day");
-  const [metric, setMetric] = useState(UTILIZATION);
-  const [showGroups, setShowGroups] = useState(false);
+  // Settings are kept in the URL, so that a refresh keeps them and links share them.
+  const [level, setLevel] = useUrlParam("level", kind.levels[0], (value) => kind.levels.includes(value));
+  const [metric, setMetric] = useUrlParam(
+    "metric",
+    UTILIZATION,
+    (value) =>
+      [...kind.metrics.map(({ value }) => value), kind.count.column].includes(value) && isValidMetric(kind, level, value),
+  );
+  const [showGroups, setShowGroups] = useUrlFlag("ids", false);
+  const today = DateTime.utc().toISODate();
+  // A custom range is always written to the URL, as the default one moves with the date.
+  const [dates, setDates] = useUrlParam("dates", "", (value) => parseDates(value) !== undefined);
+  const range = parseDates(dates) ?? { start: DateTime.utc().minus({ days: 7 }).toISODate(), end: today };
+  const [length, setLength] = useUrlParam("range", "1 day", (value) => LENGTHS.includes(value) || value === CUSTOM);
+  const customSeconds = (dates: typeof range) => toUtc(dates.end).plus({ days: 1 }).diff(toUtc(dates.start)).as("seconds");
+  const span = length === CUSTOM ? customSeconds(range) : seconds(length);
+  const [urlBucketLength, setBucketLength] = useUrlParam("bucket", "1 hour", (value) => BUCKET_LENGTHS.includes(value));
+  // the finest that fits, if a link pairs the range with a bucket length it doesn't allow
+  const bucketLength = isValidSpan(urlBucketLength, span)
+    ? urlBucketLength
+    : (BUCKET_LENGTHS.find((value) => isValidSpan(value, span)) ?? urlBucketLength);
   const { cluster_id } = useAppState().currentBackendSpec();
   // here rather than in Heatmap, which is replaced while new data loads
-  const [multiColumn, setMultiColumn] = useState(false);
-  const [axisTop, setAxisTop] = useState(true);
-  const today = DateTime.utc().toISODate();
-  const [range, setRange] = useState({ start: DateTime.utc().minus({ days: 7 }).toISODate(), end: today });
+  const [multiColumn, setMultiColumn] = useUrlFlag("columns", false);
+  const [axis, setAxis] = useUrlParam("axis", "top", (value) => value === "top" || value === "bottom");
+  const axisTop = axis === "top";
 
   // a custom range includes its end day
   const custom =
     length === CUSTOM ? { start: toUtc(range.start).toISO()!, end: toUtc(range.end).plus({ days: 1 }).toISO()! } : undefined;
-  const customSeconds = (dates: typeof range) => toUtc(dates.end).plus({ days: 1 }).diff(toUtc(dates.start)).as("seconds");
   // Presets are limited to what fits the bucket length; with a custom range,
   // the bucket lengths are limited to what fits the range instead.
   const lengths = createListCollection<Option>({
@@ -1381,10 +1406,13 @@ const UtilizationView = ({ queryName, querySelect }: UtilizationViewProps) => {
   };
   const changeLength = (value: string) => {
     setLength(value);
-    if (value === CUSTOM) fitBucketLength(range);
+    if (value === CUSTOM) {
+      setDates(formatDates(range));
+      fitBucketLength(range);
+    }
   };
   const changeRange = (dates: typeof range) => {
-    setRange(dates);
+    setDates(formatDates(dates));
     fitBucketLength(dates);
   };
   const metrics = createListCollection<Option>({
@@ -1463,7 +1491,7 @@ const UtilizationView = ({ queryName, querySelect }: UtilizationViewProps) => {
         multiColumn={multiColumn}
         onMultiColumn={setMultiColumn}
         axisTop={axisTop}
-        onAxisTop={setAxisTop}
+        onAxisTop={(top) => setAxis(top ? "top" : "bottom")}
         // e.g. ex3.simula.no_gpu-utilization_card_utilization_1-hour
         fileName={[cluster_id, kind.queryName, level, metric, bucketLength.replace(/\s+/g, "-")].join("_")}
       />

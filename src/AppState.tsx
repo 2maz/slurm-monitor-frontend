@@ -60,6 +60,12 @@ const useAppState = create<AppState>()(
   )
 );
 
+// a link's cluster (?cluster=…) wins over the session's, where it is configured
+const linkedBackend = new URLSearchParams(window.location.search).get("cluster");
+if (linkedBackend && linkedBackend in useAppState.getState().backendSpecs) {
+  useAppState.getState().selectBackend(linkedBackend);
+}
+
 export default useAppState;
 
 if(process.env.NODE_ENV === 'development'){

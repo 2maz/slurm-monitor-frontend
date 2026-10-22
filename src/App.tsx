@@ -39,6 +39,7 @@ import UserAuthentication from "./components/UserAuthentication";
 import { useKeycloak } from "@react-keycloak/web";
 import { auth_required } from "./auth";
 import Keycloak from "keycloak-js";
+import { getUrlParam, setUrlParams } from "./hooks/useUrlParam";
 
 const theme = createTheme({});
 
@@ -69,10 +70,14 @@ export function SecuredApp() {
 }
 
 
+const VIEWS = ["cluster", "partitions", "nodes", "jobs", "inspect-completed-jobs", "query", "benchmarks", "settings"];
+
 const App = ({keycloak, initialized} : AppProps) => {
-  const [view, setView] = useState<string>(
-    window.sessionStorage.getItem("view") || "jobs"
-  );
+  // a link's view (?view=…) wins over the session's
+  const [view, setView] = useState<string>(() => {
+    const linked = getUrlParam("view");
+    return linked && VIEWS.includes(linked) ? linked : window.sessionStorage.getItem("view") || "jobs";
+  });
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   const open = Boolean(anchorEl);
@@ -81,11 +86,20 @@ const App = ({keycloak, initialized} : AppProps) => {
   const slurmJobs = useAppState((state) => state.slurmRuns);
   const setSlurmJobs = useAppState((state) => state.updateSlurmRuns);
 
+  const currentBackend = useAppState((state) => state.currentBackend);
+
   useEffect(() => {
     document.title = "ex3 - Status: " + view;
   });
 
+  // the URL always names the view and the cluster, so that links show the same data
+  useEffect(() => {
+    setUrlParams({ view, cluster: currentBackend });
+  }, [view, currentBackend]);
+
   const selectView = (name: string) => {
+    // drops the previous view's settings from the URL
+    if (name !== view) setUrlParams({ view: name }, { only: ["cluster"] });
     setView(name);
     window.sessionStorage.setItem("view", name);
   };
