@@ -1,24 +1,41 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import GpuUtilizationView from "../src/components/QueryView/GpuUtilizationView";
+import UtilizationView, {
+  CPU_UTILIZATION_QUERY_NAME,
+  GPU_UTILIZATION_QUERY_NAME,
+} from "../src/components/QueryView/UtilizationView";
 import { ChakraProvider } from "@chakra-ui/react";
 import { system } from "../src/components/ui/theme";
 
 // two cards in the current hour: one online a quarter of the time, one all of it
-const { period, rows } = vi.hoisted(() => {
+// and two nodes, half busy and fully online
+const { period, rows, cpuRows } = vi.hoisted(() => {
   const period = new Date(Math.floor(Date.now() / 3_600_000) * 3_600_000).toISOString();
   const card = { manufacturer: "NVIDIA", model: "A100", period_start: period, gpus_reporting: 1 };
+  const node = {
+    model: "AMD EPYC 7302P",
+    period_start: period,
+    nodes_reporting: 1,
+    logical_cpus: 32,
+    percent_time_online: 100,
+    avg_utilization_percent_while_online: 50,
+    memory_percent_used: 20,
+  };
   return {
     period,
     rows: [
       { ...card, gpu_group: "uuid-a", gpu_label: "GPU 0", percent_time_online: 25, avg_utilization_percent_while_online: 80 },
       { ...card, gpu_group: "uuid-b", gpu_label: "GPU 1", percent_time_online: 100, avg_utilization_percent_while_online: 10 },
     ],
+    cpuRows: [
+      { ...node, cpu_group: "n001" },
+      { ...node, cpu_group: "n002" },
+    ],
   };
 });
 
 vi.mock("../src/hooks/useDataFrameQuery", () => ({
-  default: () => ({ data: rows, isLoading: false, error: null }),
+  default: (queryName: string) => ({ data: queryName === "cpu-utilization" ? cpuRows : rows, isLoading: false, error: null }),
 }));
 
 class NoopObserver {
@@ -30,10 +47,10 @@ vi.stubGlobal("IntersectionObserver", NoopObserver);
 // jsdom has no canvas, so text widths are estimated
 vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null);
 
-const renderView = () =>
+const renderView = (queryName = GPU_UTILIZATION_QUERY_NAME) =>
   render(
     <ChakraProvider value={system}>
-      <GpuUtilizationView querySelect={null} />
+      <UtilizationView queryName={queryName} querySelect={null} />
     </ChakraProvider>,
   );
 
@@ -84,5 +101,23 @@ describe("GpuUtilizationView heatmap", () => {
     expect(svg.querySelectorAll(`[data-period="${period}"]`)).toHaveLength(2);
     // sticky labels fall back to their place when scrolled to the start
     expect(svg.innerHTML).toContain("var(--scroll, 0px)");
+  });
+});
+
+describe("CPU utilization view", () => {
+  it("lists nodes by CPU model, with busy CPUs in the tooltip", () => {
+    const { container } = renderView(CPU_UTILIZATION_QUERY_NAME);
+    expect(screen.getByText("AMD EPYC 7302P (2 nodes)")).toBeInTheDocument();
+    expect(screen.getByText("n002")).toBeInTheDocument();
+
+    fireEvent.mouseMove(cellOf(container, "n001"));
+    expect(screen.getByText("50%")).toBeInTheDocument();
+    expect(screen.getByText(/16\.0 of 32 CPUs/)).toBeInTheDocument();
+  });
+
+  it("explains the numbers behind the info button", async () => {
+    renderView(CPU_UTILIZATION_QUERY_NAME);
+    fireEvent.click(screen.getByRole("button", { name: "About these numbers" }));
+    expect(await screen.findByText(/share of the node's logical CPUs/)).toBeInTheDocument();
   });
 });

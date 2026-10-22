@@ -1,7 +1,19 @@
 import { memo, ReactNode, RefCallback, useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { DateTime, Duration, DurationLikeObject, DurationUnit } from "luxon";
 import { BarLoader } from "react-spinners";
-import { Button, createListCollection, Field, HStack, Input, ListCollection, Switch } from "@chakra-ui/react";
+import {
+  Button,
+  createListCollection,
+  Field,
+  HStack,
+  IconButton,
+  Input,
+  ListCollection,
+  Popover,
+  Portal,
+  Switch,
+} from "@chakra-ui/react";
+import { LuInfo } from "react-icons/lu";
 import useDataFrameQuery, { Row } from "../../hooks/useDataFrameQuery";
 import useAppState from "../../AppState";
 import {
@@ -13,8 +25,6 @@ import {
   SelectValueText,
 } from "../ui/select";
 
-export const GPU_UTILIZATION_QUERY_NAME = "gpu-utilization";
-
 interface Option {
   label: string;
   value: string;
@@ -24,9 +34,8 @@ interface Option {
 const options = (values: string[], isDisabled: (value: string) => boolean = () => false) =>
   createListCollection<Option>({ items: values.map((value) => ({ label: value, value, disabled: isDisabled(value) })) });
 
-// Mirrors GPUUtilizationAggregationLevel / GPUUtilizationBucketLength / GPUUtilizationLength
-// in slurm_monitor/db/query.py - keep in sync with the backend enums.
-const levels = options(["card", "model", "manufacturer"]);
+// Mirrors GPUUtilizationBucketLength / GPUUtilizationLength in slurm_monitor/db/query.py,
+// which both utilization queries use - keep in sync with the backend enums.
 const BUCKET_LENGTHS = ["15 minutes", "1 hour", "1 day", "1 week", "1 month"];
 const LENGTHS = ["15 minutes", "1 hour", "1 day", "1 week", "1 month", "1 year"];
 // a custom range of whole UTC days, picked with date inputs
@@ -47,22 +56,6 @@ const isValidSpan = (bucketLength: string, spanSeconds: number) => {
   const buckets = spanSeconds / seconds(bucketLength);
   return buckets >= 1 && buckets <= MAX_BUCKETS;
 };
-const UTILIZATION = "utilization";
-const GPUS = "gpus_reporting";
-// Metrics shown on a 0-100% color scale, with a box sized by time online:
-// the column holding each, and its legend label.
-const PERCENT_METRICS: Record<string, { column: string; label: string }> = {
-  [UTILIZATION]: { column: "avg_utilization_percent_while_online", label: "Utilization while online" },
-  power: { column: "power_percent_of_limit", label: "Power while online (% of limit)" },
-};
-const METRICS: Option[] = [
-  { label: "Utilization & time online", value: UTILIZATION },
-  { label: "Power & time online", value: "power" },
-  { label: "GPUs reporting", value: GPUS },
-];
-// At card level every group is a single card, so GPUs reporting is always 1.
-const isValidMetric = (level: string, metric: string) => level !== "card" || metric !== GPUS;
-
 interface ParamSelectProps {
   label: string;
   collection: ListCollection<Option>;
@@ -93,6 +86,29 @@ const ParamSelect = ({ label, collection, value, onChange, width = "180px" }: Pa
   </SelectRoot>
 );
 
+interface OptionSwitchProps {
+  label: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  mb?: number;
+}
+
+// The root is a label, which Bootstrap's unlayered `label { display: inline-block }`
+// would take over from Chakra's layered styles, so its flex layout is set inline.
+const OptionSwitch = ({ label, checked, onChange, mb }: OptionSwitchProps) => (
+  <Switch.Root
+    size="sm"
+    mb={mb}
+    checked={checked}
+    onCheckedChange={(event) => onChange(event.checked)}
+    style={{ display: "inline-flex" }}
+  >
+    <Switch.HiddenInput />
+    <Switch.Control />
+    <Switch.Label>{label}</Switch.Label>
+  </Switch.Root>
+);
+
 interface DateInputProps {
   label: string;
   value: string;
@@ -117,10 +133,174 @@ const DateInput = ({ label, value, min, max, onChange }: DateInputProps) => (
 );
 
 // Single-hue ramps (light = low, dark = high) for heatmap magnitude: blue by
-// default, amber for power. Both checked for colour-blind safety.
+// default, amber for power, green for memory. Checked for colour-blind safety;
+// green has blue's lightness steps (OKLCH, hue 150).
 const BLUE = ["#cde2fb", "#9ec5f4", "#6da7ec", "#3987e5", "#256abf", "#184f95", "#0d366b"];
 const AMBER = ["#ffeab1", "#ffcc5f", "#f5af20", "#df9201", "#bd7200", "#985704", "#743c01"];
-const rampFor = (metric: string) => (metric === "power" ? AMBER : BLUE);
+const GREEN = ["#cde8d2", "#9dd0a7", "#69b87c", "#1fa04e", "#02813a", "#00622a", "#01441b"];
+
+const UTILIZATION = "utilization";
+
+// A metric shown on a 0-100% color scale, with a box sized by time online.
+interface PercentMetric {
+  value: string;
+  // in the metric select, and in the legend and tooltip
+  label: string;
+  legend: string;
+  column: string;
+  ramp: string[];
+  // absolute values the tooltip adds after the percentage, e.g. " (41 W of 350 W)"
+  detail?: (row: Row) => string | undefined;
+}
+
+// What a utilization query returns, and how its rows are grouped and explained.
+interface UtilizationKind {
+  queryName: string;
+  // the columns with each row's group, and its display label if not the group itself
+  groupColumn: string;
+  labelColumn?: string;
+  // the label of a switch showing the groups rather than their labels
+  showGroupsLabel?: string;
+  levels: string[];
+  // the level where every group is a single GPU or node
+  unitLevel: string;
+  // the column counting GPUs or nodes in a group (also a metric), and its label
+  count: { column: string; label: string };
+  metrics: PercentMetric[];
+  // a group's section, if its level has any, and what the sections' headers count
+  section: (level: string, row: Row) => string | undefined;
+  unit: (level: string) => string;
+  info: ReactNode;
+}
+
+const InfoItem = ({ term, children }: { term: string; children: ReactNode }) => (
+  <p style={{ marginTop: 6 }}>
+    <strong>{term}</strong>: {children}
+  </p>
+);
+
+export const GPU_UTILIZATION_QUERY_NAME = "gpu-utilization";
+export const CPU_UTILIZATION_QUERY_NAME = "cpu-utilization";
+
+const GPU_UTILIZATION: UtilizationKind = {
+  queryName: GPU_UTILIZATION_QUERY_NAME,
+  groupColumn: "gpu_group",
+  labelColumn: "gpu_label",
+  showGroupsLabel: "Show UUIDs",
+  levels: ["card", "model", "manufacturer"],
+  unitLevel: "card",
+  count: { column: "gpus_reporting", label: "GPUs reporting" },
+  metrics: [
+    {
+      value: UTILIZATION,
+      label: "Utilization & time online",
+      legend: "Utilization while online",
+      column: "avg_utilization_percent_while_online",
+      ramp: BLUE,
+    },
+    {
+      value: "power",
+      label: "Power & time online",
+      legend: "Power while online (% of limit)",
+      column: "power_percent_of_limit",
+      ramp: AMBER,
+      detail: (row) =>
+        row.avg_power_watts !== undefined && row.avg_power_watts !== null
+          ? ` (${row.avg_power_watts} W of ${row.avg_power_limit_watts} W)`
+          : undefined,
+    },
+  ],
+  // cards by model, models by manufacturer
+  section: (level, row) =>
+    level === "card"
+      ? `${row.manufacturer || "unknown"} · ${row.model || "unknown model"}`
+      : level === "model"
+        ? String(row.manufacturer || "unknown")
+        : undefined,
+  unit: (level) => (level === "card" ? "card" : "model"),
+  info: (
+    <>
+      <InfoItem term="Utilization">
+        how busy the card's compute engines were, as reported by its driver, averaged over the time it was
+        online. It says nothing about whether a Slurm job had the card allocated.
+      </InfoItem>
+      <InfoItem term="Time online">
+        the share of the bucket the card sent samples (one every 30 seconds), shown as the area of the box in
+        each cell.
+      </InfoItem>
+      <InfoItem term="Power">
+        the average power draw as a share of the card's power limit. Some cards (e.g. Habana, Intel) don't
+        report it.
+      </InfoItem>
+      <InfoItem term="GPUs reporting">the cards in a model or manufacturer that sent samples in the bucket.</InfoItem>
+    </>
+  ),
+};
+
+const CPU_UTILIZATION: UtilizationKind = {
+  queryName: CPU_UTILIZATION_QUERY_NAME,
+  groupColumn: "cpu_group",
+  levels: ["node", "model"],
+  unitLevel: "node",
+  count: { column: "nodes_reporting", label: "Nodes reporting" },
+  metrics: [
+    {
+      value: UTILIZATION,
+      label: "Utilization & time online",
+      legend: "Utilization while online",
+      column: "avg_utilization_percent_while_online",
+      ramp: BLUE,
+      // on average over the bucket
+      detail: (row) => {
+        const percent = toNumber(row.avg_utilization_percent_while_online);
+        const cpus = toNumber(row.logical_cpus);
+        if (percent === undefined || cpus === undefined) return undefined;
+        return ` (${((percent * cpus) / 100).toFixed(1)} of ${cpus} CPUs)`;
+      },
+    },
+    {
+      value: "memory",
+      label: "Memory & time online",
+      legend: "Memory used while online",
+      column: "memory_percent_used",
+      ramp: GREEN,
+    },
+  ],
+  // nodes by CPU model
+  section: (level, row) => (level === "node" ? String(row.model || "unknown model") : undefined),
+  unit: () => "node",
+  info: (
+    <>
+      <InfoItem term="Utilization">
+        the share of the node's logical CPUs that were busy, from the kernel's busy time per CPU, averaged over
+        the time it was online. Logical CPUs are hardware threads: on nodes with 2 threads per core, every
+        core running a single thread shows as about 50%.
+      </InfoItem>
+      <InfoItem term="What counts">
+        everything on the node: Slurm jobs, other processes (e.g. on login nodes) and the kernel's own work (e.g.
+        the file system on the mds nodes). The load average isn't used, as it also counts processes waiting for
+        I/O and can exceed the number of CPUs.
+      </InfoItem>
+      <InfoItem term="Memory">the memory in use as a share of the node's memory.</InfoItem>
+      <InfoItem term="Time online">
+        the share of the bucket the node sent samples (one every 30 seconds), shown as the area of the box in
+        each cell.
+      </InfoItem>
+      <InfoItem term="Nodes reporting">the nodes of a CPU model that sent samples in the bucket.</InfoItem>
+    </>
+  ),
+};
+
+const UTILIZATION_KINDS: Record<string, UtilizationKind> = Object.fromEntries(
+  [GPU_UTILIZATION, CPU_UTILIZATION].map((kind) => [kind.queryName, kind]),
+);
+
+const percentMetric = (kind: UtilizationKind, metric: string) => kind.metrics.find(({ value }) => value === metric);
+const rampFor = (kind: UtilizationKind, metric: string) => percentMetric(kind, metric)?.ramp ?? BLUE;
+// At the unit level every group is a single GPU or node, so the count is always 1.
+const isValidMetric = (kind: UtilizationKind, level: string, metric: string) =>
+  level !== kind.unitLevel || metric !== kind.count.column;
+
 const OFFLINE = "#f0efec";
 // box color for cards that were online but don't report the metric (e.g. power)
 const NOT_REPORTED = "#a9a7a1";
@@ -263,6 +443,7 @@ const bucketStarts = (first: string, bucketLength: string, length: string, start
 };
 
 interface ChartProps {
+  kind: UtilizationKind;
   data: Row[];
   metric: string;
   groups: string[];
@@ -290,19 +471,17 @@ const useSize = () => {
   return [ref, size, element] as const;
 };
 
-// Marks a side the heatmap has more to scroll to: columns to the left or right,
-// or rows beneath the floating axis ("top" of an axis at the bottom, "bottom" of one on top).
-const scrollShadow = (side: "left" | "right" | "top" | "bottom", offset: number, visible: boolean) => (
+// Marks a side the heatmap has more columns to scroll to.
+const scrollShadow = (side: "left" | "right", offset: number, visible: boolean) => (
   <div
     style={{
       position: "absolute",
-      // the side shadows start below the scroll container's 2px top padding
-      ...(side === "top"
-        ? { left: offset, right: 0, bottom: "100%", height: 16 }
-        : side === "bottom"
-          ? { left: offset, right: 0, top: "100%", height: 16 }
-          : { top: 2, bottom: 0, [side]: offset, width: 16 }),
-      background: `linear-gradient(to ${{ left: "right", right: "left", top: "top", bottom: "bottom" }[side]}, rgba(0, 0, 0, 0.15), transparent)`,
+      // below the scroll container's 2px top padding
+      top: 2,
+      bottom: 0,
+      [side]: offset,
+      width: 16,
+      background: `linear-gradient(to ${side === "left" ? "right" : "left"}, rgba(0, 0, 0, 0.15), transparent)`,
       opacity: visible ? 1 : 0,
       transition: "opacity 150ms",
       pointerEvents: "none",
@@ -320,13 +499,14 @@ const Swatch = ({ background }: { background: string }) => (
 // before it when it starts a group of entries.
 type LegendItem = { text: string } | { color: string; percent?: number; cell?: boolean; spaced?: boolean };
 
-const legendItems = (metric: string, max: number): LegendItem[] => {
-  const steps = rampFor(metric);
+const legendItems = (kind: UtilizationKind, metric: string, max: number): LegendItem[] => {
+  const steps = rampFor(kind, metric);
+  const percent = percentMetric(kind, metric);
   return [
-    { text: metric === GPUS ? "GPUs reporting: 0" : `${PERCENT_METRICS[metric].label}: 0%` },
+    { text: percent ? `${percent.legend}: 0%` : `${kind.count.label}: 0` },
     ...steps.map((color) => ({ color })),
-    { text: metric === GPUS ? String(max) : "100%" },
-    ...(metric === GPUS
+    { text: percent ? "100%" : String(max) },
+    ...(!percent
       ? []
       : [
           { color: steps[3], percent: 25, cell: true, spaced: true },
@@ -506,23 +686,22 @@ interface CellValues {
   group: string;
   label?: string;
   period: string;
-  percent?: number;
-  watts?: string | number;
-  limit?: string | number;
-  online?: number;
-  gpus?: number;
+  percent?: number | string;
+  detail?: string;
+  online?: number | string;
+  count?: number | string;
 }
 
 // A cell's values as plain text lines, as its tooltip shows them.
-const cellTitle = (metric: string, bucketLength: string, cell: CellValues) => {
-  const { group, label, period, percent, watts, limit, online, gpus } = cell;
+const cellTitle = (kind: UtilizationKind, metric: string, bucketLength: string, cell: CellValues) => {
+  const { group, label, period, percent, detail, online, count } = cell;
   const lines = [formatTime(period, AXES[bucketLength].tooltip), label];
   if (group !== label) lines.push(group);
+  const percentLabel = percentMetric(kind, metric)?.legend;
   if (online === undefined) lines.push("Offline / no data");
-  else if (metric === GPUS) lines.push(`GPUs reporting: ${gpus}`);
+  else if (!percentLabel) lines.push(`${kind.count.label}: ${count}`);
   else {
-    const power = metric === "power" && watts !== undefined ? ` (${watts} W of ${limit} W)` : "";
-    lines.push(`${PERCENT_METRICS[metric].label}: ${percent === undefined ? "not reported" : `${percent}%`}${power}`);
+    lines.push(`${percentLabel}: ${percent === undefined ? "not reported" : `${percent}%`}${detail ?? ""}`);
     lines.push(`Time online: ${online}%`);
   }
   return lines.join("\n");
@@ -533,6 +712,7 @@ const cellTitle = (metric: string, bucketLength: string, cell: CellValues) => {
 // Memoized so hovering, which only re-renders the tooltip in Heatmap, doesn't
 // re-render every cell.
 const HeatmapGrid = memo(function HeatmapGrid({
+  kind,
   data,
   metric,
   groups,
@@ -560,25 +740,25 @@ const HeatmapGrid = memo(function HeatmapGrid({
   }, [rows, labels, showGroups, onLabelWidth]);
 
   const cells = useMemo(() => {
-    const byKey = new Map(data.map((row) => [`${row.gpu_group}|${toUtc(String(row.period_start)).toISO()}`, row]));
+    const byKey = new Map(data.map((row) => [`${row[kind.groupColumn]}|${toUtc(String(row.period_start)).toISO()}`, row]));
     const width = pitch - columnGapFor(pitch);
+    const percentColumn = percentMetric(kind, metric);
     return rows.map(({ group, y }) =>
       periods.map((period, i) => {
         const row = byKey.get(`${group}|${period}`);
         const online = toNumber(row?.percent_time_online);
-        const gpus = toNumber(row?.gpus_reporting);
-        const percent = metric === GPUS ? undefined : toNumber(row?.[PERCENT_METRICS[metric].column]);
-        const value = metric === GPUS ? gpus : percent;
-        const color = value === undefined ? undefined : ramp(rampFor(metric), value / (metric === GPUS ? max : 100));
+        const count = toNumber(row?.[kind.count.column]);
+        const percent = percentColumn && toNumber(row?.[percentColumn.column]);
+        const value = percentColumn ? percent : count;
+        const color = value === undefined ? undefined : ramp(rampFor(kind, metric), value / (percentColumn ? 100 : max));
         const values = {
           group,
           label: labels.get(group),
           period,
           percent,
-          watts: row?.avg_power_watts ?? undefined,
-          limit: row?.avg_power_limit_watts ?? undefined,
+          detail: row && percentColumn?.detail?.(row),
           online,
-          gpus,
+          count,
         };
         return (
           <g
@@ -588,25 +768,24 @@ const HeatmapGrid = memo(function HeatmapGrid({
             data-period={period}
             data-color={color}
             data-percent={percent}
-            data-watts={values.watts}
-            data-limit={values.limit}
+            data-detail={values.detail}
             data-online={online}
-            data-gpus={gpus}
+            data-count={count}
           >
-            {titles && <title>{cellTitle(metric, bucketLength, values)}</title>}
+            {titles && <title>{cellTitle(kind, metric, bucketLength, values)}</title>}
             <CellBox
               x={columnX(i, labelWidth, pitch)}
               y={y}
               width={width}
               height={CELL_SIZE}
               color={color ?? NOT_REPORTED}
-              percent={online === undefined ? 0 : metric === GPUS ? 100 : online}
+              percent={online === undefined ? 0 : percentColumn ? online : 100}
             />
           </g>
         );
       }),
     );
-  }, [data, metric, rows, labels, bucketLength, periods, max, pitch, labelWidth, titles]);
+  }, [kind, data, metric, rows, labels, bucketLength, periods, max, pitch, labelWidth, titles]);
 
   return (
     <svg width={chartWidth(periods, labelWidth, pitch)} height={height} style={{ display: "block" }}>
@@ -735,6 +914,7 @@ const Axis = ({ periods, bucketLength, pitch, labelWidth, top }: AxisProps) => {
 // window has no room above), shifted horizontally by the cell's position so it
 // stays within the visible part of the heatmap.
 interface CellTooltipProps {
+  kind: UtilizationKind;
   cell: SVGGElement;
   // the element the tooltip is placed in, around the scroll container, which would clip it
   frame: HTMLElement;
@@ -742,10 +922,11 @@ interface CellTooltipProps {
   bucketLength: string;
 }
 
-const CellTooltip = ({ cell, frame, metric, bucketLength }: CellTooltipProps) => {
+const CellTooltip = ({ kind, cell, frame, metric, bucketLength }: CellTooltipProps) => {
   // the cell may have been removed by a refetch while hovered
   if (!cell.isConnected) return null;
-  const { group, label, period, color, percent, watts, limit, online, gpus } = cell.dataset;
+  const { group, label, period, color, percent, detail, online, count } = cell.dataset;
+  const percentLabel = percentMetric(kind, metric)?.legend;
   // the cell's box within the frame
   const box = cell.getBoundingClientRect();
   const origin = frame.getBoundingClientRect();
@@ -789,12 +970,12 @@ const CellTooltip = ({ cell, frame, metric, bucketLength }: CellTooltipProps) =>
             <Swatch background={OFFLINE} />
             Offline / no data
           </div>
-        ) : metric !== GPUS ? (
+        ) : percentLabel ? (
           <>
             <div style={line}>
               <Swatch background={color ?? NOT_REPORTED} />
-              {PERCENT_METRICS[metric].label}: <strong>{percent === undefined ? "not reported" : `${percent}%`}</strong>
-              {metric === "power" && watts !== undefined && ` (${watts} W of ${limit} W)`}
+              {percentLabel}: <strong>{percent === undefined ? "not reported" : `${percent}%`}</strong>
+              {detail}
             </div>
             <div style={line}>
               <Swatch background={fill(color ?? NOT_REPORTED, Number(online))} />
@@ -804,7 +985,7 @@ const CellTooltip = ({ cell, frame, metric, bucketLength }: CellTooltipProps) =>
         ) : (
           <div style={line}>
             <Swatch background={color!} />
-            GPUs reporting: <strong>{gpus}</strong>
+            {kind.count.label}: <strong>{count}</strong>
           </div>
         )}
       </div>
@@ -821,8 +1002,8 @@ interface ChartSvgProps extends GridProps {
 // The legend above the columns, each a grid with its axis, in one standalone SVG,
 // as drawn when scrolled to the start.
 const ChartSvg = ({ font, columns, axisTop, ...props }: ChartSvgProps) => {
-  const { metric, max, periods, bucketLength, pitch, labelWidth } = props;
-  const items = legendItems(metric, max);
+  const { kind, metric, max, periods, bucketLength, pitch, labelWidth } = props;
+  const items = legendItems(kind, metric, max);
   const gridTop = CELL_SIZE + 8;
   // the axis, with the space below it on top as on screen
   const axisSpace = AXIS_HEIGHT + (axisTop ? 4 + TOP_AXIS_SPACE : 0);
@@ -895,7 +1076,6 @@ const saveFile = (blob: Blob, name: string) => {
 };
 
 interface FloatingAxisProps {
-  labelWidth: number;
   // above its grid, rather than below
   top: boolean;
   children: ReactNode;
@@ -905,7 +1085,7 @@ interface FloatingAxisProps {
 // it's outside any scroll container (sticky only follows the window from there),
 // above the sticky grid and below the tooltip (4). Its shadow is outside the axis'
 // own scroll container, which would clip it.
-const FloatingAxis = ({ labelWidth, top, children }: FloatingAxisProps) => {
+const FloatingAxis = ({ top, children }: FloatingAxisProps) => {
   const [axisRef, { height }] = useSize();
   // Whether the axis floats over rows. Below the grid: the end of the grid is behind
   // it or below the window, rather than above it or scrolled past. On top: where
@@ -935,9 +1115,12 @@ const FloatingAxis = ({ labelWidth, top, children }: FloatingAxisProps) => {
           zIndex: 3,
           background: SURFACE,
           ...(top && { paddingTop: TOP_AXIS_SPACE, paddingBottom: TOP_AXIS_SPACE }),
+          // Marks the rows running beneath it. A box shadow rather than an element hanging
+          // out of the axis, which Chrome could leave painted over the first header.
+          boxShadow: floating ? `0 ${top ? 8 : -8}px 8px -8px rgba(0, 0, 0, 0.3)` : "none",
+          transition: "box-shadow 150ms",
         }}
       >
-        {scrollShadow(top ? "bottom" : "top", labelWidth, floating)}
         {children}
       </div>
     </>
@@ -956,7 +1139,7 @@ interface HeatmapProps extends ChartProps {
 }
 
 const Heatmap = ({ multiColumn, onMultiColumn, fileName, axisTop, onAxisTop, ...props }: HeatmapProps) => {
-  const { data, metric, groups, headers, bucketLength, length, start, end } = props;
+  const { kind, data, metric, groups, headers, bucketLength, length, start, end } = props;
   const [cell, setCell] = useState<SVGGElement | null>(null);
   const [fitToWidth, setFitToWidth] = useState(true);
   // each column's label width, as measured by its grid; all columns use the widest
@@ -973,7 +1156,7 @@ const Heatmap = ({ multiColumn, onMultiColumn, fileName, axisTop, onAxisTop, ...
     () => bucketStarts(String(data[0].period_start), bucketLength, length, start, end),
     [data, bucketLength, length, start, end],
   );
-  const max = Math.max(...data.map((row) => Number(row.gpus_reporting)));
+  const max = Math.max(...data.map((row) => Number(row[kind.count.column])));
   // the pitch that fits the width (less a pixel against rounding, at least 1px); full size until measured
   const fitPitch = width ? Math.max(1, (width - labelWidth - 1) / periods.length) : CELL_SIZE + 2;
   const pitch = Math.min(CELL_SIZE + 2, fitToWidth ? fitPitch : Math.max(fitPitch, MIN_PITCH));
@@ -1053,12 +1236,12 @@ const Heatmap = ({ multiColumn, onMultiColumn, fileName, axisTop, onAxisTop, ...
     <Axis periods={periods} bucketLength={bucketLength} pitch={pitch} labelWidth={labelWidth} top={axisTop} />
   );
   const columnAxis = (
-    <FloatingAxis labelWidth={labelWidth} top={axisTop}>
+    <FloatingAxis top={axisTop}>
       <div style={{ paddingBottom: 4 }}>{axisSvg}</div>
     </FloatingAxis>
   );
   const singleAxis = (
-    <FloatingAxis labelWidth={labelWidth} top={axisTop}>
+    <FloatingAxis top={axisTop}>
       <div
         ref={axis}
         style={{ overflowX: "auto", paddingBottom: 4 }}
@@ -1069,38 +1252,31 @@ const Heatmap = ({ multiColumn, onMultiColumn, fileName, axisTop, onAxisTop, ...
     </FloatingAxis>
   );
   // outside any scroll container, which would clip it at the ends and below short heatmaps
-  const tooltip = cell && frame && <CellTooltip cell={cell} frame={frame} metric={metric} bucketLength={bucketLength} />;
+  const tooltip = cell && frame && (
+    <CellTooltip kind={kind} cell={cell} frame={frame} metric={metric} bucketLength={bucketLength} />
+  );
   return (
     <div ref={rootRef} className="my-3" style={{ fontSize: 12, color: TEXT_SECONDARY }}>
-      <HStack gap={8} mb={2} wrap="wrap">
-        <Legend items={legendItems(metric, max)} />
-        {fitPitch < MIN_PITCH && (
-          <Switch.Root size="sm" checked={fitToWidth} onCheckedChange={(event) => setFitToWidth(event.checked)}>
-            <Switch.HiddenInput />
-            <Switch.Control />
-            <Switch.Label>Fit to width</Switch.Label>
-          </Switch.Root>
-        )}
-        {columnCount > 1 && (
-          <Switch.Root size="sm" checked={multiColumn} onCheckedChange={(event) => onMultiColumn(event.checked)}>
-            <Switch.HiddenInput />
-            <Switch.Control />
-            <Switch.Label>Multiple columns</Switch.Label>
-          </Switch.Root>
-        )}
-        <Switch.Root size="sm" checked={axisTop} onCheckedChange={(event) => onAxisTop(event.checked)}>
-          <Switch.HiddenInput />
-          <Switch.Control />
-          <Switch.Label>Axis on top</Switch.Label>
-        </Switch.Root>
-        <HStack gap={2}>
-          <Button size="xs" variant="outline" onClick={() => void download("svg")}>
-            Download SVG
-          </Button>
-          <Button size="xs" variant="outline" onClick={() => void download("png")}>
-            Download PNG
-          </Button>
-          {exportError}
+      <HStack gap={6} mb={2} wrap="wrap">
+        <Legend items={legendItems(kind, metric, max)} />
+        {/* the options and downloads wrap below the legend together, rather than one by one */}
+        <HStack gap={4}>
+          {fitPitch < MIN_PITCH && (
+            <OptionSwitch label="Fit to width" checked={fitToWidth} onChange={setFitToWidth} />
+          )}
+          {columnCount > 1 && (
+            <OptionSwitch label="Multiple columns" checked={multiColumn} onChange={onMultiColumn} />
+          )}
+          <OptionSwitch label="Axis on top" checked={axisTop} onChange={onAxisTop} />
+          <HStack gap={2}>
+            <Button size="xs" variant="outline" onClick={() => void download("svg")}>
+              Download SVG
+            </Button>
+            <Button size="xs" variant="outline" onClick={() => void download("png")}>
+              Download PNG
+            </Button>
+            {exportError}
+          </HStack>
         </HStack>
       </HStack>
       {count > 1 ? (
@@ -1142,12 +1318,41 @@ const Heatmap = ({ multiColumn, onMultiColumn, fileName, axisTop, onAxisTop, ...
   );
 };
 
-const GpuUtilizationView = ({ querySelect }: { querySelect: ReactNode }) => {
-  const [level, setLevel] = useState("card");
+// Explains the metrics of a view, in a popover opened by clicking an info icon.
+const InfoButton = ({ children }: { children: ReactNode }) => (
+  <Popover.Root positioning={{ placement: "bottom-end" }}>
+    <Popover.Trigger asChild>
+      <IconButton aria-label="About these numbers" title="About these numbers" size="sm" variant="ghost">
+        <LuInfo />
+      </IconButton>
+    </Popover.Trigger>
+    <Portal>
+      <Popover.Positioner>
+        <Popover.Content width="420px" style={{ fontSize: 13 }}>
+          <Popover.Arrow />
+          <Popover.Body>
+            <Popover.Title fontWeight="semibold">About these numbers</Popover.Title>
+            {children}
+          </Popover.Body>
+        </Popover.Content>
+      </Popover.Positioner>
+    </Portal>
+  </Popover.Root>
+);
+
+interface UtilizationViewProps {
+  // GPU_UTILIZATION_QUERY_NAME or CPU_UTILIZATION_QUERY_NAME
+  queryName: string;
+  querySelect: ReactNode;
+}
+
+const UtilizationView = ({ queryName, querySelect }: UtilizationViewProps) => {
+  const kind = UTILIZATION_KINDS[queryName];
+  const [level, setLevel] = useState(kind.levels[0]);
   const [bucketLength, setBucketLength] = useState("1 hour");
   const [length, setLength] = useState("1 day");
-  const [metric, setMetric] = useState(METRICS[0].value);
-  const [showUuids, setShowUuids] = useState(false);
+  const [metric, setMetric] = useState(UTILIZATION);
+  const [showGroups, setShowGroups] = useState(false);
   const { cluster_id } = useAppState().currentBackendSpec();
   // here rather than in Heatmap, which is replaced while new data loads
   const [multiColumn, setMultiColumn] = useState(false);
@@ -1183,11 +1388,14 @@ const GpuUtilizationView = ({ querySelect }: { querySelect: ReactNode }) => {
     fitBucketLength(dates);
   };
   const metrics = createListCollection<Option>({
-    items: METRICS.map((item) => ({ ...item, disabled: !isValidMetric(level, item.value) })),
+    items: [
+      ...kind.metrics.map(({ label, value }) => ({ label, value })),
+      { label: kind.count.label, value: kind.count.column },
+    ].map((item) => ({ ...item, disabled: !isValidMetric(kind, level, item.value) })),
   });
   const changeLevel = (value: string) => {
     setLevel(value);
-    if (!isValidMetric(value, metric)) setMetric(UTILIZATION);
+    if (!isValidMetric(kind, value, metric)) setMetric(UTILIZATION);
   };
   // Keep the time range valid for a new bucket length by snapping it to the
   // nearest allowed range.
@@ -1199,25 +1407,18 @@ const GpuUtilizationView = ({ querySelect }: { querySelect: ReactNode }) => {
     }
   };
 
-  const { data, isLoading, error } = useDataFrameQuery(GPU_UTILIZATION_QUERY_NAME, {
+  const { data, isLoading, error } = useDataFrameQuery(kind.queryName, {
     level,
     bucket_length: bucketLength,
     ...(custom ?? { length }),
   });
 
   // models or manufacturers can be blank for cards without sysinfo
-  const labels = new Map((data ?? []).map((row) => [String(row.gpu_group), String(row.gpu_label || "unknown")]));
-  // Groups are listed in sections: cards by model, models by manufacturer.
-  const sections = new Map(
-    (data ?? []).map((row) => [
-      String(row.gpu_group),
-      level === "card"
-        ? `${row.manufacturer || "unknown"} · ${row.model || "unknown model"}`
-        : level === "model"
-          ? String(row.manufacturer || "unknown")
-          : "",
-    ]),
+  const labels = new Map(
+    (data ?? []).map((row) => [String(row[kind.groupColumn]), String(row[kind.labelColumn ?? kind.groupColumn] || "unknown")]),
   );
+  // Groups are listed in sections, e.g. cards by model, nodes by CPU model.
+  const sections = new Map((data ?? []).map((row) => [String(row[kind.groupColumn]), kind.section(level, row) ?? ""]));
   // labels compared numerically so that e.g. "GPU 2" sorts before "GPU 10"
   const groups = [...labels.keys()].sort(
     (a, b) =>
@@ -1226,12 +1427,12 @@ const GpuUtilizationView = ({ querySelect }: { querySelect: ReactNode }) => {
   );
   // a header above the first group of each section, e.g. "NVIDIA · Tesla V100 (16 cards)"
   const headers = new Map<string, string>();
-  if (level !== "manufacturer") {
+  if (data?.some((row) => kind.section(level, row) !== undefined)) {
     groups.forEach((group, i) => {
       const section = sections.get(group);
       if (i > 0 && sections.get(groups[i - 1]) === section) return;
       const count = groups.filter((other) => sections.get(other) === section).length;
-      headers.set(group, `${section} (${count} ${level === "card" ? "card" : "model"}${count === 1 ? "" : "s"})`);
+      headers.set(group, `${section} (${count} ${kind.unit(level)}${count === 1 ? "" : "s"})`);
     });
   }
 
@@ -1248,12 +1449,13 @@ const GpuUtilizationView = ({ querySelect }: { querySelect: ReactNode }) => {
   else
     chart = (
       <Heatmap
+        kind={kind}
         data={data}
         metric={metric}
         groups={groups}
         labels={labels}
         headers={headers}
-        showGroups={level === "card" && showUuids}
+        showGroups={level === kind.unitLevel && showGroups}
         bucketLength={bucketLength}
         length={length}
         start={custom?.start}
@@ -1263,7 +1465,7 @@ const GpuUtilizationView = ({ querySelect }: { querySelect: ReactNode }) => {
         axisTop={axisTop}
         onAxisTop={setAxisTop}
         // e.g. ex3.simula.no_gpu-utilization_card_utilization_1-hour
-        fileName={[cluster_id, GPU_UTILIZATION_QUERY_NAME, level, metric, bucketLength.replace(/\s+/g, "-")].join("_")}
+        fileName={[cluster_id, kind.queryName, level, metric, bucketLength.replace(/\s+/g, "-")].join("_")}
       />
     );
 
@@ -1271,7 +1473,7 @@ const GpuUtilizationView = ({ querySelect }: { querySelect: ReactNode }) => {
     <div className="my-3">
       <HStack alignItems="end" wrap="wrap">
         {querySelect}
-        <ParamSelect label="Aggregation level" collection={levels} value={level} onChange={changeLevel} />
+        <ParamSelect label="Aggregation level" collection={options(kind.levels)} value={level} onChange={changeLevel} />
         <ParamSelect label="Bucket length" collection={bucketLengths} value={bucketLength} onChange={changeBucketLength} />
         <ParamSelect label="Time range" collection={lengths} value={length} onChange={changeLength} />
         {custom && (
@@ -1281,17 +1483,14 @@ const GpuUtilizationView = ({ querySelect }: { querySelect: ReactNode }) => {
           </>
         )}
         <ParamSelect label="Metric" collection={metrics} value={metric} onChange={setMetric} width="240px" />
-        {level === "card" && (
-          <Switch.Root size="sm" mb={2} checked={showUuids} onCheckedChange={(event) => setShowUuids(event.checked)}>
-            <Switch.HiddenInput />
-            <Switch.Control />
-            <Switch.Label>Show UUIDs</Switch.Label>
-          </Switch.Root>
+        {kind.showGroupsLabel && level === kind.unitLevel && (
+          <OptionSwitch label={kind.showGroupsLabel} checked={showGroups} onChange={setShowGroups} mb={2} />
         )}
+        <InfoButton>{kind.info}</InfoButton>
       </HStack>
       {chart}
     </div>
   );
 };
 
-export default GpuUtilizationView;
+export default UtilizationView;
