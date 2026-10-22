@@ -73,7 +73,7 @@ describe("GpuUtilizationView heatmap", () => {
     expect(cells("uuid-a")).toBeGreaterThanOrEqual(24);
     expect(cells("uuid-b")).toBe(cells("uuid-a"));
     expect(screen.getByText("GPU 0")).toBeInTheDocument();
-    expect(screen.getByText("NVIDIA · A100 (2 cards)")).toBeInTheDocument();
+    expect(screen.getByText("NVIDIA: A100 (2 cards)")).toBeInTheDocument();
   });
 
   it("sizes the box of a cell by time online", () => {
