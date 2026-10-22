@@ -508,13 +508,16 @@ const Figure = (props: FigureProps) => {
                   {row.capacity > 0 ? (
                     <GaugeShapes kind={kind} paths={gaugePaths(kind.bands, gauges(row.splits, row.capacity), height, true)} />
                   ) : (
-                    <>
-                      <rect width={gridWidth} height={height} fill="#f0efec" />
-                      <text x={6} y={ROW_HEIGHT / 2} dy="0.32em" fill={TEXT_SECONDARY}>
-                        Slurm&apos;s job records give jobs {amount(averageAllocated(row, weights, from, to))} {unit} here on
-                        average, but the node reports no {unit} to the monitor
-                      </text>
-                    </>
+                    // only not monitored nodes have no cells, as the backend leaves out nodes with nothing to show
+                    row.notCounted === "not monitored" && (
+                      <>
+                        <rect width={gridWidth} height={height} fill="#f0efec" />
+                        <text x={6} y={ROW_HEIGHT / 2} dy="0.32em" fill={TEXT_SECONDARY}>
+                          Slurm&apos;s job records give jobs {amount(averageAllocated(row, weights, from, to))} {unit} here on
+                          average, but the node reports no {unit} to the monitor
+                        </text>
+                      </>
+                    )
                   )}
                   <g>
                     <title>{reason(kind, row.notCounted!)}</title>
