@@ -15,7 +15,7 @@ import useUrlParam, { setUrlParams } from "../../hooks/useUrlParam";
 import DataFrameView from "./DataFrameView";
 import UtilizationView, { CPU_UTILIZATION_QUERY_NAME, GPU_UTILIZATION_QUERY_NAME } from "./UtilizationView";
 import AllocationView from "./AllocationView";
-import { ALLOCATION_QUERIES, GPU_ALLOCATION_QUERY_NAME } from "./allocation";
+import { ALLOCATION_QUERIES, GPU_ALLOCATION_QUERY_NAME } from "./Allocation";
 
 const UTILIZATION_QUERIES = [GPU_UTILIZATION_QUERY_NAME, CPU_UTILIZATION_QUERY_NAME];
 

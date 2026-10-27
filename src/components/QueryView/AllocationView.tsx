@@ -4,6 +4,7 @@ import { Button, createListCollection, HStack } from "@chakra-ui/react";
 import useDataFrameQuery from "../../hooks/useDataFrameQuery";
 import useAppState from "../../AppState";
 import useSize from "../../hooks/useSize";
+import useTimeWindow from "../../hooks/useTimeWindow";
 import useUrlParam, { useUrlFlag } from "../../hooks/useUrlParam";
 import {
   ALLOCATION_KINDS,
@@ -22,11 +23,10 @@ import {
   Summary,
   toSeries,
   total,
-} from "./allocation";
-import { textWidth } from "./chartText";
-import { DURATIONS, Option, saveFile, toPng, toUtc } from "./timeWindow";
-import useTimeWindow from "./useTimeWindow";
-import { InfoButton, InfoItem, LoadingNote, OptionSwitch, ParamSelect } from "./viewControls";
+} from "./Allocation";
+import { textWidth } from "./ChartText";
+import { DURATIONS, Option, saveFile, toPng, toUtc } from "./TimeWindow";
+import { InfoButton, InfoItem, LoadingNote, OptionSwitch, ParamSelect } from "./ViewControls";
 
 const SURFACE = "#fff";
 const TEXT_PRIMARY = "#1f1e1c";

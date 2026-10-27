@@ -9,7 +9,7 @@ import {
   groupSeries,
   splitRow,
   total,
-} from "../src/components/QueryView/allocation";
+} from "../src/components/QueryView/Allocation";
 import { ChakraProvider } from "@chakra-ui/react";
 import { system } from "../src/components/ui/theme";
 

@@ -1,5 +1,5 @@
 import { Row } from "../../hooks/useDataFrameQuery";
-import { Option } from "./timeWindow";
+import { Option } from "./TimeWindow";
 
 // What the allocation queries return, split into bands that partition each node's capacity.
 
