@@ -1,6 +1,6 @@
 import { DateTime } from "luxon";
 import { createListCollection } from "@chakra-ui/react";
-import useUrlParam from "../../hooks/useUrlParam";
+import useUrlParam from "./useUrlParam";
 import {
   BUCKET_LENGTHS,
   CUSTOM,
@@ -12,8 +12,8 @@ import {
   parseDates,
   seconds,
   toUtc,
-} from "./timeWindow";
-import { DateInput, ParamSelect } from "./viewControls";
+} from "../components/QueryView/TimeWindow";
+import { DateInput, ParamSelect } from "../components/QueryView/ViewControls";
 
 // The time window of a view, kept in the URL: a bucket length, and either a preset range up to now or a
 // custom range of whole UTC days. Comes with its selects and date inputs, and the query parameters.

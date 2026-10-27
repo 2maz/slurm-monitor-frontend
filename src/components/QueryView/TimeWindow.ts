@@ -12,12 +12,8 @@ export interface Option {
 export const options = (values: string[], isDisabled: (value: string) => boolean = () => false) =>
   createListCollection<Option>({ items: values.map((value) => ({ label: value, value, disabled: isDisabled(value) })) });
 
-// Mirrors GPUUtilizationBucketLength / GPUUtilizationLength in slurm_monitor/db/query.py,
-// which both utilization queries use - keep in sync with the backend enums.
-export const BUCKET_LENGTHS = ["15 minutes", "1 hour", "1 day", "1 week", "1 month"];
-export const LENGTHS = ["15 minutes", "1 hour", "1 day", "1 week", "1 month", "1 year"];
-// a custom range of whole UTC days, picked with date inputs
-export const CUSTOM = "custom";
+// The window lengths, mirroring GPUUtilizationLength in slurm_monitor/db/query.py, which both
+// utilization queries use - keep in sync with the backend enums.
 export const DURATIONS: Record<string, DurationLikeObject> = {
   "15 minutes": { minutes: 15 },
   "1 hour": { hours: 1 },
@@ -26,6 +22,11 @@ export const DURATIONS: Record<string, DurationLikeObject> = {
   "1 month": { months: 1 },
   "1 year": { years: 1 },
 };
+export const LENGTHS = Object.keys(DURATIONS);
+// GPUUtilizationBucketLength: the same, except that a bucket is at most a month
+export const BUCKET_LENGTHS = LENGTHS.filter((value) => value !== "1 year");
+// a custom range of whole UTC days, picked with date inputs
+export const CUSTOM = "custom";
 export const seconds = (value: string) => Duration.fromObject(DURATIONS[value]).as("seconds");
 // Caps the number of buckets (heatmap columns) to keep rendering fast, e.g. 1 hour
 // buckets go up to 1 week, 1 day buckets up to 1 year. The backend enforces it too.

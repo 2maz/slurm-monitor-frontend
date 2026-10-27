@@ -4,11 +4,11 @@ import { Button, createListCollection, HStack } from "@chakra-ui/react";
 import useDataFrameQuery, { Row } from "../../hooks/useDataFrameQuery";
 import useAppState from "../../AppState";
 import useSize from "../../hooks/useSize";
+import useTimeWindow from "../../hooks/useTimeWindow";
 import useUrlParam, { useUrlFlag } from "../../hooks/useUrlParam";
-import { CHAR_WIDTH, textWidth } from "./chartText";
-import { bucketStarts, DURATIONS, Option, options, saveFile, toPng, toUtc } from "./timeWindow";
-import useTimeWindow from "./useTimeWindow";
-import { InfoButton, InfoItem, LoadingNote, OptionSwitch, ParamSelect } from "./viewControls";
+import { CHAR_WIDTH, textWidth } from "./ChartText";
+import { bucketStarts, DURATIONS, Option, options, saveFile, toPng, toUtc } from "./TimeWindow";
+import { InfoButton, InfoItem, LoadingNote, OptionSwitch, ParamSelect } from "./ViewControls";
 
 // Single-hue ramps (light = low, dark = high) for heatmap magnitude: blue by
 // default, amber for power, green for memory. Checked for colour-blind safety;

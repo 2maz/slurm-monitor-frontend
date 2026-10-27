@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValueText,
 } from "../ui/select";
-import { Option } from "./timeWindow";
+import { Option } from "./TimeWindow";
 
 // Controls shared by the utilization and allocation views.
 
