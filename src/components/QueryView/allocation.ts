@@ -29,28 +29,32 @@ export interface AllocationKind {
   rowScale: { factor: number; step: number; growth: string };
 }
 
-// The blue ramp of the utilization heatmap, darker for more use (an ordinal ramp, validated
-// for monotone lightness and contrast); amber for use outside Slurm, gray for unavailable.
-const BUSY = "#184f95";
-const OCCUPIED_IDLE = "#3987e5";
-const ALLOCATED_IDLE = "#6da7ec";
-// the empty track of a gauge, a wash lighter than the ramp
-const NOT_ALLOCATED = "#e4edfa";
-const OUTSIDE_SLURM = "#df9201";
-const UNAVAILABLE = "#a9a7a1";
+export const SlurmStatusColors = {
+  BUSY: "#184f95",
+  OCCUPIED_IDLE: "#3987e5",
+  ALLOCATED_IDLE: "#6da7ec",
+  NOT_ALLOCATED: "#e4edfa",
+  OUTSIDE_SLURM: "#df9201",
+  UNAVAILABLE: "#a9a7a1",
+};
+
+// The bands that mean the same for GPUs and CPUs
+const BUSY: Band = { key: "busy", label: "Busy", color: SlurmStatusColors.BUSY };
+const UNAVAILABLE: Band = { key: "unavailable", label: "Unavailable", color: SlurmStatusColors.UNAVAILABLE };
+const NOT_ALLOCATED: Band = { key: "notAllocated", label: "Not allocated", color: SlurmStatusColors.NOT_ALLOCATED };
 
 export const GPU_ALLOCATION: AllocationKind = {
   queryName: GPU_ALLOCATION_QUERY_NAME,
   resource: "GPU",
   prefix: "gpus",
   bands: [
-    { key: "busy", label: "Busy", color: BUSY },
-    { key: "occupiedIdle", label: "Job process, idle", color: OCCUPIED_IDLE },
-    { key: "allocatedIdle", label: "Allocated, no process", color: ALLOCATED_IDLE },
+    BUSY,
+    { key: "occupiedIdle", label: "Job process, idle", color: SlurmStatusColors.OCCUPIED_IDLE },
+    { key: "allocatedIdle", label: "Allocated, no process", color: SlurmStatusColors.ALLOCATED_IDLE },
     // a card held by a process outside Slurm, busy or not
-    { key: "outsideSlurm", label: "Process outside Slurm", color: OUTSIDE_SLURM },
-    { key: "unavailable", label: "Unavailable", color: UNAVAILABLE },
-    { key: "notAllocated", label: "Not allocated", color: NOT_ALLOCATED },
+    { key: "outsideSlurm", label: "Process outside Slurm", color: SlurmStatusColors.OUTSIDE_SLURM },
+    UNAVAILABLE,
+    NOT_ALLOCATED,
   ],
   levels: [
     { label: "Node", value: "node" },
@@ -64,12 +68,13 @@ export const CPU_ALLOCATION: AllocationKind = {
   queryName: CPU_ALLOCATION_QUERY_NAME,
   resource: "CPU",
   prefix: "cpus",
+  // no occupiedIdle: CPUs aren't tied to jobs
   bands: [
-    { key: "busy", label: "Busy", color: BUSY },
-    { key: "allocatedIdle", label: "Allocated, idle", color: ALLOCATED_IDLE },
-    { key: "outsideSlurm", label: "Busy outside allocations", color: OUTSIDE_SLURM },
-    { key: "unavailable", label: "Unavailable", color: UNAVAILABLE },
-    { key: "notAllocated", label: "Not allocated", color: NOT_ALLOCATED },
+    BUSY,
+    { key: "allocatedIdle", label: "Allocated, idle", color: SlurmStatusColors.ALLOCATED_IDLE },
+    { key: "outsideSlurm", label: "Busy outside allocations", color: SlurmStatusColors.OUTSIDE_SLURM },
+    UNAVAILABLE,
+    NOT_ALLOCATED,
   ],
   levels: [
     { label: "Node", value: "node" },
@@ -86,13 +91,13 @@ export type Split = Record<BandKey, number>;
 
 const EMPTY: Split = { busy: 0, occupiedIdle: 0, allocatedIdle: 0, outsideSlurm: 0, unavailable: 0, notAllocated: 0 };
 
-const value = (row: Row, column: string) => {
+const toNumber = (row: Row, column: string) => {
   const raw = row[column];
   return raw === null || raw === undefined || raw === "" ? 0 : Number(raw);
 };
 
-export const installed = (kind: AllocationKind, row: Row) => value(row, `${kind.prefix}_installed`);
-export const allocated = (kind: AllocationKind, row: Row) => value(row, `${kind.prefix}_allocated`);
+export const installed = (kind: AllocationKind, row: Row) => toNumber(row, `${kind.prefix}_installed`);
+export const allocated = (kind: AllocationKind, row: Row) => toNumber(row, `${kind.prefix}_allocated`);
 
 /**
  * Splits a node's capacity in a bucket into the bands, which add up to what is installed. The layers
@@ -104,13 +109,13 @@ export const splitRow = (kind: AllocationKind, row: Row): Split => {
   const capacity = installed(kind, row);
   if (capacity <= 0) return { ...EMPTY };
   const inAllocation = Math.min(Math.max(allocated(kind, row), 0), capacity);
-  const busyAll = Math.max(value(row, `${kind.prefix}_busy`), 0);
+  const busyAll = Math.max(toNumber(row, `${kind.prefix}_busy`), 0);
   let busy, occupiedIdle, outsideSlurm;
   if (kind.resource === "GPU") {
-    const occupied = Math.min(value(row, "gpus_occupied"), inAllocation);
+    const occupied = Math.min(toNumber(row, "gpus_occupied"), inAllocation);
     busy = Math.min(busyAll, occupied);
     occupiedIdle = occupied - busy;
-    outsideSlurm = Math.min(value(row, "gpus_occupied_outside_slurm"), capacity - inAllocation);
+    outsideSlurm = Math.min(toNumber(row, "gpus_occupied_outside_slurm"), capacity - inAllocation);
   } else {
     // CPUs aren't tied to jobs: what is busy beyond the allocations is outside them
     busy = Math.min(busyAll, inAllocation);
@@ -118,7 +123,7 @@ export const splitRow = (kind: AllocationKind, row: Row): Split => {
     outsideSlurm = Math.min(busyAll - busy, capacity - inAllocation);
   }
   const rest = capacity - inAllocation - outsideSlurm;
-  const unavailable = Math.min(rest, (value(row, "percent_time_unavailable") / 100) * capacity);
+  const unavailable = Math.min(rest, (toNumber(row, "percent_time_unavailable") / 100) * capacity);
   return {
     busy,
     occupiedIdle,
