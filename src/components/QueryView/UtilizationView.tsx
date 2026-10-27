@@ -1,136 +1,14 @@
-import { memo, ReactNode, RefCallback, useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { DateTime, Duration, DurationLikeObject, DurationUnit } from "luxon";
-import { BarLoader } from "react-spinners";
-import {
-  Button,
-  createListCollection,
-  Field,
-  HStack,
-  IconButton,
-  Input,
-  ListCollection,
-  Popover,
-  Portal,
-  Switch,
-} from "@chakra-ui/react";
-import { LuInfo } from "react-icons/lu";
+import { memo, ReactNode, useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { DateTime, DurationUnit } from "luxon";
+import { Button, createListCollection, HStack } from "@chakra-ui/react";
 import useDataFrameQuery, { Row } from "../../hooks/useDataFrameQuery";
 import useAppState from "../../AppState";
-import {
-  SelectContent,
-  SelectItem,
-  SelectLabel,
-  SelectRoot,
-  SelectTrigger,
-  SelectValueText,
-} from "../ui/select";
-
-interface Option {
-  label: string;
-  value: string;
-  disabled?: boolean;
-}
-
-const options = (values: string[], isDisabled: (value: string) => boolean = () => false) =>
-  createListCollection<Option>({ items: values.map((value) => ({ label: value, value, disabled: isDisabled(value) })) });
-
-// Mirrors GPUUtilizationBucketLength / GPUUtilizationLength in slurm_monitor/db/query.py,
-// which both utilization queries use - keep in sync with the backend enums.
-const BUCKET_LENGTHS = ["15 minutes", "1 hour", "1 day", "1 week", "1 month"];
-const LENGTHS = ["15 minutes", "1 hour", "1 day", "1 week", "1 month", "1 year"];
-// a custom range of whole UTC days, picked with date inputs
-const CUSTOM = "custom";
-const DURATIONS: Record<string, DurationLikeObject> = {
-  "15 minutes": { minutes: 15 },
-  "1 hour": { hours: 1 },
-  "1 day": { days: 1 },
-  "1 week": { weeks: 1 },
-  "1 month": { months: 1 },
-  "1 year": { years: 1 },
-};
-const seconds = (value: string) => Duration.fromObject(DURATIONS[value]).as("seconds");
-// Caps the number of buckets (heatmap columns) to keep rendering fast, e.g. 1 hour
-// buckets go up to 1 week, 1 day buckets up to 1 year. The backend enforces it too.
-const MAX_BUCKETS = 400;
-const isValidSpan = (bucketLength: string, spanSeconds: number) => {
-  const buckets = spanSeconds / seconds(bucketLength);
-  return buckets >= 1 && buckets <= MAX_BUCKETS;
-};
-interface ParamSelectProps {
-  label: string;
-  collection: ListCollection<Option>;
-  value: string;
-  onChange: (value: string) => void;
-  width?: string;
-}
-
-const ParamSelect = ({ label, collection, value, onChange, width = "180px" }: ParamSelectProps) => (
-  <SelectRoot
-    collection={collection}
-    size="sm"
-    width={width}
-    value={[value]}
-    onValueChange={(event) => onChange(event.value[0])}
-  >
-    <SelectLabel>{label}</SelectLabel>
-    <SelectTrigger>
-      <SelectValueText />
-    </SelectTrigger>
-    <SelectContent>
-      {collection.items.map((item) => (
-        <SelectItem item={item} key={item.value}>
-          {item.label}
-        </SelectItem>
-      ))}
-    </SelectContent>
-  </SelectRoot>
-);
-
-interface OptionSwitchProps {
-  label: string;
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-  mb?: number;
-}
-
-// The root is a label, which Bootstrap's unlayered `label { display: inline-block }`
-// would take over from Chakra's layered styles, so its flex layout is set inline.
-const OptionSwitch = ({ label, checked, onChange, mb }: OptionSwitchProps) => (
-  <Switch.Root
-    size="sm"
-    mb={mb}
-    checked={checked}
-    onCheckedChange={(event) => onChange(event.checked)}
-    style={{ display: "inline-flex" }}
-  >
-    <Switch.HiddenInput />
-    <Switch.Control />
-    <Switch.Label>{label}</Switch.Label>
-  </Switch.Root>
-);
-
-interface DateInputProps {
-  label: string;
-  value: string;
-  min?: string;
-  max?: string;
-  onChange: (value: string) => void;
-}
-
-// A UTC date (yyyy-MM-dd); cleared inputs are ignored, as a range needs both ends.
-const DateInput = ({ label, value, min, max, onChange }: DateInputProps) => (
-  <Field.Root width="150px">
-    <Field.Label>{label}</Field.Label>
-    <Input
-      type="date"
-      size="sm"
-      value={value}
-      min={min}
-      max={max}
-      onChange={(event) => event.target.value && onChange(event.target.value)}
-    />
-  </Field.Root>
-);
+import useSize from "../../hooks/useSize";
+import useTimeWindow from "../../hooks/useTimeWindow";
+import useUrlParam, { useUrlFlag } from "../../hooks/useUrlParam";
+import { CHAR_WIDTH, textWidth } from "./ChartText";
+import { bucketStarts, DURATIONS, Option, options, saveFile, toPng, toUtc } from "./TimeWindow";
+import { InfoButton, InfoItem, LoadingNote, OptionSwitch, ParamSelect } from "./ViewControls";
 
 // Single-hue ramps (light = low, dark = high) for heatmap magnitude: blue by
 // default, amber for power, green for memory. Checked for colour-blind safety;
@@ -173,12 +51,6 @@ interface UtilizationKind {
   info: ReactNode;
 }
 
-const InfoItem = ({ term, children }: { term: string; children: ReactNode }) => (
-  <p style={{ marginTop: 6 }}>
-    <strong>{term}</strong>: {children}
-  </p>
-);
-
 export const GPU_UTILIZATION_QUERY_NAME = "gpu-utilization";
 export const CPU_UTILIZATION_QUERY_NAME = "cpu-utilization";
 
@@ -213,7 +85,7 @@ const GPU_UTILIZATION: UtilizationKind = {
   // cards by model, models by manufacturer
   section: (level, row) =>
     level === "card"
-      ? `${row.manufacturer || "unknown"} · ${row.model || "unknown model"}`
+      ? `${row.manufacturer || "unknown"}: ${row.model || "unknown model"}`
       : level === "model"
         ? String(row.manufacturer || "unknown")
         : undefined,
@@ -309,8 +181,6 @@ const CELL_SIZE = 20;
 // Columns are at most CELL_SIZE + 2px apart. When fitting the width makes them
 // closer than MIN_PITCH, the heatmap can scroll sideways instead.
 const MIN_PITCH = 12;
-// rough width of a 12px label character, for fitting axis labels
-const CHAR_WIDTH = 7;
 // rough tooltip height, for placing it below cells near the top of the window
 const TOOLTIP_HEIGHT = 100;
 // vertical layout of the grid: section headers, with space above all but the first, and rows
@@ -353,7 +223,6 @@ const TOOLTIP_STYLE = {
   color: TEXT_PRIMARY,
 };
 
-const toUtc = (ts: string) => DateTime.fromISO(ts, { zone: "utc" });
 const formatTime = (ts: string, format: string) => toUtc(ts).toFormat(format);
 // Formats leave out what the bucket makes redundant, e.g. the hour of a day bucket.
 interface AxisFormat {
@@ -427,21 +296,6 @@ const fill = (color: string, percent: number) => {
   return `linear-gradient(${color}, ${color}) center / ${side}% ${side}% no-repeat, ${OFFLINE}`;
 };
 
-// All bucket starts in the time range, including those without data (e.g. downtime).
-// Steps from a bucket in the data so they line up with the backend's time_bucket.
-// The range is a custom start-end, or else `length` up to now; never past now.
-const bucketStarts = (first: string, bucketLength: string, length: string, start?: string, end?: string) => {
-  const step = DURATIONS[bucketLength];
-  const now = DateTime.utc();
-  const to = end ? DateTime.min(toUtc(end), now) : now;
-  const from = start ? toUtc(start) : to.minus(DURATIONS[length]);
-  let period = toUtc(first);
-  while (period > from) period = period.minus(step);
-  const periods = [];
-  for (; period < to; period = period.plus(step)) periods.push(period.toISO()!);
-  return periods;
-};
-
 interface ChartProps {
   kind: UtilizationKind;
   data: Row[];
@@ -455,21 +309,6 @@ interface ChartProps {
   start?: string;
   end?: string;
 }
-
-// An element's size, kept up to date as it resizes. A ref callback, so it
-// follows the element when React replaces it.
-const useSize = () => {
-  const [size, setSize] = useState({ width: 0, height: 0 });
-  const element = useRef<HTMLDivElement | null>(null);
-  const ref: RefCallback<HTMLDivElement> = useCallback((current: HTMLDivElement | null) => {
-    element.current = current;
-    if (!current) return;
-    const observer = new ResizeObserver(() => setSize({ width: current.clientWidth, height: current.clientHeight }));
-    observer.observe(current);
-    return () => observer.disconnect();
-  }, []);
-  return [ref, size, element] as const;
-};
 
 // Marks a side the heatmap has more columns to scroll to.
 const scrollShadow = (side: "left" | "right", offset: number, visible: boolean) => (
@@ -541,14 +380,6 @@ const Legend = ({ items }: { items: LegendItem[] }) => (
     )}
   </div>
 );
-
-// A label's width at 12px, measured on a canvas; estimated where there is none (tests).
-const textWidth = (text: string, font: string) => {
-  const context = document.createElement("canvas").getContext("2d");
-  if (!context) return CHAR_WIDTH * text.length;
-  context.font = `12px ${font}`;
-  return context.measureText(text).width;
-};
 
 // Where each legend entry starts, in a row laid out like `Legend`, and the row's width.
 const legendLayout = (items: LegendItem[], font: string) => {
@@ -1045,36 +876,6 @@ const chartSvg = async (props: ChartSvgProps) => {
   return renderToStaticMarkup(<ChartSvg {...props} />);
 };
 
-// Rasterizes an SVG document at `scale` times its size.
-const toPng = (svg: string, scale = 2) =>
-  new Promise<Blob>((resolve, reject) => {
-    const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
-    const image = new Image();
-    image.onload = () => {
-      URL.revokeObjectURL(url);
-      const canvas = document.createElement("canvas");
-      canvas.width = image.width * scale;
-      canvas.height = image.height * scale;
-      canvas.getContext("2d")?.drawImage(image, 0, 0, canvas.width, canvas.height);
-      canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("Too large for a PNG, try SVG"))), "image/png");
-    };
-    image.onerror = () => {
-      URL.revokeObjectURL(url);
-      reject(new Error("Failed to render the PNG"));
-    };
-    image.src = url;
-  });
-
-// Offers a file for download.
-const saveFile = (blob: Blob, name: string) => {
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = name;
-  link.click();
-  // once the download has started
-  setTimeout(() => URL.revokeObjectURL(link.href));
-};
-
 interface FloatingAxisProps {
   // above its grid, rather than below
   top: boolean;
@@ -1318,28 +1119,6 @@ const Heatmap = ({ multiColumn, onMultiColumn, fileName, axisTop, onAxisTop, ...
   );
 };
 
-// Explains the metrics of a view, in a popover opened by clicking an info icon.
-const InfoButton = ({ children }: { children: ReactNode }) => (
-  <Popover.Root positioning={{ placement: "bottom-end" }}>
-    <Popover.Trigger asChild>
-      <IconButton aria-label="About these numbers" title="About these numbers" size="sm" variant="ghost">
-        <LuInfo />
-      </IconButton>
-    </Popover.Trigger>
-    <Portal>
-      <Popover.Positioner>
-        <Popover.Content width="420px" style={{ fontSize: 13 }}>
-          <Popover.Arrow />
-          <Popover.Body>
-            <Popover.Title fontWeight="semibold">About these numbers</Popover.Title>
-            {children}
-          </Popover.Body>
-        </Popover.Content>
-      </Popover.Positioner>
-    </Portal>
-  </Popover.Root>
-);
-
 interface UtilizationViewProps {
   // GPU_UTILIZATION_QUERY_NAME or CPU_UTILIZATION_QUERY_NAME
   queryName: string;
@@ -1348,45 +1127,23 @@ interface UtilizationViewProps {
 
 const UtilizationView = ({ queryName, querySelect }: UtilizationViewProps) => {
   const kind = UTILIZATION_KINDS[queryName];
-  const [level, setLevel] = useState(kind.levels[0]);
-  const [bucketLength, setBucketLength] = useState("1 hour");
-  const [length, setLength] = useState("1 day");
-  const [metric, setMetric] = useState(UTILIZATION);
-  const [showGroups, setShowGroups] = useState(false);
+  // Settings are kept in the URL, so that a refresh keeps them and links share them.
+  const [level, setLevel] = useUrlParam("level", kind.levels[0], (value) => kind.levels.includes(value));
+  const [metric, setMetric] = useUrlParam(
+    "metric",
+    UTILIZATION,
+    (value) =>
+      [...kind.metrics.map(({ value }) => value), kind.count.column].includes(value) && isValidMetric(kind, level, value),
+  );
+  const [showGroups, setShowGroups] = useUrlFlag("ids", false);
+  const timeWindow = useTimeWindow();
+  const { bucketLength, length, custom } = timeWindow;
   const { cluster_id } = useAppState().currentBackendSpec();
   // here rather than in Heatmap, which is replaced while new data loads
-  const [multiColumn, setMultiColumn] = useState(false);
-  const [axisTop, setAxisTop] = useState(true);
-  const today = DateTime.utc().toISODate();
-  const [range, setRange] = useState({ start: DateTime.utc().minus({ days: 7 }).toISODate(), end: today });
+  const [multiColumn, setMultiColumn] = useUrlFlag("columns", false);
+  const [axis, setAxis] = useUrlParam("axis", "top", (value) => value === "top" || value === "bottom");
+  const axisTop = axis === "top";
 
-  // a custom range includes its end day
-  const custom =
-    length === CUSTOM ? { start: toUtc(range.start).toISO()!, end: toUtc(range.end).plus({ days: 1 }).toISO()! } : undefined;
-  const customSeconds = (dates: typeof range) => toUtc(dates.end).plus({ days: 1 }).diff(toUtc(dates.start)).as("seconds");
-  // Presets are limited to what fits the bucket length; with a custom range,
-  // the bucket lengths are limited to what fits the range instead.
-  const lengths = createListCollection<Option>({
-    items: [
-      ...LENGTHS.map((value) => ({ label: value, value, disabled: !isValidSpan(bucketLength, seconds(value)) })),
-      { label: "Custom…", value: CUSTOM },
-    ],
-  });
-  const bucketLengths = options(BUCKET_LENGTHS, (value) => custom !== undefined && !isValidSpan(value, customSeconds(range)));
-  // the finest bucket length that fits a custom range, if the current one doesn't
-  const fitBucketLength = (dates: typeof range) => {
-    if (!isValidSpan(bucketLength, customSeconds(dates))) {
-      setBucketLength(BUCKET_LENGTHS.find((value) => isValidSpan(value, customSeconds(dates))) ?? bucketLength);
-    }
-  };
-  const changeLength = (value: string) => {
-    setLength(value);
-    if (value === CUSTOM) fitBucketLength(range);
-  };
-  const changeRange = (dates: typeof range) => {
-    setRange(dates);
-    fitBucketLength(dates);
-  };
   const metrics = createListCollection<Option>({
     items: [
       ...kind.metrics.map(({ label, value }) => ({ label, value })),
@@ -1397,21 +1154,7 @@ const UtilizationView = ({ queryName, querySelect }: UtilizationViewProps) => {
     setLevel(value);
     if (!isValidMetric(kind, value, metric)) setMetric(UTILIZATION);
   };
-  // Keep the time range valid for a new bucket length by snapping it to the
-  // nearest allowed range.
-  const changeBucketLength = (value: string) => {
-    setBucketLength(value);
-    if (length !== CUSTOM && !isValidSpan(value, seconds(length))) {
-      const valid = LENGTHS.filter((l) => isValidSpan(value, seconds(l)));
-      setLength(seconds(length) > seconds(valid[valid.length - 1]) ? valid[valid.length - 1] : valid[0]);
-    }
-  };
-
-  const { data, isLoading, error } = useDataFrameQuery(kind.queryName, {
-    level,
-    bucket_length: bucketLength,
-    ...(custom ?? { length }),
-  });
+  const { data, isLoading, error } = useDataFrameQuery(kind.queryName, { level, ...timeWindow.params });
 
   // models or manufacturers can be blank for cards without sysinfo
   const labels = new Map(
@@ -1425,7 +1168,7 @@ const UtilizationView = ({ queryName, querySelect }: UtilizationViewProps) => {
       sections.get(a)!.localeCompare(sections.get(b)!) ||
       labels.get(a)!.localeCompare(labels.get(b)!, undefined, { numeric: true }),
   );
-  // a header above the first group of each section, e.g. "NVIDIA · Tesla V100 (16 cards)"
+  // a header above the first group of each section, e.g. "NVIDIA: Tesla V100 (16 cards)"
   const headers = new Map<string, string>();
   if (data?.some((row) => kind.section(level, row) !== undefined)) {
     groups.forEach((group, i) => {
@@ -1438,12 +1181,7 @@ const UtilizationView = ({ queryName, querySelect }: UtilizationViewProps) => {
 
   let chart;
   if (isLoading)
-    chart = (
-      <div className="my-3" style={{ color: TEXT_SECONDARY }}>
-        <BarLoader />
-        Loading - long time ranges can take up to half a minute
-      </div>
-    );
+    chart = <LoadingNote expected="long time ranges can take about half a minute" />;
   else if (error) chart = "Failed to load data";
   else if (!data?.length) chart = "No data available for this time range";
   else
@@ -1463,7 +1201,7 @@ const UtilizationView = ({ queryName, querySelect }: UtilizationViewProps) => {
         multiColumn={multiColumn}
         onMultiColumn={setMultiColumn}
         axisTop={axisTop}
-        onAxisTop={setAxisTop}
+        onAxisTop={(top) => setAxis(top ? "top" : "bottom")}
         // e.g. ex3.simula.no_gpu-utilization_card_utilization_1-hour
         fileName={[cluster_id, kind.queryName, level, metric, bucketLength.replace(/\s+/g, "-")].join("_")}
       />
@@ -1474,14 +1212,7 @@ const UtilizationView = ({ queryName, querySelect }: UtilizationViewProps) => {
       <HStack alignItems="end" wrap="wrap">
         {querySelect}
         <ParamSelect label="Aggregation level" collection={options(kind.levels)} value={level} onChange={changeLevel} />
-        <ParamSelect label="Bucket length" collection={bucketLengths} value={bucketLength} onChange={changeBucketLength} />
-        <ParamSelect label="Time range" collection={lengths} value={length} onChange={changeLength} />
-        {custom && (
-          <>
-            <DateInput label="From" value={range.start} max={range.end} onChange={(start) => changeRange({ ...range, start })} />
-            <DateInput label="To" value={range.end} min={range.start} max={today} onChange={(end) => changeRange({ ...range, end })} />
-          </>
-        )}
+        {timeWindow.controls}
         <ParamSelect label="Metric" collection={metrics} value={metric} onChange={setMetric} width="240px" />
         {kind.showGroupsLabel && level === kind.unitLevel && (
           <OptionSwitch label={kind.showGroupsLabel} checked={showGroups} onChange={setShowGroups} mb={2} />
